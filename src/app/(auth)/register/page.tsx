@@ -32,22 +32,31 @@ export default function RegisterPage() {
 
     setLoading(true)
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-      },
-    })
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+        },
+      })
 
-    if (error) {
-      setError(error.message)
+      if (error) {
+        setError(
+          error.message.includes('rate limit')
+            ? 'Demasiados intentos. Espera unos minutos e intenta de nuevo.'
+            : error.message
+        )
+        return
+      }
+
+      setEmailSent(true)
+    } catch {
+      setError('Error de conexión. Verifica tu internet e intenta de nuevo.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    setEmailSent(true)
   }
 
   if (emailSent) {

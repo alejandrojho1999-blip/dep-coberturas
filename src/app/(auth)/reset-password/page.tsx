@@ -18,18 +18,23 @@ export default function ResetPasswordPage() {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
-    })
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
+      })
 
-    if (error) {
-      setError(error.message)
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      setEmailSent(true)
+    } catch {
+      setError('Error de conexión. Intenta de nuevo.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    setEmailSent(true)
   }
 
   if (emailSent) {
