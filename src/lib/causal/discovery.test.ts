@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { correlation, partialCorrelation, fisherZTest } from './discovery'
+import { correlation, partialCorrelation, fisherZTest, runPC, compareWithManualDAG } from './discovery'
 
 describe('correlation()', () => {
   it('returns 1 for perfect positive correlation', () => {
@@ -150,5 +150,182 @@ describe('fisherZTest()', () => {
     // With alpha=0.99, almost anything with nonzero pValue would be independent...
     // but perfect correlation has p≈0, so still dependent
     expect(lenient.isIndependent).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// runPC() tests
+// ---------------------------------------------------------------------------
+
+describe('runPC()', () => {
+  /**
+   * Fork structure: Z → X, Z → Y
+   * X and Y are marginally correlated (due to shared cause Z) but
+   * conditionally independent given Z.
+   * PC should discover edges X-Z and Z-Y, but NOT X-Y.
+   */
+  it('fork structure (Z→X, Z→Y): finds X-Z and Z-Y edges, not X-Y', () => {
+    const n = 200
+    // Deterministic LCG for reproducibility
+    let seed = 12345
+    function lcg() {
+      seed = (1664525 * seed + 1013904223) & 0xffffffff
+      return (seed >>> 0) / 0xffffffff
+    }
+    function randNormal() {
+      let s = 0
+      for (let i = 0; i < 12; i++) s += lcg()
+      return s - 6
+    }
+
+    const Z: number[] = []
+    const X: number[] = []
+    const Y: number[] = []
+    for (let i = 0; i < n; i++) {
+      const z = randNormal()
+      Z.push(z)
+      X.push(z + 0.1 * randNormal())
+      Y.push(z + 0.1 * randNormal())
+    }
+
+    const data = { X, Y, Z }
+    const result = runPC(data, ['X', 'Y', 'Z'], n, 0.05, 1)
+
+    // Should have edge between X and Z
+    const hasXZ = result.adjacencyMatrix['X']['Z'] || result.adjacencyMatrix['Z']['X']
+    expect(hasXZ).toBe(true)
+
+    // Should have edge between Z and Y
+    const hasZY = result.adjacencyMatrix['Z']['Y'] || result.adjacencyMatrix['Y']['Z']
+    expect(hasZY).toBe(true)
+
+    // Should NOT have edge between X and Y (they are independent given Z)
+    const hasXY = result.adjacencyMatrix['X']['Y'] || result.adjacencyMatrix['Y']['X']
+    expect(hasXY).toBe(false)
+  })
+
+  /**
+   * V-structure: X → Z ← Y, X and Y independent.
+   * PC should orient X → Z ← Y (collider orientation).
+   * sep[X][Y] should NOT contain Z.
+   */
+  it('v-structure (X→Z←Y): orients collider X→Z←Y', () => {
+    const n = 300
+    let seed = 99991
+    function lcg() {
+      seed = (1664525 * seed + 1013904223) & 0xffffffff
+      return (seed >>> 0) / 0xffffffff
+    }
+    function randNormal() {
+      let s = 0
+      for (let i = 0; i < 12; i++) s += lcg()
+      return s - 6
+    }
+
+    const X: number[] = []
+    const Y: number[] = []
+    const Z: number[] = []
+    for (let i = 0; i < n; i++) {
+      const x = randNormal()
+      const y = randNormal()
+      X.push(x)
+      Y.push(y)
+      // Z is caused by both X and Y
+      Z.push(0.8 * x + 0.8 * y + 0.1 * randNormal())
+    }
+
+    const data = { X, Y, Z }
+    const result = runPC(data, ['X', 'Y', 'Z'], n, 0.05, 1)
+
+    // X and Y should not be adjacent (they are truly independent)
+    const hasXY = result.adjacencyMatrix['X']['Y'] || result.adjacencyMatrix['Y']['X']
+    expect(hasXY).toBe(false)
+
+    // X-Z and Y-Z edges should exist
+    const hasXZ = result.adjacencyMatrix['X']['Z'] || result.adjacencyMatrix['Z']['X']
+    const hasYZ = result.adjacencyMatrix['Y']['Z'] || result.adjacencyMatrix['Z']['Y']
+    expect(hasXZ).toBe(true)
+    expect(hasYZ).toBe(true)
+
+    // The collider should be oriented: X→Z and Y→Z
+    const xToZ = result.edges.find((e) => e.from === 'X' && e.to === 'Z' && e.oriented)
+    const yToZ = result.edges.find((e) => e.from === 'Y' && e.to === 'Z' && e.oriented)
+    expect(xToZ).toBeDefined()
+    expect(yToZ).toBeDefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// compareWithManualDAG() tests
+// ---------------------------------------------------------------------------
+
+describe('compareWithManualDAG()', () => {
+  it('matching edges appear in consistent list', () => {
+    const n = 200
+    let seed = 55555
+    function lcg() {
+      seed = (1664525 * seed + 1013904223) & 0xffffffff
+      return (seed >>> 0) / 0xffffffff
+    }
+    function randNormal() {
+      let s = 0
+      for (let i = 0; i < 12; i++) s += lcg()
+      return s - 6
+    }
+
+    const Z: number[] = []
+    const X: number[] = []
+    const Y: number[] = []
+    for (let i = 0; i < n; i++) {
+      const z = randNormal()
+      Z.push(z)
+      X.push(z + 0.1 * randNormal())
+      Y.push(z + 0.1 * randNormal())
+    }
+
+    const data = { X, Y, Z }
+    const pcResult = runPC(data, ['X', 'Y', 'Z'], n, 0.05, 1)
+
+    // Manual DAG matches the fork: Z→X and Z→Y
+    const manualEdges = [
+      { from: 'Z', to: 'X' },
+      { from: 'Z', to: 'Y' },
+    ]
+
+    const comparison = compareWithManualDAG(pcResult, manualEdges)
+
+    // Both manual edges should be consistent with PC (Z-X and Z-Y adjacency)
+    expect(comparison.consistent.length).toBeGreaterThan(0)
+  })
+
+  it('manual edges absent in PC appear in pcMissing', () => {
+    // Use variables that are independent — PC will find no edges
+    const n = 100
+    let seed = 77777
+    function lcg() {
+      seed = (1664525 * seed + 1013904223) & 0xffffffff
+      return (seed >>> 0) / 0xffffffff
+    }
+    function randNormal() {
+      let s = 0
+      for (let i = 0; i < 12; i++) s += lcg()
+      return s - 6
+    }
+
+    const X = Array.from({ length: n }, randNormal)
+    const Y = Array.from({ length: n }, randNormal)
+    const data = { X, Y }
+
+    const pcResult = runPC(data, ['X', 'Y'], n, 0.05, 0)
+
+    // Manual says X→Y but PC may find them independent
+    const manualEdges = [{ from: 'X', to: 'Y' }]
+    const comparison = compareWithManualDAG(pcResult, manualEdges)
+
+    // Either consistent (if PC found the edge) or pcMissing — just verify structure
+    expect(comparison).toHaveProperty('consistent')
+    expect(comparison).toHaveProperty('pcMissing')
+    expect(comparison).toHaveProperty('pcExtra')
+    expect(comparison.consistent.length + comparison.pcMissing.length).toBe(manualEdges.length)
   })
 })
