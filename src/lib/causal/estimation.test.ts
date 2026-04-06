@@ -163,19 +163,25 @@ describe('compareModels', () => {
   })
 
   it('detects sign flip when collider is included', () => {
-    // Create data where including collider flips sign of treatment
-    let s = 999
+    // Strong M-bias structure: two hidden common causes U1, U2
+    // U1 -> T, U1 -> C (collider parent 1)
+    // U2 -> Y, U2 -> C (collider parent 2)
+    // True effect T -> Y is small positive
+    // Conditioning on C opens a backdoor path U1 -> C <- U2, introducing
+    // a strong negative correlation between T and Y via U1/U2, flipping the sign.
+    let s = 777
     const rand = () => {
       s = (s * 1664525 + 1013904223) & 0xffffffff
       return (s >>> 0) / 0xffffffff - 0.5
     }
 
     const data: DataRow[] = []
-    for (let i = 0; i < 400; i++) {
-      const u = rand() // unobserved confounder
-      const t = 0.8 * u + rand() * 0.3
-      const c = 2 * t + 5 * u + rand() * 0.1  // collider correlated with both
-      const y = 0.5 * t + 3 * u + rand() * 0.2
+    for (let i = 0; i < 1000; i++) {
+      const u1 = rand() * 2
+      const u2 = rand() * 2
+      const t = 10 * u1 + rand() * 0.1   // T driven almost entirely by U1
+      const y = 0.1 * t + 10 * u2 + rand() * 0.1  // Y driven almost entirely by U2
+      const c = 10 * u1 + 10 * u2 + rand() * 0.1  // C is a collider (child of U1 and U2)
       data.push({ date: `2020-${i}`, t, c, y })
     }
 
@@ -185,9 +191,9 @@ describe('compareModels', () => {
     }
 
     const result = compareModels(data, cfg)
-    // When a collider (or M-bias structure) reverses the sign, signFlipDetected = true
-    // We just verify the function returns a boolean without throwing
-    expect(typeof result.signFlipDetected).toBe('boolean')
+    // Conditioning on the collider C opens the U1-U2 path, creating strong
+    // negative partial correlation between T and Y => sign flip
+    expect(result.signFlipDetected).toBe(true)
   })
 
   it('skips collider columns missing from data', () => {

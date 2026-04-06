@@ -116,11 +116,19 @@ export function olsRegression(
   const n = X.length
   const p = predictorNames.length // includes intercept
 
+  if (predictorNames.length !== (X[0]?.length ?? 0)) {
+    throw new Error(`predictorNames length (${predictorNames.length}) does not match X columns (${X[0]?.length})`)
+  }
+
   if (n < p + 1) {
     throw new Error(
       `Not enough observations (n=${n}) for ${p} parameters. Need at least ${p + 1}.`,
     )
   }
+
+  const yMean = (mean(y) as number)
+  const sst = y.reduce((sum, yi) => sum + (yi - yMean) ** 2, 0)
+  if (sst < Number.EPSILON) throw new Error('Outcome has zero variance — all values are identical')
 
   // Use mathjs matrices
   const mX = matrix(X)
@@ -128,9 +136,15 @@ export function olsRegression(
 
   const Xt = transpose(mX)
   const XtX = multiply(Xt, mX)
-  const XtXinv = inv(XtX)
+  let XtXinvMatrix: ReturnType<typeof inv>
+  try {
+    XtXinvMatrix = inv(XtX)
+  } catch {
+    throw new Error('Design matrix is singular — check for collinear predictors or insufficient data')
+  }
+  const XtXinv: number[][] = (XtXinvMatrix as { toArray(): number[][] }).toArray()
   const Xty = multiply(Xt, mY)
-  const betaMat = multiply(XtXinv, Xty) // p × 1
+  const betaMat = multiply(matrix(XtXinv), Xty) // p × 1
 
   const betaArr: number[] = (betaMat.toArray() as number[][]).map((row) => row[0])
 
@@ -141,8 +155,6 @@ export function olsRegression(
 
   // SSR, SST
   const ssr = residuals.reduce((acc, r) => acc + r * r, 0)
-  const yMean = (mean(y) as number)
-  const sst = y.reduce((acc, yi) => acc + (yi - yMean) ** 2, 0)
 
   const r2 = sst === 0 ? 1 : 1 - ssr / sst
   const k = p - 1 // number of predictors excluding intercept
@@ -152,7 +164,7 @@ export function olsRegression(
   const sigma2 = ssr / (n - k - 1)
 
   // Var(β) = σ² (X'X)^-1
-  const XtXinvArr = XtXinv.toArray() as number[][]
+  const XtXinvArr: number[][] = XtXinv
 
   const coefficients: Record<string, number> = {}
   const standardErrors: Record<string, number> = {}
@@ -242,13 +254,19 @@ export function compareModels(data: DataRow[], config: CausalConfig): ModelCompa
     data.some((row) => typeof row[v] === 'number'),
   )
 
+  // Compute intersection of valid rows across ALL variables used in any model
+  const allVars = [treatment, outcome, ...confounders, ...colliderVars]
+  const alignedData = data.filter((row) =>
+    allVars.every((v) => typeof row[v] === 'number' && isFinite(row[v] as number)),
+  )
+
   // --- naive ---
-  const naiveInput = buildMatrix(data, [treatment], outcome)
+  const naiveInput = buildMatrix(alignedData, [treatment], outcome)
   const naive = olsRegression(naiveInput.X, naiveInput.y, naiveInput.names)
 
   // --- withColliders ---
   const withCollidersInput = buildMatrix(
-    data,
+    alignedData,
     [treatment, ...colliderVars],
     outcome,
   )
@@ -259,7 +277,7 @@ export function compareModels(data: DataRow[], config: CausalConfig): ModelCompa
   )
 
   // --- causal ---
-  const causalInput = buildMatrix(data, [treatment, ...confounders], outcome)
+  const causalInput = buildMatrix(alignedData, [treatment, ...confounders], outcome)
   const causal = olsRegression(causalInput.X, causalInput.y, causalInput.names)
 
   // Sign flip: opposite signs in naive vs withColliders for treatment coefficient
