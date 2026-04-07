@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { CausalConfig, DataRow, PipelineResult } from '@/lib/causal/types'
 import DataPanel from './DataPanel'
+import DagPanel from './DagPanel'
 
 interface Props {
   config: CausalConfig
@@ -96,9 +97,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
         )}
 
         {activeTab === 'dag' && (
-          <div className="flex items-center justify-center h-48 text-[#64748b] text-sm">
-            DAG visualization — próximamente (Task 11)
-          </div>
+          <DagPanel config={config} />
         )}
 
         {activeTab === 'results' && (
