@@ -42,3 +42,11 @@ next-env.d.ts
 
 # worktrees
 .worktrees
+
+# local tooling / credentials (never commit)
+.mcp.json
+.claude/
+.claude-flow/
+.agents/
+.playwright-mcp/
+skills-lock.json
