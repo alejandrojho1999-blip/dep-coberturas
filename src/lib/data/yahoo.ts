@@ -49,12 +49,12 @@ export async function fetchStockData(
     period1: startDate,
     period2: end,
     interval: '1d',
-  })
+  }) as { date: Date; adjClose?: number; close: number }[]
 
   // Filter rows that have a valid close price
   const validRows: HistoricalRow[] = rawData
     .filter((row) => row.close != null && !isNaN(row.close))
-    .map((row) => ({ date: row.date, close: row.close }))
+    .map((row) => ({ date: row.date, close: row.adjClose ?? row.close }))
 
   // Resample to quarterly
   const quarterly = resampleToQuarterly(validRows)
