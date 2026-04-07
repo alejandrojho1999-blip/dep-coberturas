@@ -4,6 +4,10 @@ import { useState } from 'react'
 import type { CausalConfig, DataRow, PipelineResult } from '@/lib/causal/types'
 import DataPanel from './DataPanel'
 import DagPanel from './DagPanel'
+import ModelComparisonPanel from './ModelComparison'
+import PortfolioScorePanel from './PortfolioScore'
+import BacktestPanelComponent from './BacktestPanel'
+import PlaceboPanelComponent from './PlaceboPanel'
 
 interface Props {
   config: CausalConfig
@@ -103,36 +107,18 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
         {activeTab === 'results' && (
           <div className="space-y-4">
             {pipelineResult ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-[#64748b] text-sm">Signal:</span>
-                  <span
-                    className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                      pipelineResult.portfolio.signal === 'AUMENTAR'
-                        ? 'bg-[#00ff88]/10 text-[#00ff88]'
-                        : pipelineResult.portfolio.signal === 'REDUCIR'
-                          ? 'bg-red-500/10 text-red-400'
-                          : 'bg-blue-500/10 text-blue-400'
-                    }`}
-                  >
-                    {pipelineResult.portfolio.signal}
-                  </span>
-                  <span className="text-[#64748b] text-sm ml-2">
-                    Score: <span className="text-[#e2e8f0]">{pipelineResult.portfolio.score.toFixed(1)}</span>
-                  </span>
-                </div>
+              <div className="space-y-6">
                 <p className="text-[#64748b] text-xs">
                   Análisis completado —{' '}
                   {new Date(pipelineResult.runAt).toLocaleString('es-ES')}
                 </p>
-                <p className="text-[#64748b] text-sm mt-2">
-                  Panel completo de resultados — próximamente (Task 12)
-                </p>
+                <ModelComparisonPanel models={pipelineResult.models} />
+                <PortfolioScorePanel portfolio={pipelineResult.portfolio} />
+                <BacktestPanelComponent backtest={pipelineResult.backtest} />
+                <PlaceboPanelComponent multipleTesting={pipelineResult.multipleTesting} />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-24 text-[#64748b] text-sm">
-                Resultados — próximamente (Task 12)
-              </div>
+              <p className="text-[#64748b]">Ejecuta el análisis para ver los resultados.</p>
             )}
           </div>
         )}
