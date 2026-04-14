@@ -20,12 +20,13 @@ export default async function InversionCausalPage() {
   let assets: CausalAsset[] = []
 
   if (user) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('causal_assets')
       .select('id, ticker, config, last_run_at, last_score, last_signal')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
+    if (error) console.error('[InversionCausalPage] causal_assets fetch failed', error)
     assets = (data as CausalAsset[]) ?? []
   }
 

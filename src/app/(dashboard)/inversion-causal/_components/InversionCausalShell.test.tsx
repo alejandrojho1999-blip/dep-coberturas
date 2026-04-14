@@ -26,9 +26,15 @@ vi.mock('./AssetSelector', () => ({
   ),
 }))
 vi.mock('./NewAssetForm', () => ({
-  default: ({ onCancel }: { onCancel: () => void }) => (
+  default: ({ onCancel, onCreated }: {
+    onCancel: () => void
+    onCreated: (asset: { id: string; ticker: string; config: never; last_run_at: null; last_score: null; last_signal: null }) => void
+  }) => (
     <div data-testid="new-form">
       <button onClick={onCancel}>Cancelar</button>
+      <button onClick={() => onCreated({ id: 'new-id', ticker: 'GOOG', config: { ticker: 'GOOG' } as never, last_run_at: null, last_score: null, last_signal: null })}>
+        Simular creación
+      </button>
     </div>
   ),
 }))
@@ -68,5 +74,17 @@ describe('InversionCausalShell', () => {
   it('renders AAPL_DEFAULT_CONFIG when no assets provided', () => {
     render(<InversionCausalShell initialAssets={[]} />)
     expect(screen.getByTestId('causal-client')).toHaveTextContent('AAPL')
+  })
+
+  it('adds new asset to list and sets it active when onCreated is called', () => {
+    render(<InversionCausalShell initialAssets={assets} />)
+    // Open the new asset form
+    fireEvent.click(screen.getByText('+ Nuevo activo'))
+    expect(screen.getByTestId('new-form')).toBeInTheDocument()
+    // Simulate asset creation
+    fireEvent.click(screen.getByText('Simular creación'))
+    // Form should be hidden, new asset should be active
+    expect(screen.queryByTestId('new-form')).not.toBeInTheDocument()
+    expect(screen.getByTestId('causal-client')).toHaveTextContent('GOOG')
   })
 })
