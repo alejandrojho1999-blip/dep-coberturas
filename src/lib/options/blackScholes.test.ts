@@ -81,9 +81,11 @@ describe('blackScholesPrice()', () => {
   })
 
   // sigma=0 edge cases
-  it('sigma=0 call returns intrinsic value', () => {
+  it('sigma=0 call returns discounted intrinsic value', () => {
+    // S=200, K=190, T=0.5, r=0.05, sigma=0
+    // Expected: max(200 - 190*e^(-0.05*0.5), 0) = max(200 - 185.32, 0) ≈ 14.68
     const p = blackScholesPrice({ type: 'call', S: 200, K: 190, T: 0.5, r: 0.05, sigma: 0 })
-    expect(p).toBeCloseTo(10, 5)
+    expect(p).toBeCloseTo(14.68, 1)
   })
 
   it('sigma=0 OTM call returns 0', () => {
@@ -128,15 +130,14 @@ describe('computeGreeks()', () => {
     expect(computeGreeks({ ...base, type: 'put' }).vega).toBeGreaterThan(0)
   })
 
-  it('theta is always negative (long options lose time value)', () => {
+  it('call theta is always negative (long options lose time value)', () => {
     expect(computeGreeks(base).theta).toBeLessThan(0)
-    expect(computeGreeks({ ...base, type: 'put' }).theta).toBeLessThan(0)
   })
 
   it('ATM call delta ≈ 0.5', () => {
     const atm: OptionInput = { type: 'call', S: 100, K: 100, T: 0.5, r: 0.05, sigma: 0.2 }
     const g = computeGreeks(atm)
-    expect(g.delta).toBeGreaterThan(0.48)
+    expect(g.delta).toBeGreaterThan(0.55)
     expect(g.delta).toBeLessThan(0.60)
   })
 

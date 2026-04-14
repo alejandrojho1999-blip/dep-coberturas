@@ -49,8 +49,15 @@ function computeD1D2(S: number, K: number, T: number, r: number, sigma: number):
 export function blackScholesPrice(input: OptionInput): number {
   const { type, S, K, T, r, sigma } = input
 
-  // Edge case: expired or zero vol → intrinsic value
-  if (T <= 0 || sigma <= 0) {
+  // Edge case: handle expired or zero vol
+  // For sigma=0 with T>0: use discounted intrinsic (present value)
+  if (sigma <= 0 && T > 0) {
+    const discount = Math.exp(-r * T)
+    if (type === 'call') return Math.max(S - K * discount, 0)
+    return Math.max(K * discount - S, 0)
+  }
+  // For T=0: use raw intrinsic (already at expiry)
+  if (T <= 0) {
     if (type === 'call') return Math.max(S - K, 0)
     return Math.max(K - S, 0)
   }
