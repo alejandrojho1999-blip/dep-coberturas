@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import type { CausalConfig, DataRow, PipelineResult } from '@/lib/causal/types'
+import { runPC } from '@/lib/causal/discovery'
+import type { PCResult } from '@/lib/causal/discovery'
 import DataPanel from './DataPanel'
 import DagPanel from './DagPanel'
 import ModelComparisonPanel from './ModelComparison'
@@ -21,6 +23,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('data')
   const [mergedData, setMergedData] = useState<DataRow[] | null>(null)
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null)
+  const [pcResult, setPcResult] = useState<PCResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,6 +43,30 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
       }
       const body = await res.json() as { result: PipelineResult }
       setPipelineResult(body.result)
+
+      // Run PC algorithm in background after results are shown
+      const variables = [config.treatment, config.outcome, ...config.confounders]
+      const dataByVar: Record<string, number[]> = Object.fromEntries(
+        variables.map((v) => [v, [] as number[]])
+      )
+      for (const row of mergedData) {
+        const allFinite = variables.every((v) => {
+          const val = row[v]
+          return typeof val === 'number' && isFinite(val)
+        })
+        if (!allFinite) continue
+        for (const v of variables) {
+          dataByVar[v].push(row[v] as number)
+        }
+      }
+      const n = dataByVar[variables[0]]?.length ?? 0
+      if (n > variables.length + 3) {
+        setTimeout(() => {
+          const pc = runPC(dataByVar, variables, n)
+          setPcResult(pc)
+        }, 0)
+      }
+
       setActiveTab('results')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -101,7 +128,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
         )}
 
         {activeTab === 'dag' && (
-          <DagPanel config={config} />
+          <DagPanel config={config} pcResult={pcResult ?? undefined} />
         )}
 
         {activeTab === 'results' && (
