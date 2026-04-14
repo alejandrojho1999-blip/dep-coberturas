@@ -71,8 +71,9 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-[#64748b]">Ticker</label>
+        <label htmlFor="new-asset-ticker" className="text-xs text-[#64748b]">Ticker</label>
         <input
+          id="new-asset-ticker"
           value={ticker}
           onChange={(e) => setTicker(e.target.value.toUpperCase())}
           placeholder="MSFT"
@@ -82,8 +83,9 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-[#64748b]">Nombre</label>
+        <label htmlFor="new-asset-name" className="text-xs text-[#64748b]">Nombre</label>
         <input
+          id="new-asset-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Microsoft Corporation"

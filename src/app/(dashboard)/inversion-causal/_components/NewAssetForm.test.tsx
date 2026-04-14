@@ -51,6 +51,17 @@ describe('NewAssetForm', () => {
     fireEvent.click(screen.getByText('Crear activo'))
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith(fakeAsset))
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/causal/assets',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls
+    const body = JSON.parse((calls[0][1] as RequestInit).body as string) as { ticker: string }
+    expect(body.ticker).toBe('MSFT')
   })
 
   it('shows error message when API fails', async () => {
