@@ -62,4 +62,28 @@ describe('AssetSelector', () => {
     expect(pills[0].className).toContain('border-[#00ff88]')
     expect(pills[1].className).not.toContain('border-[#00ff88]')
   })
+
+  it('shows score badge when both last_signal and last_score are set', () => {
+    render(
+      <AssetSelector
+        assets={[{ id: 'a1', ticker: 'AAPL', last_score: 72, last_signal: 'AUMENTAR' }]}
+        activeId="a1"
+        onSelect={vi.fn()}
+        onNewAsset={vi.fn()}
+      />
+    )
+    expect(screen.getByText('72')).toBeInTheDocument()
+  })
+
+  it('does not show score badge when last_signal is null', () => {
+    render(
+      <AssetSelector
+        assets={[{ id: 'a1', ticker: 'AAPL', last_score: 72, last_signal: null }]}
+        activeId="a1"
+        onSelect={vi.fn()}
+        onNewAsset={vi.fn()}
+      />
+    )
+    expect(screen.queryByText('72')).not.toBeInTheDocument()
+  })
 })

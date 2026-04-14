@@ -25,6 +25,7 @@ export default function AssetSelector({ assets, activeId, onSelect, onNewAsset }
     <div className="flex flex-wrap items-center gap-2">
       {assets.map((asset) => (
         <button
+          type="button"
           key={asset.id}
           onClick={() => onSelect(asset.id)}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
@@ -34,15 +35,16 @@ export default function AssetSelector({ assets, activeId, onSelect, onNewAsset }
           }`}
         >
           <span>{asset.ticker}</span>
-          {asset.last_signal && (
+          {asset.last_signal != null && asset.last_score != null && (
             <span className={`text-xs ${signalColor(asset.last_signal)}`}>
-              {asset.last_score?.toFixed(0)}
+              {asset.last_score.toFixed(0)}
             </span>
           )}
         </button>
       ))}
 
       <button
+        type="button"
         onClick={onNewAsset}
         className="px-4 py-2 rounded-xl border border-dashed border-[#1e1e2e] text-[#64748b] text-sm font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] transition-colors"
       >
