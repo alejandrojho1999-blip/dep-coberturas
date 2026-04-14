@@ -1,0 +1,72 @@
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import InversionCausalShell from './InversionCausalShell'
+
+// Mock heavy child components
+vi.mock('./CausalAnalysisClient', () => ({
+  default: ({ config }: { config: { ticker: string } }) => (
+    <div data-testid="causal-client">{config.ticker}</div>
+  ),
+}))
+vi.mock('./AssetSelector', () => ({
+  default: ({ assets, activeId, onSelect, onNewAsset }: {
+    assets: Array<{ id: string; ticker: string }>
+    activeId: string | null
+    onSelect: (id: string) => void
+    onNewAsset: () => void
+  }) => (
+    <div>
+      {assets.map((a) => (
+        <button key={a.id} onClick={() => onSelect(a.id)} data-active={activeId === a.id}>
+          {a.ticker}
+        </button>
+      ))}
+      <button onClick={onNewAsset}>+ Nuevo activo</button>
+    </div>
+  ),
+}))
+vi.mock('./NewAssetForm', () => ({
+  default: ({ onCancel }: { onCancel: () => void }) => (
+    <div data-testid="new-form">
+      <button onClick={onCancel}>Cancelar</button>
+    </div>
+  ),
+}))
+
+const assets = [
+  { id: 'a1', ticker: 'AAPL', config: { ticker: 'AAPL', name: 'Apple' } as never, last_run_at: null, last_score: 72, last_signal: 'AUMENTAR' },
+  { id: 'a2', ticker: 'MSFT', config: { ticker: 'MSFT', name: 'Microsoft' } as never, last_run_at: null, last_score: null, last_signal: null },
+]
+
+describe('InversionCausalShell', () => {
+  it('renders the first asset as active by default', () => {
+    render(<InversionCausalShell initialAssets={assets} />)
+    expect(screen.getByTestId('causal-client')).toHaveTextContent('AAPL')
+  })
+
+  it('switches to MSFT config when MSFT pill is selected', () => {
+    render(<InversionCausalShell initialAssets={assets} />)
+    fireEvent.click(screen.getByText('MSFT'))
+    expect(screen.getByTestId('causal-client')).toHaveTextContent('MSFT')
+  })
+
+  it('shows NewAssetForm when + Nuevo activo is clicked', () => {
+    render(<InversionCausalShell initialAssets={assets} />)
+    fireEvent.click(screen.getByText('+ Nuevo activo'))
+    expect(screen.getByTestId('new-form')).toBeInTheDocument()
+    expect(screen.queryByTestId('causal-client')).not.toBeInTheDocument()
+  })
+
+  it('hides NewAssetForm when Cancelar is clicked', () => {
+    render(<InversionCausalShell initialAssets={assets} />)
+    fireEvent.click(screen.getByText('+ Nuevo activo'))
+    fireEvent.click(screen.getByText('Cancelar'))
+    expect(screen.queryByTestId('new-form')).not.toBeInTheDocument()
+    expect(screen.getByTestId('causal-client')).toBeInTheDocument()
+  })
+
+  it('renders AAPL_DEFAULT_CONFIG when no assets provided', () => {
+    render(<InversionCausalShell initialAssets={[]} />)
+    expect(screen.getByTestId('causal-client')).toHaveTextContent('AAPL')
+  })
+})
