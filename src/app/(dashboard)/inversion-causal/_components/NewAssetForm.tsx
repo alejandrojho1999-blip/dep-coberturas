@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { AAPL_DEFAULT_CONFIG } from '@/lib/causal/dag'
 import type { CausalConfig } from '@/lib/causal/types'
 
@@ -18,45 +18,90 @@ interface Props {
   onCancel: () => void
 }
 
+interface SearchResult {
+  symbol: string
+  name: string
+  exchange: string
+}
+
 export default function NewAssetForm({ onCreated, onCancel }: Props) {
-  const [ticker, setTicker] = useState('')
-  const [name, setName] = useState('')
+  const [query, setQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<SearchResult[]>([])
+  const [selectedTicker, setSelectedTicker] = useState('')
+  const [selectedName, setSelectedName] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleInputChange = (value: string) => {
+    setQuery(value)
+    setSelectedTicker('')
+    setSelectedName('')
+    setError(null)
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    if (value.trim().length < 2) {
+      setSuggestions([])
+      setShowDropdown(false)
+      return
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`/api/causal/search?q=${encodeURIComponent(value.trim())}`)
+        const data = await res.json() as { results?: SearchResult[] }
+        setSuggestions(data.results ?? [])
+        setShowDropdown(true)
+      } catch {
+        // ignore search errors silently
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+  }
+
+  const handleSelect = (result: SearchResult) => {
+    setSelectedTicker(result.symbol)
+    setSelectedName(result.name)
+    setQuery(`${result.symbol} — ${result.name}`)
+    setShowDropdown(false)
+    setSuggestions([])
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const t = ticker.trim().toUpperCase()
-    const n = name.trim()
-    if (!t || !n) return
+    if (!selectedTicker || !selectedName) return
 
     setLoading(true)
     setError(null)
 
     try {
-      const config: CausalConfig = { ...AAPL_DEFAULT_CONFIG, ticker: t, name: n }
-
       const res = await fetch('/api/causal/assets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: t, config }),
+        body: JSON.stringify({
+          ticker: selectedTicker,
+          config: { ...AAPL_DEFAULT_CONFIG, ticker: selectedTicker, name: selectedName },
+        }),
       })
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string }
-        throw new Error(body.error ?? `HTTP ${res.status}`)
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error ?? 'Error al crear el activo')
       }
 
-      const body = await res.json() as { asset: CreatedAsset }
-      onCreated(body.asset)
+      const data = await res.json() as { asset: CreatedAsset }
+      onCreated(data.asset)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error creando activo')
+      setError(err instanceof Error ? err.message : 'Error al crear el activo')
     } finally {
       setLoading(false)
     }
   }
-
-  const canSubmit = ticker.trim().length > 0 && name.trim().length > 0 && !loading
 
   return (
     <form
@@ -66,42 +111,56 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
       <div>
         <h3 className="text-sm font-medium text-[#e2e8f0]">Nuevo activo causal</h3>
         <p className="text-xs text-[#64748b] mt-1">
-          Usa la configuración de AAPL como plantilla. Puedes ajustar el DAG después.
+          Busca un ticker para usar la configuración de AAPL como plantilla. Puedes ajustar el DAG después.
         </p>
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="new-asset-ticker" className="text-xs text-[#64748b]">Ticker</label>
+      <div style={{ position: 'relative' }}>
+        <label htmlFor="new-asset-search" className="text-xs text-[#64748b] block mb-1">
+          Buscar activo
+        </label>
         <input
-          id="new-asset-ticker"
-          value={ticker}
-          onChange={(e) => setTicker(e.target.value.toUpperCase())}
-          placeholder="MSFT"
-          required
-          className="w-full px-3 py-2 rounded-lg bg-[#0a0a0f] border border-[#1e1e2e] text-[#e2e8f0] text-sm font-mono placeholder-[#64748b] focus:outline-none focus:border-[#3b82f6] transition-colors"
-        />
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="new-asset-name" className="text-xs text-[#64748b]">Nombre</label>
-        <input
-          id="new-asset-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Microsoft Corporation"
-          required
+          id="new-asset-search"
+          type="text"
+          value={query}
+          onChange={(e) => handleInputChange(e.target.value)}
+          placeholder="Buscar ticker o empresa..."
+          autoComplete="off"
           className="w-full px-3 py-2 rounded-lg bg-[#0a0a0f] border border-[#1e1e2e] text-[#e2e8f0] text-sm placeholder-[#64748b] focus:outline-none focus:border-[#3b82f6] transition-colors"
         />
+        {searching && (
+          <span className="absolute right-3 top-8 text-xs text-[#64748b]">Buscando...</span>
+        )}
+        {showDropdown && suggestions.length > 0 && (
+          <div className="absolute z-10 w-full mt-1 rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] shadow-xl overflow-hidden">
+            {suggestions.map((result) => (
+              <button
+                key={result.symbol}
+                type="button"
+                onClick={() => handleSelect(result)}
+                className="w-full px-3 py-2 text-left hover:bg-[#1e1e2e] transition-colors flex items-center gap-2"
+              >
+                <span className="text-sm font-mono text-[#00ff88] shrink-0">{result.symbol}</span>
+                <span className="text-sm text-[#e2e8f0] truncate">{result.name}</span>
+                {result.exchange && (
+                  <span className="text-xs text-[#64748b] shrink-0 ml-auto">{result.exchange}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {error && (
-        <p className="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>
+        <p role="alert" className="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">
+          {error}
+        </p>
       )}
 
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={!canSubmit}
+          disabled={!selectedTicker || !selectedName || loading}
           className="px-4 py-2 rounded-lg bg-[#00ff88] text-[#0a0a0f] text-sm font-semibold hover:bg-[#00ff88]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Creando...' : 'Crear activo'}
