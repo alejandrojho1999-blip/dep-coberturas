@@ -10,14 +10,13 @@ export async function POST(request: Request): Promise<Response> {
 
   const body = await request.json() as {
     ticker?: string
-    name?: string
     config?: CausalConfig
   }
-  const { ticker, name, config } = body
+  const { ticker, config } = body
 
-  if (!ticker || !name || !config) {
+  if (!ticker || !config) {
     return Response.json(
-      { error: 'Missing required fields: ticker, name, config' },
+      { error: 'Missing required fields: ticker, config' },
       { status: 400 }
     )
   }
