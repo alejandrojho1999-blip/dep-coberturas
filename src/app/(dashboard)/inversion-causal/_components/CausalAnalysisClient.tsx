@@ -10,6 +10,7 @@ import ModelComparisonPanel from './ModelComparison'
 import PortfolioScorePanel from './PortfolioScore'
 import BacktestPanelComponent from './BacktestPanel'
 import PlaceboPanelComponent from './PlaceboPanel'
+import ResultsHistory from './ResultsHistory'
 
 interface Props {
   config: CausalConfig
@@ -17,7 +18,7 @@ interface Props {
   userId?: string
 }
 
-type ActiveTab = 'data' | 'dag' | 'results'
+type ActiveTab = 'data' | 'dag' | 'results' | 'historial'
 
 export default function CausalAnalysisClient({ config, assetId }: Props) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('data')
@@ -75,10 +76,13 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
     }
   }
 
+  const hasRealAsset = Boolean(assetId) && config.ticker !== 'AAPL'
+
   const tabs: { id: ActiveTab; label: string }[] = [
     { id: 'data', label: 'Datos' },
     { id: 'dag', label: 'DAG' },
     { id: 'results', label: 'Resultados' },
+    ...(hasRealAsset ? [{ id: 'historial' as const, label: 'Historial' }] : []),
   ]
 
   return (
@@ -148,6 +152,16 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
               <p className="text-[#64748b]">Ejecuta el análisis para ver los resultados.</p>
             )}
           </div>
+        )}
+
+        {activeTab === 'historial' && assetId && (
+          <ResultsHistory
+            assetId={assetId}
+            onLoadResult={(result) => {
+              setPipelineResult(result)
+              setActiveTab('results')
+            }}
+          />
         )}
       </div>
     </div>
