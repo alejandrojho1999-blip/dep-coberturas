@@ -16,6 +16,7 @@ interface FormValues {
   T: string
   r: string
   sigma: string
+  ticker: string
 }
 
 const DEFAULTS: FormValues = {
@@ -25,6 +26,7 @@ const DEFAULTS: FormValues = {
   T: '0.25',
   r: '0.053',
   sigma: '0.28',
+  ticker: '',
 }
 
 function parsePositiveNumber(val: string): number | null {
@@ -36,6 +38,8 @@ export default function OptionsPricer({ onResult }: Props) {
   const [form, setForm] = useState<FormValues>(DEFAULTS)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [tickerLoading, setTickerLoading] = useState(false)
+  const [tickerError, setTickerError] = useState<string | null>(null)
 
   function isValid(): boolean {
     const S = parsePositiveNumber(form.S)
@@ -55,6 +59,31 @@ export default function OptionsPricer({ onResult }: Props) {
   function setField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
     setError(null)
+  }
+
+  async function handleFetchTicker() {
+    if (!form.ticker.trim()) {
+      setTickerError('Ingresa un ticker')
+      return
+    }
+
+    setTickerLoading(true)
+    setTickerError(null)
+
+    try {
+      const res = await fetch(`/api/options/quote?ticker=${encodeURIComponent(form.ticker.toUpperCase())}`)
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
+      const data = await res.json() as { ticker: string; price: number; currency: string }
+      setField('S', data.price.toString())
+      setTickerError(null)
+    } catch (err) {
+      setTickerError('No se encontró el ticker')
+    } finally {
+      setTickerLoading(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -101,6 +130,36 @@ export default function OptionsPricer({ onResult }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Ticker lookup */}
+      <div>
+        <label className={labelClass}>Ticker (opcional)</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={form.ticker}
+            onChange={(e) => {
+              setField('ticker', e.target.value.toUpperCase())
+              setTickerError(null)
+            }}
+            className={inputClass}
+            placeholder="AAPL"
+            maxLength={10}
+            disabled={tickerLoading}
+          />
+          <button
+            type="button"
+            onClick={handleFetchTicker}
+            disabled={tickerLoading || !form.ticker.trim()}
+            className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white text-sm font-medium hover:bg-[#3b82f6]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            {tickerLoading ? 'Obteniendo...' : 'Obtener precio'}
+          </button>
+        </div>
+        {tickerError && (
+          <p className="text-xs text-red-400 mt-1">{tickerError}</p>
+        )}
+      </div>
+
       {/* Option type */}
       <div>
         <label className={labelClass}>Tipo</label>
