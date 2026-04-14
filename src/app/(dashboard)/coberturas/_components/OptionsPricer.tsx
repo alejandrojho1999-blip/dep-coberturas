@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import type { PricingResult } from '@/lib/options/types'
 
+import type { OptionInput } from '@/lib/options/types'
+
 interface Props {
-  onResult: (result: PricingResult) => void
+  onResult: (result: PricingResult, input: OptionInput) => void
 }
 
 interface FormValues {
@@ -78,7 +80,14 @@ export default function OptionsPricer({ onResult }: Props) {
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
       const result = await res.json() as PricingResult
-      onResult(result)
+      onResult(result, {
+        type: form.type,
+        S: parseFloat(form.S),
+        K: parseFloat(form.K),
+        T: parseFloat(form.T),
+        r: parseFloat(form.r),
+        sigma: parseFloat(form.sigma),
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {
