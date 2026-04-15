@@ -6,6 +6,7 @@ import { analyzeHedge } from '@/lib/options/hedge'
 import OptionsPricer from './OptionsPricer'
 import GreeksPanel from './GreeksPanel'
 import HedgeAnalyzer from './HedgeAnalyzer'
+import PositionBuilder from './PositionBuilder'
 
 interface PricingState {
   result: PricingResult
@@ -77,6 +78,12 @@ export default function CoberturasClient() {
           hedgingOption={hedgeData.hedgingOption}
         />
       )}
+
+      {/* Divider */}
+      <div className="border-t border-[#1e1e2e]" />
+
+      {/* Multi-position portfolio builder */}
+      <PositionBuilder defaultOption={pricing?.input ?? undefined} />
     </div>
   )
 }
