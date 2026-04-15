@@ -1,40 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
-import yahooFinance from 'yahoo-finance2'
-import type { SearchResult } from 'yahoo-finance2/modules/search'
+
+interface YahooQuote {
+  symbol?: string
+  shortname?: string
+  longname?: string
+  exchange?: string
+}
 
 export async function GET(req: NextRequest) {
-  const q = req.nextUrl.searchParams.get('q')
+  const query = req.nextUrl.searchParams.get('q')
 
-  if (!q || q.trim().length < 2) {
+  if (!query || query.trim().length < 2) {
     return NextResponse.json({ error: 'Query must be at least 2 characters' }, { status: 400 })
   }
 
   try {
-    // validateResult: false evita FailedYahooValidationError en producción cuando
-    // Yahoo Finance devuelve campos extra o esquema ligeramente diferente al esperado.
-    // Cast explícito a SearchResult porque el overload con validateResult:false
-    // resuelve a `never` en TypeScript.
-    const result = (await yahooFinance.search(
-      q.trim(),
-      { quotesCount: 8, newsCount: 0 },
-      { validateResult: false }
-    )) as unknown as SearchResult
+    // Llamada directa al endpoint de Yahoo Finance — más confiable en serverless
+    // que yahoo-finance2, que requiere cookies/crumb que no persisten entre
+    // invocaciones frías de Vercel.
+    const url = new URL('https://query1.finance.yahoo.com/v1/finance/search')
+    url.searchParams.set('q', query.trim())
+    url.searchParams.set('quotesCount', '8')
+    url.searchParams.set('newsCount', '0')
+    url.searchParams.set('enableFuzzyQuery', 'false')
+    url.searchParams.set('lang', 'en-US')
 
-    const results = (result.quotes ?? [])
-      .filter((quote) => 'symbol' in quote && quote.symbol)
+    const res = await fetch(url.toString(), {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'application/json',
+      },
+    })
+
+    if (!res.ok) {
+      console.error(`Yahoo Finance search HTTP ${res.status}`)
+      return NextResponse.json({ results: [] })
+    }
+
+    const data = (await res.json()) as {
+      finance?: { result?: Array<{ quotes?: YahooQuote[] }> }
+    }
+
+    const quotes: YahooQuote[] = data?.finance?.result?.[0]?.quotes ?? []
+
+    const results = quotes
+      .filter((quote): quote is YahooQuote & { symbol: string } => Boolean(quote.symbol))
       .map((quote) => ({
-        symbol: (quote as { symbol: string }).symbol,
-        name:
-          (quote as { shortname?: string }).shortname ??
-          (quote as { longname?: string }).longname ??
-          (quote as { symbol: string }).symbol, // usar symbol como fallback, nunca ''
-        exchange: (quote as { exchange?: string }).exchange ?? '',
+        symbol: quote.symbol,
+        name: quote.shortname ?? quote.longname ?? quote.symbol,
+        exchange: quote.exchange ?? '',
       }))
       .slice(0, 8)
 
     return NextResponse.json({ results })
   } catch (err) {
     console.error('Yahoo Finance search error:', err)
-    return NextResponse.json({ error: 'Search failed' }, { status: 500 })
+    return NextResponse.json({ results: [] })
   }
 }
