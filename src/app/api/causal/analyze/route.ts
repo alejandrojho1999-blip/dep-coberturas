@@ -58,6 +58,15 @@ export async function POST(request: Request): Promise<Response> {
   // Save to Supabase if assetId provided
   if (assetId) {
     await supabase.from('causal_results').insert({ asset_id: assetId, result })
+    // Update last_score and last_signal on the asset
+    await supabase
+      .from('causal_assets')
+      .update({
+        last_score: portfolio.score,
+        last_signal: portfolio.signal,
+        last_run_at: result.runAt,
+      })
+      .eq('id', assetId)
   }
 
   return Response.json({ result })
