@@ -39,10 +39,10 @@ export async function GET(req: NextRequest) {
     }
 
     const data = (await res.json()) as {
-      finance?: { result?: Array<{ quotes?: YahooQuote[] }> }
+      quotes?: YahooQuote[]
     }
 
-    const quotes: YahooQuote[] = data?.finance?.result?.[0]?.quotes ?? []
+    const quotes: YahooQuote[] = data?.quotes ?? []
 
     const results = quotes
       .filter((quote): quote is YahooQuote & { symbol: string } => Boolean(quote.symbol))
