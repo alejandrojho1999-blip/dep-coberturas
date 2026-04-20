@@ -28,9 +28,10 @@ export async function POST(request: Request): Promise<Response> {
 
   const body = await request.json() as {
     ticker?: string
+    name?: string
     config?: CausalConfig
   }
-  const { ticker, config } = body
+  const { ticker, name, config } = body
 
   if (!ticker || !config) {
     return Response.json(
@@ -41,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const { data, error } = await supabase
     .from('causal_assets')
-    .insert({ user_id: user.id, ticker, config })
+    .insert({ user_id: user.id, ticker, name: name ?? ticker, config })
     .select('id, ticker, config, last_run_at, last_score, last_signal')
     .single()
 

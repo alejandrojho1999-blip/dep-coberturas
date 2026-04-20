@@ -91,6 +91,7 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ticker: selectedTicker,
+          name: selectedName,
           config: { ...AAPL_DEFAULT_CONFIG, ticker: selectedTicker, name: selectedName },
         }),
       })
