@@ -44,6 +44,11 @@ export async function fetchFREDSeries(
   endDate: string
 ): Promise<FREDObservation[]> {
   const apiKey = process.env.FRED_API_KEY
+  if (!apiKey) {
+    throw new Error(
+      'FRED_API_KEY no está configurada. Obtén una gratis en https://fred.stlouisfed.org/docs/api/api_key.html y agrégala en Vercel → Settings → Environment Variables.'
+    )
+  }
   const params = new URLSearchParams({
     series_id: seriesId,
     observation_start: startDate,
