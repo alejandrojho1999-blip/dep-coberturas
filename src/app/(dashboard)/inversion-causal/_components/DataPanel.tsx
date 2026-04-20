@@ -22,7 +22,9 @@ interface YahooRow {
   date: string
   close?: number
   adjClose?: number
-  [key: string]: number | string | undefined
+  logReturn?: number
+  futureReturn?: number | null
+  [key: string]: number | string | undefined | null
 }
 
 type DataStatus = 'idle' | 'loading' | 'success' | 'error'
@@ -207,12 +209,11 @@ export default function DataPanel({ config, onDataReady }: Props) {
   // ---- Merge ----
   // Runs when all 3 sources ready and mapping confirmed
   function allReady(): boolean {
-    return (
-      fredState.status === 'success' &&
-      yahooState.status === 'success' &&
-      uploadState.status === 'success' &&
-      uploadState.confirmedMapping !== null
-    )
+    return fredState.status === 'success' && yahooState.status === 'success'
+  }
+
+  function hasBloomberg(): boolean {
+    return uploadState.status === 'success' && uploadState.confirmedMapping !== null
   }
 
   function mergeAndNotify() {
@@ -298,17 +299,19 @@ export default function DataPanel({ config, onDataReady }: Props) {
         }
       }
 
-      // Inner join on quarters present in all 3 sources
-      const allQuarters = Array.from(fredByQ.keys()).filter(
-        (q) => yahooByQ.has(q) && bloombergByQ.has(q)
-      )
+      // Inner join: FRED + Yahoo required; Bloomberg optional
+      const allQuarters = Array.from(fredByQ.keys()).filter((q) => {
+        if (!yahooByQ.has(q)) return false
+        if (bloombergByQ.size > 0 && !bloombergByQ.has(q)) return false
+        return true
+      })
 
       allQuarters.sort()
 
       const merged: DataRow[] = allQuarters.map((q) => {
         const fred = fredByQ.get(q)!
         const yahoo = yahooByQ.get(q)!
-        const bloom = bloombergByQ.get(q)!
+        const bloom = bloombergByQ.get(q) ?? {}
 
         const row: DataRow = {
           date: quarterToDate(q),
@@ -316,8 +319,9 @@ export default function DataPanel({ config, onDataReady }: Props) {
           YIELD_10Y: fred.YIELD_10Y ?? NaN,
           FED_RATE: fred.FED_RATE ?? NaN,
           VIX: fred.VIX ?? NaN,
-          // Yahoo fields
-          Return: yahoo.close ?? yahoo.adjClose ?? NaN,
+          // Yahoo fields — use log return for causal analysis, not absolute price
+          Return: yahoo.logReturn ?? NaN,
+          FutureReturn: yahoo.futureReturn ?? NaN,
         }
 
         // Bloomberg fields
@@ -426,6 +430,35 @@ export default function DataPanel({ config, onDataReady }: Props) {
         {yahooState.status === 'error' && (
           <p className="mt-2 text-xs text-red-400">{yahooState.error}</p>
         )}
+
+        {yahooState.status === 'success' && yahooState.data && yahooState.data.length > 0 && (
+          <div className="mt-3 overflow-x-auto">
+            <table className="text-xs w-full">
+              <thead>
+                <tr className="text-[#64748b] border-b border-[#1e1e2e]">
+                  <th className="pb-1 pr-3 text-left font-normal">Fecha</th>
+                  <th className="pb-1 pr-3 text-right font-normal">Precio</th>
+                  <th className="pb-1 pr-3 text-right font-normal">Log Return</th>
+                  <th className="pb-1 text-right font-normal">Future Return</th>
+                </tr>
+              </thead>
+              <tbody>
+                {yahooState.data.slice(-3).map((row, i) => (
+                  <tr key={i} className="text-[#e2e8f0]">
+                    <td className="py-0.5 pr-3">{row.date}</td>
+                    <td className="py-0.5 pr-3 text-right">{row.close?.toFixed(2) ?? '—'}</td>
+                    <td className="py-0.5 pr-3 text-right">
+                      {row.logReturn != null ? (row.logReturn * 100).toFixed(2) + '%' : '—'}
+                    </td>
+                    <td className="py-0.5 text-right">
+                      {row.futureReturn != null ? (row.futureReturn * 100).toFixed(2) + '%' : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Upload Card */}
@@ -495,7 +528,11 @@ export default function DataPanel({ config, onDataReady }: Props) {
           disabled={merging}
           className="w-full px-4 py-2.5 rounded-lg border border-[#00ff88]/30 text-[#00ff88] text-sm font-medium hover:bg-[#00ff88]/5 disabled:opacity-50 transition-colors"
         >
-          {merging ? 'Unificando datos...' : 'Unificar fuentes de datos'}
+          {merging
+        ? 'Unificando datos...'
+        : hasBloomberg()
+          ? 'Unificar (FRED + Yahoo + Bloomberg)'
+          : 'Unificar (FRED + Yahoo)'}
         </button>
       )}
     </div>
