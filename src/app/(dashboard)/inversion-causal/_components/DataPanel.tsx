@@ -95,8 +95,24 @@ export default function DataPanel({ config, onDataReady }: Props) {
         const body = await res.json().catch(() => ({})) as { error?: string }
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
-      const body = await res.json() as { data: FredRow[] }
-      setFredState({ status: 'success', data: body.data, error: null })
+      // API returns FREDSeriesMap: { YIELD_10Y, FED_RATE, VIX } — each is an array of { date, value }
+      const body = await res.json() as {
+        YIELD_10Y?: { date: string; value: number }[]
+        FED_RATE?: { date: string; value: number }[]
+        VIX?: { date: string; value: number }[]
+      }
+      const byDate = new Map<string, FredRow>()
+      for (const obs of body.YIELD_10Y ?? []) {
+        byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, YIELD_10Y: obs.value })
+      }
+      for (const obs of body.FED_RATE ?? []) {
+        byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, FED_RATE: obs.value })
+      }
+      for (const obs of body.VIX ?? []) {
+        byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, VIX: obs.value })
+      }
+      const rows = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
+      setFredState({ status: 'success', data: rows, error: null })
     } catch (err) {
       setFredState({
         status: 'error',
@@ -120,8 +136,9 @@ export default function DataPanel({ config, onDataReady }: Props) {
         const body = await res.json().catch(() => ({})) as { error?: string }
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
-      const body = await res.json() as { data: YahooRow[] }
-      setYahooState({ status: 'success', data: body.data, error: null })
+      // API returns { observations: PriceObservation[] }
+      const body = await res.json() as { observations: YahooRow[] }
+      setYahooState({ status: 'success', data: body.observations, error: null })
     } catch (err) {
       setYahooState({
         status: 'error',
