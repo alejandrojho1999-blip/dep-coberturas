@@ -1,9 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import type { CausalConfig, DataRow } from '@/lib/causal/types'
-import type { ParseResult } from '@/lib/data/parser'
-import ColumnMapper from './ColumnMapper'
 
 interface Props {
   config: CausalConfig
@@ -15,16 +13,13 @@ interface FredRow {
   YIELD_10Y?: number
   FED_RATE?: number
   VIX?: number
-  [key: string]: number | string | undefined
 }
 
 interface YahooRow {
   date: string
   close?: number
-  adjClose?: number
   logReturn?: number
   futureReturn?: number | null
-  [key: string]: number | string | undefined | null
 }
 
 type DataStatus = 'idle' | 'loading' | 'success' | 'error'
@@ -35,67 +30,29 @@ interface SourceState<T> {
   error: string | null
 }
 
-// Quarter string: "2020-Q1"
 function toQuarter(dateStr: string): string {
   const d = new Date(dateStr)
   const q = Math.ceil((d.getUTCMonth() + 1) / 3)
   return `${d.getUTCFullYear()}-Q${q}`
 }
 
-// Representative date for a quarter (first day)
 function quarterToDate(q: string): string {
   const [year, quarter] = q.split('-Q')
   const month = (parseInt(quarter) - 1) * 3 + 1
   return `${year}-${String(month).padStart(2, '0')}-01`
 }
 
-function computeCapexGrowth(values: number[]): number[] {
-  return values.map((v, i) => {
-    if (i === 0) return NaN
-    const prev = values[i - 1]
-    if (prev === 0) return NaN
-    return (v - prev) / Math.abs(prev)
-  })
-}
-
 export default function DataPanel({ config, onDataReady }: Props) {
-  const [fredState, setFredState] = useState<SourceState<FredRow>>({
-    status: 'idle',
-    data: null,
-    error: null,
-  })
-  const [yahooState, setYahooState] = useState<SourceState<YahooRow>>({
-    status: 'idle',
-    data: null,
-    error: null,
-  })
-  const [uploadState, setUploadState] = useState<{
-    status: DataStatus
-    parseResult: ParseResult | null
-    confirmedMapping: Record<string, string> | null
-    rawRows: Record<string, number[]> | null
-    rawDates: string[] | null
-    error: string | null
-  }>({
-    status: 'idle',
-    parseResult: null,
-    confirmedMapping: null,
-    rawRows: null,
-    rawDates: null,
-    error: null,
-  })
-
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [fredState, setFredState] = useState<SourceState<FredRow>>({ status: 'idle', data: null, error: null })
+  const [yahooState, setYahooState] = useState<SourceState<YahooRow>>({ status: 'idle', data: null, error: null })
   const [merging, setMerging] = useState(false)
 
-  // Auto-load FRED + Yahoo on mount / ticker change
   useEffect(() => {
     loadFred()
     loadYahoo()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.ticker, config.horizon])
 
-  // Auto-merge when both sources are ready
   useEffect(() => {
     if (fredState.status === 'success' && yahooState.status === 'success') {
       mergeAndNotify()
@@ -103,7 +60,6 @@ export default function DataPanel({ config, onDataReady }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fredState.status, yahooState.status])
 
-  // ---- FRED ----
   async function loadFred() {
     setFredState({ status: 'loading', data: null, error: null })
     try {
@@ -112,240 +68,63 @@ export default function DataPanel({ config, onDataReady }: Props) {
         const body = await res.json().catch(() => ({})) as { error?: string }
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
-      // API returns FREDSeriesMap: { YIELD_10Y, FED_RATE, VIX } — each is an array of { date, value }
       const body = await res.json() as {
         YIELD_10Y?: { date: string; value: number }[]
         FED_RATE?: { date: string; value: number }[]
         VIX?: { date: string; value: number }[]
       }
       const byDate = new Map<string, FredRow>()
-      for (const obs of body.YIELD_10Y ?? []) {
-        byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, YIELD_10Y: obs.value })
-      }
-      for (const obs of body.FED_RATE ?? []) {
-        byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, FED_RATE: obs.value })
-      }
-      for (const obs of body.VIX ?? []) {
-        byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, VIX: obs.value })
-      }
+      for (const obs of body.YIELD_10Y ?? []) byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, YIELD_10Y: obs.value })
+      for (const obs of body.FED_RATE ?? [])  byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, FED_RATE: obs.value })
+      for (const obs of body.VIX ?? [])       byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, VIX: obs.value })
       const rows = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
       setFredState({ status: 'success', data: rows, error: null })
     } catch (err) {
-      setFredState({
-        status: 'error',
-        data: null,
-        error: err instanceof Error ? err.message : 'Error cargando FRED',
-      })
+      setFredState({ status: 'error', data: null, error: err instanceof Error ? err.message : 'Error cargando FRED' })
     }
   }
 
-  // ---- Yahoo ----
   async function loadYahoo() {
     setYahooState({ status: 'loading', data: null, error: null })
     try {
-      const params = new URLSearchParams({
-        ticker: config.ticker,
-        start: '2010-01-01',
-        horizon: String(config.horizon),
-      })
+      const params = new URLSearchParams({ ticker: config.ticker, start: '2010-01-01', horizon: String(config.horizon) })
       const res = await fetch(`/api/data/yahoo?${params}`)
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { error?: string }
         throw new Error(body.error ?? `HTTP ${res.status}`)
       }
-      // API returns { observations: PriceObservation[] }
       const body = await res.json() as { observations: YahooRow[] }
       setYahooState({ status: 'success', data: body.observations, error: null })
     } catch (err) {
-      setYahooState({
-        status: 'error',
-        data: null,
-        error: err instanceof Error ? err.message : 'Error cargando Yahoo Finance',
-      })
+      setYahooState({ status: 'error', data: null, error: err instanceof Error ? err.message : 'Error cargando Yahoo Finance' })
     }
-  }
-
-  // ---- Upload ----
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploadState({
-      status: 'loading',
-      parseResult: null,
-      confirmedMapping: null,
-      rawRows: null,
-      rawDates: null,
-      error: null,
-    })
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const res = await fetch('/api/data/upload', { method: 'POST', body: formData })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string }
-        throw new Error(body.error ?? `HTTP ${res.status}`)
-      }
-      const body = await res.json() as { parseResult: ParseResult }
-
-      // Build rawRows map for later merge
-      const rawRows: Record<string, number[]> = {}
-      const rawDates: string[] = body.parseResult.columns[0]?.dates ?? []
-      for (const col of body.parseResult.columns) {
-        rawRows[col.originalName] = col.values
-      }
-
-      setUploadState({
-        status: 'success',
-        parseResult: body.parseResult,
-        confirmedMapping: null,
-        rawRows,
-        rawDates: body.parseResult.columns[0]?.dates ?? [],
-        error: null,
-      })
-    } catch (err) {
-      setUploadState({
-        status: 'error',
-        parseResult: null,
-        confirmedMapping: null,
-        rawRows: null,
-        rawDates: null,
-        error: err instanceof Error ? err.message : 'Error procesando archivo',
-      })
-    }
-  }
-
-  function handleMappingConfirmed(mapping: Record<string, string>) {
-    setUploadState((prev) => ({ ...prev, confirmedMapping: mapping }))
-  }
-
-  // ---- Merge ----
-  // Runs when all 3 sources ready and mapping confirmed
-  function allReady(): boolean {
-    return fredState.status === 'success' && yahooState.status === 'success'
-  }
-
-  function hasBloomberg(): boolean {
-    return uploadState.status === 'success' && uploadState.confirmedMapping !== null
   }
 
   function mergeAndNotify() {
-    if (!allReady()) return
+    if (fredState.status !== 'success' || yahooState.status !== 'success') return
     setMerging(true)
-
     try {
-      const fredData = fredState.data!
-      const yahooData = yahooState.data!
-      const { confirmedMapping, rawRows, rawDates, parseResult } = uploadState
+      const fredByQ = new Map<string, FredRow>()
+      for (const row of fredState.data!) fredByQ.set(toQuarter(row.date), row)
 
-      // Build quarter-keyed maps
-      const fredByQ: Map<string, FredRow> = new Map()
-      for (const row of fredData) {
-        fredByQ.set(toQuarter(row.date), row)
-      }
+      const yahooByQ = new Map<string, YahooRow>()
+      for (const row of yahooState.data!) yahooByQ.set(toQuarter(row.date), row)
 
-      const yahooByQ: Map<string, YahooRow> = new Map()
-      for (const row of yahooData) {
-        yahooByQ.set(toQuarter(row.date), row)
-      }
-
-      // Build bloomberg data by quarter using mapping
-      const bloombergByQ: Map<string, Record<string, number>> = new Map()
-      const colNames = parseResult!.columns.map((c) => c.originalName)
-
-      // Determine if rawRows contains raw CAPEX (needs pct_change) or CAPEX_Growth directly
-      const hasRawCapex =
-        rawRows !== null &&
-        Object.entries(confirmedMapping!).some(
-          ([orig, mapped]) => mapped === 'CAPEX_Growth' && orig !== 'CAPEX_Growth'
-        )
-
-      // Pre-compute CAPEX_Growth if needed
-      let capexGrowthValues: number[] | null = null
-      let capexGrowthDates: string[] | null = null
-
-      if (hasRawCapex && rawRows !== null) {
-        const capexEntry = Object.entries(confirmedMapping!).find(
-          ([, mapped]) => mapped === 'CAPEX_Growth'
-        )
-        if (capexEntry) {
-          const [capexOrigName] = capexEntry
-          const rawCapex = rawRows[capexOrigName]
-          if (rawCapex) {
-            capexGrowthValues = computeCapexGrowth(rawCapex)
-            capexGrowthDates = rawDates
+      const merged: DataRow[] = Array.from(fredByQ.keys())
+        .filter((q) => yahooByQ.has(q))
+        .sort()
+        .map((q) => {
+          const fred = fredByQ.get(q)!
+          const yahoo = yahooByQ.get(q)!
+          return {
+            date: quarterToDate(q),
+            YIELD_10Y: fred.YIELD_10Y ?? NaN,
+            FED_RATE: fred.FED_RATE ?? NaN,
+            VIX: fred.VIX ?? NaN,
+            Return: yahoo.logReturn ?? NaN,
+            FutureReturn: yahoo.futureReturn ?? NaN,
           }
-        }
-      }
-
-      if (rawRows !== null && rawDates !== null) {
-        // Use per-column dates (all columns from same file share same date array mostly)
-        // Group by quarter
-        const dateArr = rawDates
-        const numRows = dateArr.length
-
-        for (let i = 0; i < numRows; i++) {
-          const dateStr = dateArr[i]
-          if (!dateStr) continue
-          const q = toQuarter(dateStr)
-
-          const existing = bloombergByQ.get(q) ?? {}
-
-          for (const origName of colNames) {
-            const mapped = confirmedMapping![origName]
-            if (!mapped) continue
-
-            // If this is the CAPEX column that needs pct_change, use precomputed values
-            if (mapped === 'CAPEX_Growth' && hasRawCapex && capexGrowthValues !== null) {
-              const val = capexGrowthValues[i]
-              if (!isNaN(val)) existing[mapped] = val
-            } else {
-              const col = parseResult!.columns.find((c) => c.originalName === origName)
-              if (col && col.dates[i] !== undefined) {
-                const val = col.values[i]
-                if (val !== undefined && !isNaN(val)) existing[mapped] = val
-              }
-            }
-          }
-
-          bloombergByQ.set(q, existing)
-        }
-      }
-
-      // Inner join: FRED + Yahoo required; Bloomberg optional
-      const allQuarters = Array.from(fredByQ.keys()).filter((q) => {
-        if (!yahooByQ.has(q)) return false
-        if (bloombergByQ.size > 0 && !bloombergByQ.has(q)) return false
-        return true
-      })
-
-      allQuarters.sort()
-
-      const merged: DataRow[] = allQuarters.map((q) => {
-        const fred = fredByQ.get(q)!
-        const yahoo = yahooByQ.get(q)!
-        const bloom = bloombergByQ.get(q) ?? {}
-
-        const row: DataRow = {
-          date: quarterToDate(q),
-          // FRED fields
-          YIELD_10Y: fred.YIELD_10Y ?? NaN,
-          FED_RATE: fred.FED_RATE ?? NaN,
-          VIX: fred.VIX ?? NaN,
-          // Yahoo fields — use log return for causal analysis, not absolute price
-          Return: yahoo.logReturn ?? NaN,
-          FutureReturn: yahoo.futureReturn ?? NaN,
-        }
-
-        // Bloomberg fields
-        for (const [key, val] of Object.entries(bloom)) {
-          row[key] = val
-        }
-
-        return row
-      })
+        })
 
       onDataReady(merged)
     } finally {
@@ -353,44 +132,31 @@ export default function DataPanel({ config, onDataReady }: Props) {
     }
   }
 
-  const uploadReady =
-    uploadState.status === 'success' && uploadState.confirmedMapping !== null
-
   return (
     <div className="space-y-4">
-      {/* Two source cards side by side on md+, stacked on mobile */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* FRED Card */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* FRED */}
         <div className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-[#e2e8f0] font-medium text-sm">Datos FRED</h3>
               <p className="text-[#64748b] text-xs mt-0.5">YIELD_10Y · FED_RATE · VIX</p>
             </div>
-            {fredState.status === 'loading' && (
-              <span className="text-xs text-[#64748b] animate-pulse">Cargando...</span>
-            )}
+            {fredState.status === 'loading' && <span className="text-xs text-[#64748b] animate-pulse">Cargando...</span>}
             {fredState.status === 'success' && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88]">
                 ✓ {fredState.data!.length} filas
               </span>
             )}
             {fredState.status === 'error' && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
-                Error
-              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">Error</span>
             )}
           </div>
 
           {fredState.status === 'error' && (
-            <div className="mb-2">
-              <p className="text-xs text-red-400 mb-2">{fredState.error}</p>
-              <button
-                onClick={loadFred}
-                className="px-3 py-1.5 rounded-lg border border-[#1e1e2e] text-[#e2e8f0] text-xs font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] cursor-pointer transition-colors"
-              >
-                Reintentar
-              </button>
+            <div className="mb-2 space-y-1">
+              <p className="text-xs text-red-400">{fredState.error}</p>
+              <button onClick={loadFred} className="text-xs text-[#3b82f6] hover:underline cursor-pointer">Reintentar</button>
             </div>
           )}
 
@@ -420,37 +186,28 @@ export default function DataPanel({ config, onDataReady }: Props) {
           )}
         </div>
 
-        {/* Yahoo Card */}
+        {/* Yahoo */}
         <div className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="text-[#e2e8f0] font-medium text-sm">Yahoo Finance</h3>
               <p className="text-[#64748b] text-xs mt-0.5">{config.ticker} · horizonte {config.horizon}Q</p>
             </div>
-            {yahooState.status === 'loading' && (
-              <span className="text-xs text-[#64748b] animate-pulse">Cargando...</span>
-            )}
+            {yahooState.status === 'loading' && <span className="text-xs text-[#64748b] animate-pulse">Cargando...</span>}
             {yahooState.status === 'success' && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88]">
                 ✓ {yahooState.data!.length} obs
               </span>
             )}
             {yahooState.status === 'error' && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
-                Error
-              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">Error</span>
             )}
           </div>
 
           {yahooState.status === 'error' && (
-            <div className="mb-2">
-              <p className="text-xs text-red-400 mb-2">{yahooState.error}</p>
-              <button
-                onClick={loadYahoo}
-                className="px-3 py-1.5 rounded-lg border border-[#1e1e2e] text-[#e2e8f0] text-xs font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] cursor-pointer transition-colors"
-              >
-                Reintentar
-              </button>
+            <div className="mb-2 space-y-1">
+              <p className="text-xs text-red-400">{yahooState.error}</p>
+              <button onClick={loadYahoo} className="text-xs text-[#3b82f6] hover:underline cursor-pointer">Reintentar</button>
             </div>
           )}
 
@@ -468,14 +225,10 @@ export default function DataPanel({ config, onDataReady }: Props) {
                 <tbody>
                   {yahooState.data.slice(-3).map((row, i) => (
                     <tr key={i} className="text-[#e2e8f0]">
-                      <td className="py-0.5 pr-3">{row.date?.toString().slice(0, 7)}</td>
+                      <td className="py-0.5 pr-3">{String(row.date).slice(0, 7)}</td>
                       <td className="py-0.5 pr-3 text-right">{row.close?.toFixed(2) ?? '—'}</td>
-                      <td className="py-0.5 pr-3 text-right">
-                        {row.logReturn != null ? (row.logReturn * 100).toFixed(1) + '%' : '—'}
-                      </td>
-                      <td className="py-0.5 text-right">
-                        {row.futureReturn != null ? (row.futureReturn * 100).toFixed(1) + '%' : '—'}
-                      </td>
+                      <td className="py-0.5 pr-3 text-right">{row.logReturn != null ? (row.logReturn * 100).toFixed(1) + '%' : '—'}</td>
+                      <td className="py-0.5 text-right">{row.futureReturn != null ? (row.futureReturn * 100).toFixed(1) + '%' : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -485,10 +238,7 @@ export default function DataPanel({ config, onDataReady }: Props) {
         </div>
       </div>
 
-      {/* Merge status — shown instead of button */}
-      {merging && (
-        <p className="text-xs text-[#64748b] text-center animate-pulse">Unificando datos...</p>
-      )}
+      {merging && <p className="text-xs text-[#64748b] text-center animate-pulse">Unificando datos...</p>}
     </div>
   )
 }
