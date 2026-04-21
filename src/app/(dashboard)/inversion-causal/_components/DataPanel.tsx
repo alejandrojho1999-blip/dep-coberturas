@@ -88,12 +88,20 @@ export default function DataPanel({ config, onDataReady }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [merging, setMerging] = useState(false)
 
-  // Auto-load FRED + Yahoo on mount
+  // Auto-load FRED + Yahoo on mount / ticker change
   useEffect(() => {
     loadFred()
     loadYahoo()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.ticker, config.horizon])
+
+  // Auto-merge when both sources are ready
+  useEffect(() => {
+    if (fredState.status === 'success' && yahooState.status === 'success') {
+      mergeAndNotify()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fredState.status, yahooState.status])
 
   // ---- FRED ----
   async function loadFred() {
@@ -350,137 +358,136 @@ export default function DataPanel({ config, onDataReady }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* FRED Card */}
-      <div className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-[#e2e8f0] font-medium text-sm">Datos FRED</h3>
-            <p className="text-[#64748b] text-xs mt-0.5">YIELD_10Y · FED_RATE · VIX</p>
+      {/* Two source cards side by side on md+, stacked on mobile */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* FRED Card */}
+        <div className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-[#e2e8f0] font-medium text-sm">Datos FRED</h3>
+              <p className="text-[#64748b] text-xs mt-0.5">YIELD_10Y · FED_RATE · VIX</p>
+            </div>
+            {fredState.status === 'loading' && (
+              <span className="text-xs text-[#64748b] animate-pulse">Cargando...</span>
+            )}
+            {fredState.status === 'success' && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88]">
+                ✓ {fredState.data!.length} filas
+              </span>
+            )}
+            {fredState.status === 'error' && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
+                Error
+              </span>
+            )}
           </div>
-          {fredState.status === 'success' && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88]">
-              ✓ {fredState.data!.length} filas
-            </span>
-          )}
+
           {fredState.status === 'error' && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
-              Error
-            </span>
+            <div className="mb-2">
+              <p className="text-xs text-red-400 mb-2">{fredState.error}</p>
+              <button
+                onClick={loadFred}
+                className="px-3 py-1.5 rounded-lg border border-[#1e1e2e] text-[#e2e8f0] text-xs font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] cursor-pointer transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+
+          {fredState.status === 'success' && fredState.data && fredState.data.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="text-xs w-full">
+                <thead>
+                  <tr className="text-[#64748b] border-b border-[#1e1e2e]">
+                    <th className="pb-1 pr-3 text-left font-normal">Fecha</th>
+                    <th className="pb-1 pr-3 text-right font-normal">10Y</th>
+                    <th className="pb-1 pr-3 text-right font-normal">FED</th>
+                    <th className="pb-1 text-right font-normal">VIX</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fredState.data.slice(-3).map((row, i) => (
+                    <tr key={i} className="text-[#e2e8f0]">
+                      <td className="py-0.5 pr-3">{row.date.slice(0, 7)}</td>
+                      <td className="py-0.5 pr-3 text-right">{row.YIELD_10Y?.toFixed(2) ?? '—'}</td>
+                      <td className="py-0.5 pr-3 text-right">{row.FED_RATE?.toFixed(2) ?? '—'}</td>
+                      <td className="py-0.5 text-right">{row.VIX?.toFixed(2) ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
-        <button
-          onClick={loadFred}
-          disabled={fredState.status === 'loading'}
-          className="px-4 py-1.5 rounded-lg border border-[#1e1e2e] text-[#e2e8f0] text-xs font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] disabled:opacity-50 transition-colors"
-        >
-          {fredState.status === 'loading' ? 'Cargando...' : 'Cargar datos FRED'}
-        </button>
-
-        {fredState.status === 'error' && (
-          <p className="mt-2 text-xs text-red-400">{fredState.error}</p>
-        )}
-
-        {fredState.status === 'success' && fredState.data && fredState.data.length > 0 && (
-          <div className="mt-3 overflow-x-auto">
-            <table className="text-xs w-full">
-              <thead>
-                <tr className="text-[#64748b] border-b border-[#1e1e2e]">
-                  <th className="pb-1 pr-3 text-left font-normal">Fecha</th>
-                  <th className="pb-1 pr-3 text-right font-normal">YIELD_10Y</th>
-                  <th className="pb-1 pr-3 text-right font-normal">FED_RATE</th>
-                  <th className="pb-1 text-right font-normal">VIX</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fredState.data.slice(-3).map((row, i) => (
-                  <tr key={i} className="text-[#e2e8f0]">
-                    <td className="py-0.5 pr-3">{row.date}</td>
-                    <td className="py-0.5 pr-3 text-right">{row.YIELD_10Y?.toFixed(2) ?? '—'}</td>
-                    <td className="py-0.5 pr-3 text-right">{row.FED_RATE?.toFixed(2) ?? '—'}</td>
-                    <td className="py-0.5 text-right">{row.VIX?.toFixed(2) ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Yahoo Card */}
+        <div className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-[#e2e8f0] font-medium text-sm">Yahoo Finance</h3>
+              <p className="text-[#64748b] text-xs mt-0.5">{config.ticker} · horizonte {config.horizon}Q</p>
+            </div>
+            {yahooState.status === 'loading' && (
+              <span className="text-xs text-[#64748b] animate-pulse">Cargando...</span>
+            )}
+            {yahooState.status === 'success' && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88]">
+                ✓ {yahooState.data!.length} obs
+              </span>
+            )}
+            {yahooState.status === 'error' && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
+                Error
+              </span>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Yahoo Card */}
-      <div className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-[#e2e8f0] font-medium text-sm">Precios Yahoo Finance</h3>
-            <p className="text-[#64748b] text-xs mt-0.5">{config.ticker} — {config.horizon}Q horizon</p>
-          </div>
-          {yahooState.status === 'success' && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88]">
-              ✓ {yahooState.data!.length} obs
-            </span>
-          )}
           {yahooState.status === 'error' && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
-              Error
-            </span>
+            <div className="mb-2">
+              <p className="text-xs text-red-400 mb-2">{yahooState.error}</p>
+              <button
+                onClick={loadYahoo}
+                className="px-3 py-1.5 rounded-lg border border-[#1e1e2e] text-[#e2e8f0] text-xs font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] cursor-pointer transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+
+          {yahooState.status === 'success' && yahooState.data && yahooState.data.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="text-xs w-full">
+                <thead>
+                  <tr className="text-[#64748b] border-b border-[#1e1e2e]">
+                    <th className="pb-1 pr-3 text-left font-normal">Fecha</th>
+                    <th className="pb-1 pr-3 text-right font-normal">Precio</th>
+                    <th className="pb-1 pr-3 text-right font-normal">LogRet</th>
+                    <th className="pb-1 text-right font-normal">FutRet</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {yahooState.data.slice(-3).map((row, i) => (
+                    <tr key={i} className="text-[#e2e8f0]">
+                      <td className="py-0.5 pr-3">{row.date?.toString().slice(0, 7)}</td>
+                      <td className="py-0.5 pr-3 text-right">{row.close?.toFixed(2) ?? '—'}</td>
+                      <td className="py-0.5 pr-3 text-right">
+                        {row.logReturn != null ? (row.logReturn * 100).toFixed(1) + '%' : '—'}
+                      </td>
+                      <td className="py-0.5 text-right">
+                        {row.futureReturn != null ? (row.futureReturn * 100).toFixed(1) + '%' : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-
-        <button
-          onClick={loadYahoo}
-          disabled={yahooState.status === 'loading'}
-          className="px-4 py-1.5 rounded-lg border border-[#1e1e2e] text-[#e2e8f0] text-xs font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] disabled:opacity-50 transition-colors"
-        >
-          {yahooState.status === 'loading' ? 'Cargando...' : 'Cargar precios'}
-        </button>
-
-        {yahooState.status === 'error' && (
-          <p className="mt-2 text-xs text-red-400">{yahooState.error}</p>
-        )}
-
-        {yahooState.status === 'success' && yahooState.data && yahooState.data.length > 0 && (
-          <div className="mt-3 overflow-x-auto">
-            <table className="text-xs w-full">
-              <thead>
-                <tr className="text-[#64748b] border-b border-[#1e1e2e]">
-                  <th className="pb-1 pr-3 text-left font-normal">Fecha</th>
-                  <th className="pb-1 pr-3 text-right font-normal">Precio</th>
-                  <th className="pb-1 pr-3 text-right font-normal">Log Return</th>
-                  <th className="pb-1 text-right font-normal">Future Return</th>
-                </tr>
-              </thead>
-              <tbody>
-                {yahooState.data.slice(-3).map((row, i) => (
-                  <tr key={i} className="text-[#e2e8f0]">
-                    <td className="py-0.5 pr-3">{row.date}</td>
-                    <td className="py-0.5 pr-3 text-right">{row.close?.toFixed(2) ?? '—'}</td>
-                    <td className="py-0.5 pr-3 text-right">
-                      {row.logReturn != null ? (row.logReturn * 100).toFixed(2) + '%' : '—'}
-                    </td>
-                    <td className="py-0.5 text-right">
-                      {row.futureReturn != null ? (row.futureReturn * 100).toFixed(2) + '%' : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
-      {/* Merge button */}
-      {allReady() && (
-        <button
-          onClick={mergeAndNotify}
-          disabled={merging}
-          className="w-full px-4 py-2.5 rounded-lg border border-[#00ff88]/30 text-[#00ff88] text-sm font-medium hover:bg-[#00ff88]/5 disabled:opacity-50 transition-colors"
-        >
-          {merging
-        ? 'Unificando datos...'
-        : hasBloomberg()
-          ? 'Unificar (FRED + Yahoo + Bloomberg)'
-          : 'Unificar (FRED + Yahoo)'}
-        </button>
+      {/* Merge status — shown instead of button */}
+      {merging && (
+        <p className="text-xs text-[#64748b] text-center animate-pulse">Unificando datos...</p>
       )}
     </div>
   )

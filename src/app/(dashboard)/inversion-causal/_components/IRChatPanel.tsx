@@ -132,7 +132,7 @@ export default function IRChatPanel({ assetId, ticker, open, onClose }: Props) {
                   key={q}
                   type="button"
                   onClick={() => sendMessage(q)}
-                  className="w-full text-left px-3 py-2 rounded-lg border border-[#1e1e2e] text-xs text-[#64748b] hover:border-[#3b82f6] hover:text-[#e2e8f0] transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-lg border border-[#1e1e2e] text-xs text-[#64748b] hover:border-[#3b82f6] hover:text-[#e2e8f0] cursor-pointer transition-colors"
                 >
                   {q}
                 </button>
@@ -176,7 +176,7 @@ export default function IRChatPanel({ assetId, ticker, open, onClose }: Props) {
             type="button"
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || loading}
-            className="px-3 py-2 rounded-lg bg-[#3b82f6] text-white text-sm font-semibold hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-2 rounded-lg bg-[#3b82f6] text-white text-sm font-semibold hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
           >
             →
           </button>

@@ -97,7 +97,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-5 py-3 text-sm font-medium transition-colors ${
+            className={`px-4 py-3 text-sm font-medium transition-colors cursor-pointer ${
               activeTab === tab.id
                 ? 'text-[#00ff88] border-b-2 border-[#00ff88]'
                 : 'text-[#64748b] hover:text-[#e2e8f0]'
@@ -122,7 +122,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
                 <button
                   onClick={handleRunAnalysis}
                   disabled={loading}
-                  className="px-5 py-2 rounded-lg bg-[#00ff88] text-[#0a0a0f] text-sm font-semibold hover:bg-[#00ff88]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-5 py-2 rounded-lg bg-[#00ff88] text-[#0a0a0f] text-sm font-semibold hover:bg-[#00ff88]/90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
                   {loading ? 'Ejecutando...' : 'Ejecutar Análisis'}
                 </button>

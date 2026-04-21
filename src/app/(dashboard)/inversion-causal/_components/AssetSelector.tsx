@@ -38,7 +38,7 @@ export default function AssetSelector({ assets, activeId, onSelect, onNewAsset, 
               className={`flex items-center gap-2 px-4 py-2 pr-8 rounded-xl border text-sm font-medium transition-colors ${
                 activeId === asset.id
                   ? 'border-[#00ff88] bg-[#00ff88]/10 text-[#e2e8f0]'
-                  : 'border-[#1e1e2e] bg-[#12121a] text-[#64748b] hover:border-[#3b82f6] hover:text-[#e2e8f0]'
+                  : 'border-[#1e1e2e] bg-[#12121a] text-[#64748b] hover:border-[#3b82f6] hover:text-[#e2e8f0] cursor-pointer'
               }`}
             >
               <span>{asset.ticker}</span>
@@ -62,7 +62,7 @@ export default function AssetSelector({ assets, activeId, onSelect, onNewAsset, 
         <button
           type="button"
           onClick={onNewAsset}
-          className="px-4 py-2 rounded-xl border border-dashed border-[#1e1e2e] text-[#64748b] text-sm font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] transition-colors"
+          className="px-4 py-2 rounded-xl border border-dashed border-[#1e1e2e] text-[#64748b] text-sm font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] cursor-pointer transition-colors"
         >
           + Nuevo activo
         </button>

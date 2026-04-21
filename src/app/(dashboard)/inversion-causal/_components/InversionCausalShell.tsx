@@ -87,7 +87,7 @@ export default function InversionCausalShell({ initialAssets, userId }: Props) {
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-[#3b82f6] text-white text-sm font-semibold shadow-lg hover:bg-[#2563eb] transition-colors"
+              className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-[#3b82f6] text-white text-sm font-semibold shadow-lg hover:bg-[#2563eb] cursor-pointer transition-colors"
             >
               <span>💬</span>
               <span>Analista IA — {activeAsset.ticker}</span>
