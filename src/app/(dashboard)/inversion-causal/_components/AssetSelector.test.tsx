@@ -15,6 +15,7 @@ describe('AssetSelector', () => {
         activeId="a1"
         onSelect={vi.fn()}
         onNewAsset={vi.fn()}
+        onDelete={vi.fn()}
       />
     )
     expect(screen.getByText('AAPL')).toBeInTheDocument()
@@ -29,6 +30,7 @@ describe('AssetSelector', () => {
         activeId="a1"
         onSelect={onSelect}
         onNewAsset={vi.fn()}
+        onDelete={vi.fn()}
       />
     )
     fireEvent.click(screen.getByText('MSFT'))
@@ -43,6 +45,7 @@ describe('AssetSelector', () => {
         activeId="a1"
         onSelect={vi.fn()}
         onNewAsset={onNewAsset}
+        onDelete={vi.fn()}
       />
     )
     fireEvent.click(screen.getByText('+ Nuevo activo'))
@@ -56,6 +59,7 @@ describe('AssetSelector', () => {
         activeId="a1"
         onSelect={vi.fn()}
         onNewAsset={vi.fn()}
+        onDelete={vi.fn()}
       />
     )
     const pills = container.querySelectorAll('button')
@@ -70,6 +74,7 @@ describe('AssetSelector', () => {
         activeId="a1"
         onSelect={vi.fn()}
         onNewAsset={vi.fn()}
+        onDelete={vi.fn()}
       />
     )
     expect(screen.getByText('72')).toBeInTheDocument()
@@ -82,6 +87,7 @@ describe('AssetSelector', () => {
         activeId="a1"
         onSelect={vi.fn()}
         onNewAsset={vi.fn()}
+        onDelete={vi.fn()}
       />
     )
     expect(screen.queryByText('72')).not.toBeInTheDocument()

@@ -210,7 +210,9 @@ describe('POST /api/causal/assets', () => {
         name: 'Apple Inc.',
         treatment: 'CAPEX_Growth',
         outcome: 'Future_Return',
+        horizon: 2,
         confounders: ['FED_RATE', 'VIX'],
+        excluded: {},
         dagEdges: [],
       }
 
@@ -265,7 +267,9 @@ describe('POST /api/causal/assets', () => {
         name: 'Apple Inc.',
         treatment: 'CAPEX_Growth',
         outcome: 'Future_Return',
+        horizon: 2,
         confounders: [],
+        excluded: {},
         dagEdges: [],
       }
 
@@ -473,7 +477,9 @@ describe('POST /api/causal/assets', () => {
         name: 'Microsoft',
         treatment: 'R&D_Spend',
         outcome: 'Revenue_Growth',
+        horizon: 2,
         confounders: ['Tech_Index'],
+        excluded: {},
         dagEdges: [],
       }
 
