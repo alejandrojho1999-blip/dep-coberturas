@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { CausalConfig, DataRow } from '@/lib/causal/types'
 import type { ParseResult } from '@/lib/data/parser'
 import ColumnMapper from './ColumnMapper'
@@ -87,6 +87,13 @@ export default function DataPanel({ config, onDataReady }: Props) {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [merging, setMerging] = useState(false)
+
+  // Auto-load FRED + Yahoo on mount
+  useEffect(() => {
+    loadFred()
+    loadYahoo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.ticker, config.horizon])
 
   // ---- FRED ----
   async function loadFred() {
@@ -457,66 +464,6 @@ export default function DataPanel({ config, onDataReady }: Props) {
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-      </div>
-
-      {/* Upload Card */}
-      <div className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-[#e2e8f0] font-medium text-sm">Datos Bloomberg</h3>
-            <p className="text-[#64748b] text-xs mt-0.5">Subir archivo .xlsx o .csv</p>
-          </div>
-          {uploadState.status === 'success' && uploadState.confirmedMapping && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88]">
-              ✓ Mapeo confirmado
-            </span>
-          )}
-          {uploadState.status === 'error' && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
-              Error
-            </span>
-          )}
-        </div>
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadState.status === 'loading'}
-          className="px-4 py-1.5 rounded-lg border border-[#1e1e2e] text-[#e2e8f0] text-xs font-medium hover:border-[#3b82f6] hover:text-[#3b82f6] disabled:opacity-50 transition-colors"
-        >
-          {uploadState.status === 'loading' ? 'Procesando...' : 'Seleccionar archivo'}
-        </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-        {uploadState.status === 'error' && (
-          <p className="mt-2 text-xs text-red-400">{uploadState.error}</p>
-        )}
-
-        {uploadState.status === 'success' && uploadState.parseResult && !uploadState.confirmedMapping && (
-          <div className="mt-4">
-            <ColumnMapper
-              parseResult={uploadState.parseResult}
-              onMappingConfirmed={handleMappingConfirmed}
-            />
-          </div>
-        )}
-
-        {uploadState.confirmedMapping && (
-          <div className="mt-3 space-y-1">
-            {Object.entries(uploadState.confirmedMapping).map(([orig, mapped]) => (
-              <p key={orig} className="text-xs text-[#64748b]">
-                <span className="font-mono text-[#e2e8f0]">{orig}</span>{' '}
-                → <span className="text-[#3b82f6]">{mapped}</span>
-              </p>
-            ))}
           </div>
         )}
       </div>

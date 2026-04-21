@@ -11,6 +11,7 @@ import PortfolioScorePanel from './PortfolioScore'
 import BacktestPanelComponent from './BacktestPanel'
 import PlaceboPanelComponent from './PlaceboPanel'
 import ResultsHistory from './ResultsHistory'
+import CausalPillars from './CausalPillars'
 
 interface Props {
   config: CausalConfig
@@ -87,6 +88,9 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
 
   return (
     <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
+      {/* 4 pillars — always visible */}
+      <CausalPillars config={config} />
+
       {/* Tab bar */}
       <div className="flex border-b border-[#1e1e2e]">
         {tabs.map((tab) => (
