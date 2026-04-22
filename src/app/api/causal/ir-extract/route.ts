@@ -1,33 +1,64 @@
+import { createClient } from '@/lib/supabase/server'
+
 const SECTOR_TREATMENTS: Record<string, { treatment: string; label: string }> = {
-  Technology:          { treatment: 'RND_Growth',     label: 'Crecimiento en I+D (YoY)' },
-  'Basic Materials':   { treatment: 'AISC_Change',    label: 'Cambio en AISC ($/oz)' },
-  Energy:              { treatment: 'CAPEX_Growth',   label: 'Crecimiento en CAPEX (YoY)' },
-  'Financial Services':{ treatment: 'NIM_Change',     label: 'Cambio en Margen Neto de Interés' },
-  Financials:          { treatment: 'NIM_Change',     label: 'Cambio en Margen Neto de Interés' },
-  Healthcare:          { treatment: 'RND_Growth',     label: 'Crecimiento en I+D (YoY)' },
-  Mining:              { treatment: 'AISC_Change',    label: 'Cambio en AISC ($/oz)' },
+  Technology:           { treatment: 'RND_Growth',   label: 'Crecimiento en I+D (YoY)' },
+  'Basic Materials':    { treatment: 'AISC_Change',  label: 'Cambio en AISC ($/oz)' },
+  Energy:               { treatment: 'CAPEX_Growth', label: 'Crecimiento en CAPEX (YoY)' },
+  'Financial Services': { treatment: 'NIM_Change',   label: 'Cambio en Margen Neto de Interés' },
+  Financials:           { treatment: 'NIM_Change',   label: 'Cambio en Margen Neto de Interés' },
+  Healthcare:           { treatment: 'RND_Growth',   label: 'Crecimiento en I+D (YoY)' },
+  Mining:               { treatment: 'AISC_Change',  label: 'Cambio en AISC ($/oz)' },
 }
+
+interface ExtractedVariable {
+  variable: string
+  label: string
+  rationale: string
+}
+
+const DEFAULT_CONFOUNDERS: ExtractedVariable[] = [
+  { variable: 'YIELD_10Y', label: 'Tasa bono 10Y EEUU', rationale: 'Tasa libre de riesgo que afecta valuación DCF' },
+  { variable: 'FED_RATE',  label: 'Tasa de política Fed', rationale: 'Costo del capital afecta múltiplos y decisiones de inversión' },
+  { variable: 'VIX',       label: 'Índice de volatilidad VIX', rationale: 'Sentimiento de mercado y aversión al riesgo' },
+]
+
+const DEFAULT_COLLIDERS: ExtractedVariable[] = [
+  { variable: 'PE_RATIO',      label: 'Price/Earnings ratio', rationale: 'Endógeno al precio — colisionador clásico' },
+  { variable: 'PX_TO_BOOK',   label: 'Price/Book ratio',      rationale: 'Precio de mercado causa tanto P/B como retorno futuro' },
+]
 
 const DEEPSEEK_SYSTEM = (ticker: string, sector: string) => `
 Eres un analista financiero causal experto en el framework de López de Prado (2025).
-Tu tarea es identificar la variable de TRATAMIENTO más relevante para analizar
-el impacto causal en el retorno futuro de la acción ${ticker} en el sector ${sector}.
+Analiza la página de Investor Relations de ${ticker} (sector: ${sector}) e identifica:
 
-Variables de tratamiento candidatas (según sector):
-- Technology / Healthcare: RND_Growth (crecimiento YoY en I+D)
-- Mining / Basic Materials: AISC_Change (cambio en All-In Sustaining Cost $/oz)
-- Energy: CAPEX_Growth (crecimiento YoY en CAPEX)
-- Financial Services / Financials: NIM_Change (cambio en Net Interest Margin)
-- Default (cualquier otro): Revenue_Growth (crecimiento YoY en ingresos)
+1. TRATAMIENTO: la variable de negocio más relevante que CAUSA causalmente el retorno futuro.
+   Candidatos por sector: Technology/Healthcare→RND_Growth, Mining/Materials→AISC_Change,
+   Energy→CAPEX_Growth, Financial→NIM_Change, Default→Revenue_Growth.
 
-Basándote en el contenido de la página de Investor Relations, selecciona la variable
-más apropiada y justifica brevemente.
+2. CONFUSORES: variables que afectan TANTO al tratamiento COMO al retorno futuro (deben controlarse).
+   Siempre incluir: YIELD_10Y, FED_RATE, VIX. Añadir 1-2 específicas del sector si aplica.
+
+3. COLISIONADORES: variables afectadas por el tratamiento O por el retorno futuro (NO controlar, excluir).
+   Ejemplos típicos: PE_RATIO, PX_TO_BOOK, EV_EBITDA, Net_Income (si es descendiente de la inversión).
 
 Responde EXCLUSIVAMENTE en JSON válido sin markdown:
-{"treatment":"VARIABLE_NAME","label":"Descripción legible","rationale":"Una oración de justificación"}
+{
+  "treatment": "VARIABLE_NAME",
+  "label": "Descripción legible",
+  "rationale": "Una oración",
+  "confounders": [
+    {"variable": "NOMBRE_VARIABLE", "label": "Descripción", "rationale": "Por qué es confusor"}
+  ],
+  "colliders": [
+    {"variable": "NOMBRE_VARIABLE", "label": "Descripción", "rationale": "Por qué es colisionador"}
+  ]
+}
 `.trim()
 
 export async function POST(request: Request): Promise<Response> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   const body = await request.json() as {
     irUrl?: string
     ticker?: string
@@ -39,8 +70,8 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Missing ticker or sector' }, { status: 400 })
   }
 
+  // Fetch IR page content
   let irContent = ''
-
   if (irUrl && !irUrl.includes('google.com/search')) {
     try {
       const res = await fetch(irUrl, { signal: AbortSignal.timeout(8000) })
@@ -49,15 +80,20 @@ export async function POST(request: Request): Promise<Response> {
         irContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 8000)
       }
     } catch {
-      // ignore fetch errors — fallback to sector default
+      // ignore — fallback to sector defaults
     }
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY
-  let treatment = SECTOR_TREATMENTS[sector]?.treatment ?? 'Revenue_Growth'
-  let label = SECTOR_TREATMENTS[sector]?.label ?? 'Crecimiento en Ingresos (YoY)'
+  // Defaults
+  const sectorDefault = SECTOR_TREATMENTS[sector]
+  let treatment = sectorDefault?.treatment ?? 'Revenue_Growth'
+  let label = sectorDefault?.label ?? 'Crecimiento en Ingresos (YoY)'
   let rationale = `Seleccionado por sector: ${sector}`
+  let confounders: ExtractedVariable[] = DEFAULT_CONFOUNDERS
+  let colliders: ExtractedVariable[] = DEFAULT_COLLIDERS
 
+  // Try AI extraction
+  const apiKey = process.env.OPENROUTER_API_KEY
   if (apiKey && irContent) {
     try {
       const aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -74,7 +110,7 @@ export async function POST(request: Request): Promise<Response> {
             { role: 'system', content: DEEPSEEK_SYSTEM(ticker, sector) },
             { role: 'user', content: `Contenido de la página IR:\n${irContent}` },
           ],
-          max_tokens: 200,
+          max_tokens: 600,
           temperature: 0.1,
         }),
         signal: AbortSignal.timeout(20000),
@@ -89,15 +125,52 @@ export async function POST(request: Request): Promise<Response> {
           treatment?: string
           label?: string
           rationale?: string
+          confounders?: ExtractedVariable[]
+          colliders?: ExtractedVariable[]
         }
         if (parsed.treatment) treatment = parsed.treatment
         if (parsed.label) label = parsed.label
         if (parsed.rationale) rationale = parsed.rationale
+        if (Array.isArray(parsed.confounders) && parsed.confounders.length > 0) {
+          confounders = parsed.confounders
+        }
+        if (Array.isArray(parsed.colliders) && parsed.colliders.length > 0) {
+          colliders = parsed.colliders
+        }
       }
     } catch {
-      // use sector defaults if AI fails
+      // keep defaults
     }
   }
 
-  return Response.json({ treatment, label, rationale, irContent })
+  // Save extracted variables to causal_variables if user is authenticated
+  if (user) {
+    const tickerUpper = ticker.toUpperCase()
+    const rows = [
+      ...confounders.map((c) => ({
+        user_id: user.id,
+        ticker: tickerUpper,
+        variable: c.variable,
+        type: 'confounder' as const,
+        source: 'auto' as const,
+        label: c.label,
+        rationale: c.rationale,
+      })),
+      ...colliders.map((c) => ({
+        user_id: user.id,
+        ticker: tickerUpper,
+        variable: c.variable,
+        type: 'collider' as const,
+        source: 'auto' as const,
+        label: c.label,
+        rationale: c.rationale,
+      })),
+    ]
+    // upsert — silently ignore duplicates
+    await supabase
+      .from('causal_variables')
+      .upsert(rows, { onConflict: 'user_id,ticker,variable,type' })
+  }
+
+  return Response.json({ treatment, label, rationale, irContent, confounders, colliders })
 }
