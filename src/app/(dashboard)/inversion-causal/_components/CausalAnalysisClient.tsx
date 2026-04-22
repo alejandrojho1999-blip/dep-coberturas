@@ -12,6 +12,7 @@ import BacktestPanelComponent from './BacktestPanel'
 import PlaceboPanelComponent from './PlaceboPanel'
 import ResultsHistory from './ResultsHistory'
 import CausalPillars from './CausalPillars'
+import VariableSelector from './VariableSelector'
 
 interface Props {
   config: CausalConfig
@@ -28,6 +29,8 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
   const [pcResult, setPcResult] = useState<PCResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [configOverride, setConfigOverride] = useState<Partial<CausalConfig> | null>(null)
+  const effectiveConfig: CausalConfig = configOverride ? { ...config, ...configOverride } : config
 
   async function handleRunAnalysis() {
     if (!mergedData) return
@@ -37,7 +40,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
       const res = await fetch('/api/causal/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assetId, config, data: mergedData }),
+        body: JSON.stringify({ assetId, config: effectiveConfig, data: mergedData }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -47,7 +50,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
       setPipelineResult(body.result)
 
       // Run PC algorithm in background after results are shown
-      const variables = [config.treatment, config.outcome, ...config.confounders]
+      const variables = [effectiveConfig.treatment, effectiveConfig.outcome, ...effectiveConfig.confounders]
       const dataByVar: Record<string, number[]> = Object.fromEntries(
         variables.map((v) => [v, [] as number[]])
       )
@@ -89,7 +92,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
   return (
     <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
       {/* 4 pillars — always visible */}
-      <CausalPillars config={config} />
+      <CausalPillars config={effectiveConfig} />
 
       {/* Tab bar */}
       <div className="flex border-b border-[#1e1e2e]">
@@ -112,7 +115,18 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
       <div className="p-6">
         {activeTab === 'data' && (
           <div className="space-y-6">
-            <DataPanel config={config} onDataReady={setMergedData} />
+            <DataPanel config={effectiveConfig} onDataReady={setMergedData} />
+
+            {hasRealAsset && assetId && (
+              <VariableSelector
+                ticker={config.ticker}
+                currentConfounders={effectiveConfig.confounders}
+                currentColliders={effectiveConfig.excluded}
+                onApply={(confounders, colliders) =>
+                  setConfigOverride((prev) => ({ ...prev, confounders, excluded: colliders }))
+                }
+              />
+            )}
 
             {mergedData && (
               <div className="flex items-center gap-4">
@@ -136,7 +150,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
         )}
 
         {activeTab === 'dag' && (
-          <DagPanel config={config} pcResult={pcResult ?? undefined} />
+          <DagPanel config={effectiveConfig} pcResult={pcResult ?? undefined} />
         )}
 
         {activeTab === 'results' && (

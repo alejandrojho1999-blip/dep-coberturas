@@ -140,6 +140,14 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
       setIrStatus('done')
     } catch {
       setIrStatus('error')
+      setConfounders([
+        { variable: 'YIELD_10Y', label: 'Tasa bono 10Y EEUU', rationale: 'Macro que afecta valuación DCF', source: 'auto' },
+        { variable: 'FED_RATE',  label: 'Tasa de política Fed', rationale: 'Costo del capital afecta múltiplos', source: 'auto' },
+        { variable: 'VIX',       label: 'Índice de volatilidad VIX', rationale: 'Sentimiento de mercado', source: 'auto' },
+      ])
+      setColliders([
+        { variable: 'PE_RATIO', label: 'P/E ratio', rationale: 'Endógeno al precio de mercado', source: 'auto' },
+      ])
     }
   }
 
@@ -270,21 +278,30 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
         </div>
       )}
 
+      {/* Treatment summary — only when IR succeeded */}
       {irStatus === 'done' && irInfo && (
-        <div className="space-y-4">
-          {/* Treatment summary */}
-          <div className="bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg px-3 py-3 space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[#00ff88] text-xs">✓ Tratamiento identificado</span>
-              <span className="ml-auto text-xs text-[#64748b]">{irInfo.sector}</span>
-            </div>
-            <div className="font-mono text-sm text-[#3b82f6]">{irInfo.treatment}</div>
-            <div className="text-xs text-[#64748b]">{irInfo.treatmentLabel}</div>
-            {irInfo.rationale && (
-              <div className="text-xs text-[#64748b] italic border-t border-[#1e1e2e] pt-2">{irInfo.rationale}</div>
-            )}
+        <div className="bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg px-3 py-3 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[#00ff88] text-xs">✓ Tratamiento identificado</span>
+            <span className="ml-auto text-xs text-[#64748b]">{irInfo.sector}</span>
           </div>
+          <div className="font-mono text-sm text-[#3b82f6]">{irInfo.treatment}</div>
+          <div className="text-xs text-[#64748b]">{irInfo.treatmentLabel}</div>
+          {irInfo.rationale && (
+            <div className="text-xs text-[#64748b] italic border-t border-[#1e1e2e] pt-2">{irInfo.rationale}</div>
+          )}
+        </div>
+      )}
 
+      {irStatus === 'error' && (
+        <div className="text-xs text-yellow-400 bg-yellow-500/10 px-3 py-2 rounded-lg">
+          No se pudo detectar IR automáticamente. Se usarán confusores macro por defecto.
+        </div>
+      )}
+
+      {/* Confounders + Colliders — shown on success OR error (always editable) */}
+      {(irStatus === 'done' || irStatus === 'error') && (
+        <div className="space-y-4">
           {/* Confounders */}
           <div className="bg-[#0a0a0f] border border-[#f59e0b]/30 rounded-lg px-3 py-3 space-y-2">
             <div className="flex items-center gap-1.5 mb-1">
@@ -375,12 +392,6 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {irStatus === 'error' && (
-        <div className="text-xs text-yellow-400 bg-yellow-500/10 px-3 py-2 rounded-lg">
-          No se pudo detectar IR automáticamente. Se usarán confusores macro por defecto.
         </div>
       )}
 

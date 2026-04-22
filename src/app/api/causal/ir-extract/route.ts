@@ -113,7 +113,7 @@ export async function POST(request: Request): Promise<Response> {
           max_tokens: 600,
           temperature: 0.1,
         }),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(12000),
       })
 
       if (aiRes.ok) {
