@@ -25,49 +25,67 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Missing or empty required field: data' }, { status: 400 })
   }
 
-  // Step 3: Backdoor criterion (adjustment set)
-  const { adjustmentSet, backdoorPaths, validation } = backdoorCriterion(config)
-
-  // Step 4: Model estimation
-  const models = compareModels(data, config)
-
-  // Extract causal model
-  const causalModel = models.causal
-
-  // Step 5: Portfolio score using last row as latest values
-  const latestData = data[data.length - 1]
-  const portfolio = computeCausalScore(causalModel, latestData, config)
-
-  // Step 6: Backtest
-  const backtest = runBacktest(data, config, adjustmentSet)
-
-  // Step 7: Multiple testing
-  const multipleTesting = runMultipleTesting(data, config, adjustmentSet, causalModel)
-
-  const result: PipelineResult = {
-    config,
-    adjustmentSet,
-    backdoorPaths,
-    models,
-    portfolio,
-    backtest,
-    multipleTesting,
-    runAt: new Date().toISOString(),
+  // Validate that the treatment variable exists in at least some rows
+  const treatmentRows = data.filter((row) => {
+    const v = row[config.treatment]
+    return typeof v === 'number' && isFinite(v)
+  })
+  if (treatmentRows.length < 5) {
+    return Response.json(
+      {
+        error: `La variable de tratamiento "${config.treatment}" no tiene datos suficientes en las filas combinadas (${treatmentRows.length} filas válidas). Esta variable debe provenir de una fuente de datos adicional no incluida en FRED/Yahoo Finance.`,
+      },
+      { status: 400 },
+    )
   }
 
-  // Save to Supabase if assetId provided
-  if (assetId) {
-    await supabase.from('causal_results').insert({ asset_id: assetId, result })
-    // Update last_score and last_signal on the asset
-    await supabase
-      .from('causal_assets')
-      .update({
-        last_score: portfolio.score,
-        last_signal: portfolio.signal,
-        last_run_at: result.runAt,
-      })
-      .eq('id', assetId)
-  }
+  try {
+    // Step 3: Backdoor criterion (adjustment set)
+    const { adjustmentSet, backdoorPaths } = backdoorCriterion(config)
 
-  return Response.json({ result })
+    // Step 4: Model estimation
+    const models = compareModels(data, config)
+
+    // Extract causal model
+    const causalModel = models.causal
+
+    // Step 5: Portfolio score using last row as latest values
+    const latestData = data[data.length - 1]
+    const portfolio = computeCausalScore(causalModel, latestData, config)
+
+    // Step 6: Backtest
+    const backtest = runBacktest(data, config, adjustmentSet)
+
+    // Step 7: Multiple testing
+    const multipleTesting = runMultipleTesting(data, config, adjustmentSet, causalModel)
+
+    const result: PipelineResult = {
+      config,
+      adjustmentSet,
+      backdoorPaths,
+      models,
+      portfolio,
+      backtest,
+      multipleTesting,
+      runAt: new Date().toISOString(),
+    }
+
+    // Save to Supabase if assetId provided
+    if (assetId) {
+      await supabase.from('causal_results').insert({ asset_id: assetId, result })
+      await supabase
+        .from('causal_assets')
+        .update({
+          last_score: portfolio.score,
+          last_signal: portfolio.signal,
+          last_run_at: result.runAt,
+        })
+        .eq('id', assetId)
+    }
+
+    return Response.json({ result })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error inesperado en el pipeline causal'
+    return Response.json({ error: message }, { status: 500 })
+  }
 }

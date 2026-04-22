@@ -61,38 +61,40 @@ const DEFAULT_PROFILE: SectorProfile = {
   },
 }
 
+// Treatment and confounders use variables available in the merged FRED+Yahoo dataset.
+// Sector-specific fundamental treatments (RND_Growth, AISC_Change, etc.) require
+// a financial fundamentals data source not yet implemented — FED_RATE is used as
+// the macro treatment proxy that is always present.
+const AVAILABLE_TREATMENT = 'FED_RATE'
+const AVAILABLE_CONFOUNDERS = ['YIELD_10Y', 'VIX']
+
 export function buildCausalConfig(
   ticker: string,
   name: string,
   sector: string,
-  treatment: string,
+  _treatment: string,
   horizon = 2,
 ): CausalConfig {
   const profile = SECTOR_PROFILES[sector] ?? DEFAULT_PROFILE
-  const outcome = 'Future_Return'
+  const treatment = AVAILABLE_TREATMENT
+  const confounders = AVAILABLE_CONFOUNDERS
+  const outcome = 'FutureReturn'
 
   const dagEdges: DAGEdge[] = [
     // Macro confounders → treatment
-    ...profile.confounders.map((c) => ({
+    ...confounders.map((c) => ({
       from: c,
       to: treatment,
       label: `${c} → ${treatment}`,
     })),
     // Treatment → outcome (direct causal path)
-    { from: treatment, to: outcome, label: 'Señal causal directa' },
+    { from: treatment, to: outcome, label: 'Política monetaria → retorno futuro' },
     // Macro confounders → outcome
-    ...profile.confounders.map((c) => ({
+    ...confounders.map((c) => ({
       from: c,
       to: outcome,
       label: `${c} → retorno`,
     })),
-    // Mediator path if present
-    ...(profile.mediator
-      ? [
-          { from: treatment, to: profile.mediator, label: `${treatment} → ${profile.mediator}` },
-          { from: profile.mediator, to: outcome, label: `${profile.mediator} → retorno` },
-        ]
-      : []),
   ]
 
   return {
@@ -101,9 +103,8 @@ export function buildCausalConfig(
     treatment,
     outcome,
     horizon,
-    confounders: profile.confounders,
+    confounders,
     excluded: profile.excluded,
-    mediators: profile.mediator ? [profile.mediator] : undefined,
     dagEdges,
   }
 }
