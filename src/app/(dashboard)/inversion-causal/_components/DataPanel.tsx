@@ -82,9 +82,18 @@ export default function DataPanel({ config, onDataReady }: Props) {
         VIX?: { date: string; value: number }[]
       }
       const byDate = new Map<string, FredRow>()
-      for (const obs of body.YIELD_10Y ?? []) byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, YIELD_10Y: obs.value })
-      for (const obs of body.FED_RATE ?? []) byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, FED_RATE: obs.value })
-      for (const obs of body.VIX ?? []) byDate.set(obs.date, { ...byDate.get(obs.date), date: obs.date, VIX: obs.value })
+      for (const obs of body.YIELD_10Y ?? []) {
+        const q = toQuarter(obs.date)
+        byDate.set(q, { date: quarterToDate(q), ...byDate.get(q), YIELD_10Y: obs.value })
+      }
+      for (const obs of body.FED_RATE ?? []) {
+        const q = toQuarter(obs.date)
+        byDate.set(q, { date: quarterToDate(q), ...byDate.get(q), FED_RATE: obs.value })
+      }
+      for (const obs of body.VIX ?? []) {
+        const q = toQuarter(obs.date)
+        byDate.set(q, { date: quarterToDate(q), ...byDate.get(q), VIX: obs.value })
+      }
       const rows = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
       setFredState({ status: 'success', data: rows, error: null })
     } catch (err) {
