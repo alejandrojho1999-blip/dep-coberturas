@@ -1,6 +1,4 @@
-import YahooFinance from 'yahoo-finance2'
-
-const yahooFinance = new YahooFinance()
+import yahooFinance from 'yahoo-finance2'
 
 const IR_URL_PATTERNS = [
   (domain: string) => `https://investors.${domain}`,
@@ -38,7 +36,7 @@ export async function GET(request: Request): Promise<Response> {
   const q = quoteResult.value as { longName?: string; shortName?: string }
   const profile =
     summaryResult.status === 'fulfilled'
-      ? (summaryResult.value.assetProfile as { sector?: string; website?: string } | null)
+      ? ((summaryResult.value as unknown as { assetProfile?: { sector?: string; website?: string } | null }).assetProfile ?? null)
       : null
 
   const companyName = q.longName ?? q.shortName ?? ticker
