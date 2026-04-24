@@ -1,5 +1,4 @@
-import YahooFinance from 'yahoo-finance2'
-const yahooFinance = new YahooFinance()
+import yahooFinance from 'yahoo-finance2'
 
 export interface PriceObservation {
   date: string             // quarter-end date 'YYYY-MM-DD'

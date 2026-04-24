@@ -58,7 +58,6 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
   const [colliders, setColliders] = useState<ExtractedVar[]>([])
   const [newConfounder, setNewConfounder] = useState('')
   const [newColliderVar, setNewColliderVar] = useState('')
-  const [newColliderRationale, setNewColliderRationale] = useState('')
   const [savedSuggestions, setSavedSuggestions] = useState<string[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -165,9 +164,8 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
   function addCollider() {
     const v = newColliderVar.trim().toUpperCase()
     if (!v || colliders.some((c) => c.variable === v)) return
-    setColliders((prev) => [...prev, { variable: v, label: v, rationale: newColliderRationale.trim() || 'Añadido manualmente', source: 'manual' }])
+    setColliders((prev) => [...prev, { variable: v, label: v, rationale: 'Añadido manualmente', source: 'manual' }])
     setNewColliderVar('')
-    setNewColliderRationale('')
   }
 
   function removeCollider(variable: string) {
@@ -375,15 +373,8 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
                 type="text"
                 value={newColliderVar}
                 onChange={(e) => setNewColliderVar(e.target.value)}
-                placeholder="Variable (ej: PE_RATIO)"
-                className="flex-1 px-2 py-1.5 rounded-lg bg-[#12121a] border border-[#1e1e2e] text-xs text-[#e2e8f0] placeholder-[#64748b] focus:outline-none focus:border-[#ef4444] transition-colors"
-              />
-              <input
-                type="text"
-                value={newColliderRationale}
-                onChange={(e) => setNewColliderRationale(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCollider() } }}
-                placeholder="Razón (opcional)"
+                placeholder="Variable (ej: PE_RATIO)"
                 className="flex-1 px-2 py-1.5 rounded-lg bg-[#12121a] border border-[#1e1e2e] text-xs text-[#e2e8f0] placeholder-[#64748b] focus:outline-none focus:border-[#ef4444] transition-colors"
               />
               <button type="button" onClick={addCollider}
