@@ -94,13 +94,13 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
       {/* 4 pillars — always visible */}
       <CausalPillars config={effectiveConfig} />
 
-      {/* Tab bar */}
-      <div className="flex border-b border-[#1e1e2e]">
+      {/* Tab bar — horizontally scrollable on mobile */}
+      <div className="flex overflow-x-auto border-b border-[#1e1e2e] scrollbar-none">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-3 text-sm font-medium transition-colors cursor-pointer ${
+            className={`px-4 py-3 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === tab.id
                 ? 'text-[#00ff88] border-b-2 border-[#00ff88]'
                 : 'text-[#64748b] hover:text-[#e2e8f0]'
@@ -112,7 +112,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
       </div>
 
       {/* Tab content */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {activeTab === 'data' && (
           <div className="space-y-6">
             <DataPanel config={effectiveConfig} onDataReady={setMergedData} />
@@ -129,7 +129,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
             )}
 
             {mergedData && (
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-sm text-[#64748b]">
                   {mergedData.length} observaciones listas
                 </span>
@@ -144,7 +144,17 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
             )}
 
             {error && (
-              <p className="text-sm text-red-400 bg-red-500/10 px-4 py-2 rounded-lg">{error}</p>
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 space-y-1">
+                <p className="text-xs font-semibold text-red-400 uppercase tracking-wide">Error en análisis</p>
+                <p className="text-sm text-red-300">{error}</p>
+                {error.includes('no tiene datos suficientes') && (
+                  <p className="text-xs text-[#64748b] mt-1">
+                    La variable de tratamiento no está disponible en FRED/Yahoo Finance.
+                    Ve al tab <strong className="text-[#e2e8f0]">Datos</strong> e ingresa el valor manualmente,
+                    o usa una variable macro como tratamiento (FED_RATE, YIELD_10Y, VIX).
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
