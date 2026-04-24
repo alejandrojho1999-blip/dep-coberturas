@@ -56,6 +56,21 @@ function formatVarValue(varName: string, value: number | undefined): string {
   return value.toFixed(3)
 }
 
+function latestValueFor(data: FredRow[], key: keyof FredRow): number | undefined {
+  for (let i = data.length - 1; i >= 0; i--) {
+    const v = data[i][key]
+    if (v != null && typeof v === 'number' && isFinite(v)) return v
+  }
+  return undefined
+}
+
+function latestFutureReturn(data: YahooRow[]): number | null {
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].futureReturn != null) return data[i].futureReturn!
+  }
+  return null
+}
+
 export default function DataPanel({ config, onDataReady, assetId }: Props) {
   const [startDate, setStartDate] = useState('2010-01-01')
   const [endDate, setEndDate] = useState(todayISO)
@@ -214,12 +229,14 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
     loadYahoo(pendingStart, pendingEnd)
   }
 
-  const latestFred = fredState.data?.at(-1)
   const latestYahoo = yahooState.data?.at(-1)
   const fredLoading = fredState.status === 'loading'
   const yahooLoading = yahooState.status === 'loading'
   const treatmentIsFred = FRED_VARS.has(config.treatment)
   const fredTableCols = [...new Set([config.treatment, ...config.confounders].filter((v) => FRED_VARS.has(v)))]
+  const latestFredValueFor = (key: keyof FredRow): number | undefined =>
+    fredState.data ? latestValueFor(fredState.data, key) : undefined
+  const bestFutureReturn = yahooState.data ? latestFutureReturn(yahooState.data) : null
 
   const anyLoading = fredLoading || yahooLoading
 
@@ -311,7 +328,7 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
                     <span className="text-[#3b82f6]">
                       {fredLoading
                         ? <span className="text-[#334155] animate-pulse">···</span>
-                        : formatVarValue(config.treatment, latestFred?.[config.treatment as keyof FredRow] as number | undefined)
+                        : formatVarValue(config.treatment, latestFredValueFor(config.treatment as keyof FredRow))
                       }
                     </span>
                   ) : editingTreatment ? (
@@ -352,7 +369,7 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
               {/* Confounder rows */}
               {config.confounders.map((v) => {
                 const isFred = FRED_VARS.has(v)
-                const value = isFred ? latestFred?.[v as keyof FredRow] as number | undefined : undefined
+                const value = isFred ? latestFredValueFor(v as keyof FredRow) : undefined
                 return (
                   <tr key={v} className="hover:bg-[#f59e0b]/5 transition-colors">
                     <td className="px-4 py-2.5 font-mono text-[#f59e0b]">{v}</td>
@@ -382,8 +399,8 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
                 <td className="px-4 py-2.5 text-right font-mono text-[#00ff88]">
                   {yahooLoading
                     ? <span className="text-[#334155] animate-pulse">···</span>
-                    : latestYahoo?.futureReturn != null
-                      ? `${(latestYahoo.futureReturn * 100).toFixed(2)}%`
+                    : bestFutureReturn != null
+                      ? `${(bestFutureReturn * 100).toFixed(2)}%`
                       : '—'
                   }
                 </td>
@@ -435,34 +452,49 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
         )}
 
         {fredState.status === 'success' && fredState.data && fredState.data.length > 0 && (
-          <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
+          <div className="overflow-x-auto">
             <table className="text-xs w-full min-w-[360px]">
-              <thead className="sticky top-0 bg-[#0a0a0f]">
+              <thead>
                 <tr className="text-[#475569] border-b border-[#1e1e2e]">
-                  <th className="pb-2 pr-4 text-left font-medium">Fecha</th>
-                  <th className="pb-2 pr-4 text-right font-medium">YIELD 10Y</th>
-                  <th className="pb-2 pr-4 text-right font-medium">FED Rate</th>
-                  <th className="pb-2 text-right font-medium">VIX</th>
+                  <th className="pb-2 pr-3 text-left font-medium">Fecha</th>
+                  <th className="pb-2 pr-3 text-right font-medium">YIELD 10Y</th>
+                  <th className="pb-2 pr-3 text-right font-medium">FED Rate</th>
+                  <th className="pb-2 pr-3 text-right font-medium">VIX</th>
+                  {!treatmentIsFred && (
+                    <th className="pb-2 text-right font-medium text-[#3b82f6]">{config.treatment}</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {fredState.data.slice().reverse().map((row, i) => (
                   <tr key={i} className="text-[#e2e8f0] border-b border-[#1e1e2e]/40 last:border-0 hover:bg-white/2">
-                    <td className="py-2 pr-4 text-[#64748b] tabular-nums">{row.date.slice(0, 7)}</td>
-                    <td className={`py-2 pr-4 text-right font-mono tabular-nums ${config.confounders.includes('YIELD_10Y') ? 'text-[#f59e0b]' : 'text-[#e2e8f0]'}`}>
+                    <td className="py-2 pr-3 text-[#64748b] tabular-nums">{row.date.slice(0, 7)}</td>
+                    <td className={`py-2 pr-3 text-right font-mono tabular-nums ${config.confounders.includes('YIELD_10Y') ? 'text-[#f59e0b]' : 'text-[#e2e8f0]'}`}>
                       {row.YIELD_10Y != null ? `${row.YIELD_10Y.toFixed(2)}%` : '—'}
                     </td>
-                    <td className={`py-2 pr-4 text-right font-mono tabular-nums ${config.treatment === 'FED_RATE' ? 'text-[#3b82f6]' : config.confounders.includes('FED_RATE') ? 'text-[#f59e0b]' : 'text-[#e2e8f0]'}`}>
+                    <td className={`py-2 pr-3 text-right font-mono tabular-nums ${config.treatment === 'FED_RATE' ? 'text-[#3b82f6]' : config.confounders.includes('FED_RATE') ? 'text-[#f59e0b]' : 'text-[#e2e8f0]'}`}>
                       {row.FED_RATE != null ? `${row.FED_RATE.toFixed(2)}%` : '—'}
                     </td>
-                    <td className={`py-2 text-right font-mono tabular-nums ${config.confounders.includes('VIX') ? 'text-[#f59e0b]' : 'text-[#e2e8f0]'}`}>
+                    <td className={`py-2 pr-3 text-right font-mono tabular-nums ${config.confounders.includes('VIX') ? 'text-[#f59e0b]' : 'text-[#e2e8f0]'}`}>
                       {row.VIX != null ? row.VIX.toFixed(1) : '—'}
                     </td>
+                    {!treatmentIsFred && (
+                      <td className="py-2 text-right font-mono tabular-nums text-[#3b82f6]">
+                        {config.manualValues?.[config.treatment] != null
+                          ? config.manualValues[config.treatment].toFixed(2)
+                          : '—'}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+        {!treatmentIsFred && !config.manualValues?.[config.treatment] && fredState.status === 'success' && (
+          <p className="text-xs text-yellow-400/70 mt-1.5 px-1">
+            ⚠ Sin valor para {config.treatment} — ingrésalo en la fila de Tratamiento arriba
+          </p>
         )}
         {fredState.status === 'success' && fredState.data && (
           <p className="text-xs text-[#475569] mt-2 px-1">

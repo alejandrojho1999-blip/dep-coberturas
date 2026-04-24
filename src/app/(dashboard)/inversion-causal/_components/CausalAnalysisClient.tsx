@@ -120,16 +120,18 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
             {hasRealAsset && assetId && (
               <VariableSelector
                 ticker={config.ticker}
+                currentTreatment={effectiveConfig.treatment}
                 currentConfounders={effectiveConfig.confounders}
                 currentColliders={effectiveConfig.excluded}
                 currentManualValues={effectiveConfig.manualValues}
                 assetId={assetId}
-                onApply={(confounders, colliders, manualValues) =>
+                onApply={(confounders, colliders, manualValues, newTreatment) =>
                   setConfigOverride((prev) => ({
                     ...prev,
                     confounders,
                     excluded: colliders,
                     manualValues: { ...prev?.manualValues, ...manualValues },
+                    ...(newTreatment ? { treatment: newTreatment } : {}),
                   }))
                 }
               />

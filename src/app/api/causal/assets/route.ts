@@ -61,7 +61,11 @@ export async function PATCH(request: Request): Promise<Response> {
   } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json() as { id?: string; manualValues?: Record<string, number> }
+  const body = await request.json() as {
+    id?: string
+    manualValues?: Record<string, number>
+    configPatch?: Record<string, unknown>
+  }
   if (!body.id) return Response.json({ error: 'Missing id' }, { status: 400 })
 
   const { data: asset } = await supabase
@@ -73,7 +77,11 @@ export async function PATCH(request: Request): Promise<Response> {
 
   if (!asset) return Response.json({ error: 'Asset not found' }, { status: 404 })
 
-  const updatedConfig = { ...(asset.config as object), manualValues: body.manualValues }
+  const updatedConfig = {
+    ...(asset.config as object),
+    ...(body.configPatch ?? {}),
+    ...(body.manualValues !== undefined ? { manualValues: body.manualValues } : {}),
+  }
 
   const { error } = await supabase
     .from('causal_assets')
