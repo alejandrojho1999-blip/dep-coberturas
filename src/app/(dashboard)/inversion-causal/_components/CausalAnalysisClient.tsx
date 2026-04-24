@@ -115,15 +115,22 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
       <div className="p-4 sm:p-6">
         {activeTab === 'data' && (
           <div className="space-y-6">
-            <DataPanel config={effectiveConfig} onDataReady={setMergedData} />
+            <DataPanel config={effectiveConfig} onDataReady={setMergedData} assetId={assetId} />
 
             {hasRealAsset && assetId && (
               <VariableSelector
                 ticker={config.ticker}
                 currentConfounders={effectiveConfig.confounders}
                 currentColliders={effectiveConfig.excluded}
-                onApply={(confounders, colliders) =>
-                  setConfigOverride((prev) => ({ ...prev, confounders, excluded: colliders }))
+                currentManualValues={effectiveConfig.manualValues}
+                assetId={assetId}
+                onApply={(confounders, colliders, manualValues) =>
+                  setConfigOverride((prev) => ({
+                    ...prev,
+                    confounders,
+                    excluded: colliders,
+                    manualValues: { ...prev?.manualValues, ...manualValues },
+                  }))
                 }
               />
             )}

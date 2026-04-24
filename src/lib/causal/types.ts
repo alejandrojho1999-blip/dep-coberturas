@@ -22,6 +22,7 @@ export interface CausalConfig {
   excluded: Record<string, string>  // variable -> reason (collider)
   mediators?: string[]
   dagEdges: DAGEdge[]
+  manualValues?: Record<string, number>  // user-entered values for non-FRED variables
 }
 
 export interface DataRow {

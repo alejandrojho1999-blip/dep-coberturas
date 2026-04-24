@@ -54,6 +54,38 @@ export async function POST(request: Request): Promise<Response> {
   return Response.json({ asset: data }, { status: 201 })
 }
 
+export async function PATCH(request: Request): Promise<Response> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const body = await request.json() as { id?: string; manualValues?: Record<string, number> }
+  if (!body.id) return Response.json({ error: 'Missing id' }, { status: 400 })
+
+  const { data: asset } = await supabase
+    .from('causal_assets')
+    .select('config')
+    .eq('id', body.id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!asset) return Response.json({ error: 'Asset not found' }, { status: 404 })
+
+  const updatedConfig = { ...(asset.config as object), manualValues: body.manualValues }
+
+  const { error } = await supabase
+    .from('causal_assets')
+    .update({ config: updatedConfig })
+    .eq('id', body.id)
+    .eq('user_id', user.id)
+
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+
+  return Response.json({ updated: true })
+}
+
 export async function DELETE(request: Request): Promise<Response> {
   const supabase = await createClient()
   const {

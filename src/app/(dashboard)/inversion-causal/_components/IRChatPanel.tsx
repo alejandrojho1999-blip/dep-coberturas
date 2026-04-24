@@ -46,10 +46,9 @@ export default function IRChatPanel({ assetId, ticker, open, onClose }: Props) {
       })
 
       if (!res.ok || !res.body) {
-        setMessages((prev) => [
-          ...prev,
-          { role: 'assistant', content: 'Error al conectar con el analista IA.' },
-        ])
+        const errBody = await res.json().catch(() => ({})) as { error?: string }
+        const errMsg = errBody.error ?? 'Error al conectar con el analista IA.'
+        setMessages((prev) => [...prev, { role: 'assistant', content: errMsg }])
         return
       }
 

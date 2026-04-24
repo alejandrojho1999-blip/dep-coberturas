@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { CausalConfig, DataRow } from '@/lib/causal/types'
 
 interface Props {
   config: CausalConfig
   onDataReady: (data: DataRow[]) => void
+  assetId?: string
 }
 
 interface FredRow {
@@ -55,7 +56,7 @@ function formatVarValue(varName: string, value: number | undefined): string {
   return value.toFixed(3)
 }
 
-export default function DataPanel({ config, onDataReady }: Props) {
+export default function DataPanel({ config, onDataReady, assetId }: Props) {
   const [startDate, setStartDate] = useState('2010-01-01')
   const [endDate, setEndDate] = useState(todayISO)
   const [pendingStart, setPendingStart] = useState('2010-01-01')
@@ -65,7 +66,15 @@ export default function DataPanel({ config, onDataReady }: Props) {
   const [yahooState, setYahooState] = useState<SourceState<YahooRow>>({ status: 'idle', data: null, error: null })
   const [merging, setMerging] = useState(false)
 
-  const [manualTreatmentValue, setManualTreatmentValue] = useState('')
+  const [manualTreatmentValue, setManualTreatmentValue] = useState(
+    config.manualValues?.[config.treatment] != null
+      ? String(config.manualValues[config.treatment])
+      : ''
+  )
+  const manualTreatmentRef = useRef(manualTreatmentValue)
+  manualTreatmentRef.current = manualTreatmentValue
+  const configManualValuesRef = useRef(config.manualValues)
+  configManualValuesRef.current = config.manualValues
   const [editingTreatment, setEditingTreatment] = useState(false)
 
   const loadFred = useCallback(async (start: string, end: string) => {
@@ -123,12 +132,14 @@ export default function DataPanel({ config, onDataReady }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.ticker, config.horizon])
 
+  const serializedManualValues = JSON.stringify(config.manualValues ?? {})
+
   useEffect(() => {
     if (fredState.status === 'success' && yahooState.status === 'success') {
       mergeAndNotify()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fredState.status, yahooState.status])
+  }, [fredState.status, yahooState.status, manualTreatmentValue, serializedManualValues])
 
   function mergeAndNotify() {
     if (fredState.status !== 'success' || yahooState.status !== 'success') return
@@ -156,9 +167,43 @@ export default function DataPanel({ config, onDataReady }: Props) {
           }
         })
 
+      // Inject stored manual values for all non-FRED variables (confounders, colliders, treatment)
+      for (const [varName, val] of Object.entries(configManualValuesRef.current ?? {})) {
+        if (!isNaN(val) && isFinite(val)) {
+          for (const row of merged) {
+            ;(row as Record<string, number | string>)[varName] = val
+          }
+        }
+      }
+
+      // Treatment local state overrides stored value (real-time editing)
+      if (!treatmentIsFred) {
+        const num = parseFloat(manualTreatmentRef.current)
+        if (!isNaN(num) && isFinite(num)) {
+          for (const row of merged) {
+            ;(row as Record<string, number | string>)[config.treatment] = num
+          }
+        }
+      }
+
       onDataReady(merged)
     } finally {
       setMerging(false)
+    }
+  }
+
+  async function saveManualValue(value: string) {
+    if (!assetId) return
+    const num = parseFloat(value)
+    if (isNaN(num) || !isFinite(num)) return
+    try {
+      await fetch('/api/causal/assets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: assetId, manualValues: { [config.treatment]: num } }),
+      })
+    } catch {
+      // silent fail — value still works in memory
     }
   }
 
@@ -277,11 +322,11 @@ export default function DataPanel({ config, onDataReady }: Props) {
                         onChange={(e) => setManualTreatmentValue(e.target.value)}
                         placeholder="ej: 12.5%"
                         autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Enter') setEditingTreatment(false) }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { setEditingTreatment(false); void saveManualValue(manualTreatmentValue) } }}
                         className="w-24 px-2 py-0.5 rounded bg-[#12121a] border border-[#3b82f6]/40 text-[#e2e8f0] text-right focus:outline-none focus:border-[#3b82f6] text-xs"
                       />
                       <button
-                        onClick={() => setEditingTreatment(false)}
+                        onClick={() => { setEditingTreatment(false); void saveManualValue(manualTreatmentValue) }}
                         className="text-[#00ff88] hover:text-[#00ff88]/80 cursor-pointer font-bold"
                       >
                         ✓
@@ -390,9 +435,9 @@ export default function DataPanel({ config, onDataReady }: Props) {
         )}
 
         {fredState.status === 'success' && fredState.data && fredState.data.length > 0 && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
             <table className="text-xs w-full min-w-[360px]">
-              <thead>
+              <thead className="sticky top-0 bg-[#0a0a0f]">
                 <tr className="text-[#475569] border-b border-[#1e1e2e]">
                   <th className="pb-2 pr-4 text-left font-medium">Fecha</th>
                   <th className="pb-2 pr-4 text-right font-medium">YIELD 10Y</th>
@@ -401,7 +446,7 @@ export default function DataPanel({ config, onDataReady }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {fredState.data.slice(-8).reverse().map((row, i) => (
+                {fredState.data.slice().reverse().map((row, i) => (
                   <tr key={i} className="text-[#e2e8f0] border-b border-[#1e1e2e]/40 last:border-0 hover:bg-white/2">
                     <td className="py-2 pr-4 text-[#64748b] tabular-nums">{row.date.slice(0, 7)}</td>
                     <td className={`py-2 pr-4 text-right font-mono tabular-nums ${config.confounders.includes('YIELD_10Y') ? 'text-[#f59e0b]' : 'text-[#e2e8f0]'}`}>
@@ -418,6 +463,11 @@ export default function DataPanel({ config, onDataReady }: Props) {
               </tbody>
             </table>
           </div>
+        )}
+        {fredState.status === 'success' && fredState.data && (
+          <p className="text-xs text-[#475569] mt-2 px-1">
+            {fredState.data.length} trimestres descargados
+          </p>
         )}
       </div>
 
