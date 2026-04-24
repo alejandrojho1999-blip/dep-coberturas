@@ -283,7 +283,11 @@ describe('POST /api/causal/assets', () => {
       expect(mockInsert).toHaveBeenCalledWith({
         user_id: 'user-123',
         ticker: 'AAPL',
+        name: 'AAPL',
         config,
+        ir_url: undefined,
+        treatment: undefined,
+        sector: undefined,
       })
     })
 

@@ -140,32 +140,33 @@ describe('benjaminiHochberg', () => {
 // ---------------------------------------------------------------------------
 
 describe('computeDSR', () => {
-  it('returns positive DSR for model with positive R²', () => {
-    const model = makeModel({ r2adj: 0.25, n: 40 })
-    const dsr = computeDSR(model)
+  it('returns |t_stat| - 1.96 for the treatment variable', () => {
+    const model = makeModel() // tStats.CAPEX_Growth = 8.0
+    const dsr = computeDSR(model, 'CAPEX_Growth')
+    expect(dsr).toBeCloseTo(8.0 - 1.96, 5)
     expect(dsr).toBeGreaterThan(0)
-    expect(dsr).toBeCloseTo(Math.sqrt(0.25) * Math.sqrt(40), 5)
   })
 
-  it('uses 0.0001 floor when R²_adj is 0, avoiding NaN', () => {
-    const model = makeModel({ r2adj: 0, n: 50 })
-    const dsr = computeDSR(model)
-    expect(dsr).not.toBeNaN()
-    expect(dsr).toBeCloseTo(Math.sqrt(0.0001) * Math.sqrt(50), 5)
+  it('returns negative value when |t_stat| < 1.96 (signal fails DSR test)', () => {
+    const model = makeModel({
+      tStats: { intercept: 0.5, CAPEX_Growth: 1.5, GROSS_MARGIN: 1.0 },
+    })
+    const dsr = computeDSR(model, 'CAPEX_Growth')
+    expect(dsr).toBeCloseTo(1.5 - 1.96, 5)
+    expect(dsr).toBeLessThan(0)
   })
 
-  it('uses 0.0001 floor when R²_adj is negative, avoiding NaN', () => {
-    const model = makeModel({ r2adj: -0.5, n: 30 })
-    const dsr = computeDSR(model)
-    expect(dsr).not.toBeNaN()
-    expect(dsr).toBeGreaterThan(0)
-    expect(dsr).toBeCloseTo(Math.sqrt(0.0001) * Math.sqrt(30), 5)
+  it('returns -1.96 when treatment variable has no t-stat entry', () => {
+    const model = makeModel()
+    const dsr = computeDSR(model, 'UNKNOWN_VAR')
+    expect(dsr).toBeCloseTo(-1.96, 5)
   })
 
-  it('DSR increases with more observations', () => {
-    const modelSmall = makeModel({ r2adj: 0.3, n: 20 })
-    const modelLarge = makeModel({ r2adj: 0.3, n: 100 })
-    expect(computeDSR(modelLarge)).toBeGreaterThan(computeDSR(modelSmall))
+  it('DSR > 0 iff |t_stat| > 1.96', () => {
+    const weak = makeModel({ tStats: { intercept: 1.0, CAPEX_Growth: 1.95, GROSS_MARGIN: 1.0 } })
+    const strong = makeModel({ tStats: { intercept: 1.0, CAPEX_Growth: 2.0, GROSS_MARGIN: 1.0 } })
+    expect(computeDSR(weak, 'CAPEX_Growth')).toBeLessThan(0)
+    expect(computeDSR(strong, 'CAPEX_Growth')).toBeGreaterThan(0)
   })
 })
 

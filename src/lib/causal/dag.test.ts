@@ -60,15 +60,15 @@ describe('buildDAG()', () => {
   })
 
   it('builds AAPL DAG with all expected nodes', () => {
-    expect(AAPL_DAG.nodes).toContain('CAPEX_Growth')
-    expect(AAPL_DAG.nodes).toContain('Future_Return')
+    expect(AAPL_DAG.nodes).toContain('FED_RATE')
+    expect(AAPL_DAG.nodes).toContain('FutureReturn')
     expect(AAPL_DAG.nodes).toContain('YIELD_10Y')
-    expect(AAPL_DAG.nodes).toContain('TRAIL_12M_EPS')
+    expect(AAPL_DAG.nodes).toContain('VIX')
   })
 
-  it('AAPL: YIELD_10Y has children CAPEX_Growth and Future_Return', () => {
-    expect(AAPL_DAG.children['YIELD_10Y']).toContain('CAPEX_Growth')
-    expect(AAPL_DAG.children['YIELD_10Y']).toContain('Future_Return')
+  it('AAPL: YIELD_10Y has children FED_RATE and FutureReturn', () => {
+    expect(AAPL_DAG.children['YIELD_10Y']).toContain('FED_RATE')
+    expect(AAPL_DAG.children['YIELD_10Y']).toContain('FutureReturn')
   })
 })
 
@@ -93,19 +93,15 @@ describe('getAncestors()', () => {
     expect(ancestors.has('B')).toBe(true)
   })
 
-  it('AAPL: ancestors of CAPEX_Growth include all 5 confounders', () => {
-    const ancestors = getAncestors(AAPL_DAG, 'CAPEX_Growth')
+  it('AAPL: ancestors of FED_RATE include both confounders', () => {
+    const ancestors = getAncestors(AAPL_DAG, 'FED_RATE')
     expect(ancestors.has('YIELD_10Y')).toBe(true)
-    expect(ancestors.has('FED_RATE')).toBe(true)
     expect(ancestors.has('VIX')).toBe(true)
-    expect(ancestors.has('RETURN_COM_EQY')).toBe(true)
-    expect(ancestors.has('GROSS_MARGIN')).toBe(true)
   })
 
-  it('AAPL: ancestors of CAPEX_Growth do NOT include descendants', () => {
-    const ancestors = getAncestors(AAPL_DAG, 'CAPEX_Growth')
-    expect(ancestors.has('TRAIL_12M_EPS')).toBe(false)
-    expect(ancestors.has('Future_Return')).toBe(false)
+  it('AAPL: ancestors of FED_RATE do NOT include its descendants', () => {
+    const ancestors = getAncestors(AAPL_DAG, 'FED_RATE')
+    expect(ancestors.has('FutureReturn')).toBe(false)
   })
 })
 
@@ -130,16 +126,14 @@ describe('getDescendants()', () => {
     expect(desc.has('C')).toBe(true)
   })
 
-  it('AAPL: descendants of CAPEX_Growth include TRAIL_12M_EPS and Future_Return', () => {
-    const desc = getDescendants(AAPL_DAG, 'CAPEX_Growth')
-    expect(desc.has('TRAIL_12M_EPS')).toBe(true)
-    expect(desc.has('Future_Return')).toBe(true)
+  it('AAPL: descendants of FED_RATE include FutureReturn', () => {
+    const desc = getDescendants(AAPL_DAG, 'FED_RATE')
+    expect(desc.has('FutureReturn')).toBe(true)
   })
 
-  it('AAPL: descendants of CAPEX_Growth do NOT include its parents', () => {
-    const desc = getDescendants(AAPL_DAG, 'CAPEX_Growth')
+  it('AAPL: descendants of FED_RATE do NOT include its parents', () => {
+    const desc = getDescendants(AAPL_DAG, 'FED_RATE')
     expect(desc.has('YIELD_10Y')).toBe(false)
-    expect(desc.has('FED_RATE')).toBe(false)
     expect(desc.has('VIX')).toBe(false)
   })
 })
@@ -165,22 +159,22 @@ describe('getBackdoorPaths()', () => {
     expect(found).toBe(true)
   })
 
-  it('AAPL: finds at least 5 backdoor paths (one per confounder)', () => {
-    const paths = getBackdoorPaths(AAPL_DAG, 'CAPEX_Growth', 'Future_Return')
-    expect(paths.length).toBeGreaterThanOrEqual(5)
+  it('AAPL: finds at least 2 backdoor paths (one per confounder)', () => {
+    const paths = getBackdoorPaths(AAPL_DAG, 'FED_RATE', 'FutureReturn')
+    expect(paths.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('AAPL: each backdoor path starts with CAPEX_Growth and ends with Future_Return', () => {
-    const paths = getBackdoorPaths(AAPL_DAG, 'CAPEX_Growth', 'Future_Return')
+  it('AAPL: each backdoor path starts with FED_RATE and ends with FutureReturn', () => {
+    const paths = getBackdoorPaths(AAPL_DAG, 'FED_RATE', 'FutureReturn')
     for (const path of paths) {
-      expect(path[0]).toBe('CAPEX_Growth')
-      expect(path[path.length - 1]).toBe('Future_Return')
+      expect(path[0]).toBe('FED_RATE')
+      expect(path[path.length - 1]).toBe('FutureReturn')
     }
   })
 
   it('respects maxPaths limit', () => {
-    const paths = getBackdoorPaths(AAPL_DAG, 'CAPEX_Growth', 'Future_Return', 3)
-    expect(paths.length).toBeLessThanOrEqual(3)
+    const paths = getBackdoorPaths(AAPL_DAG, 'FED_RATE', 'FutureReturn', 1)
+    expect(paths.length).toBeLessThanOrEqual(1)
   })
 })
 
@@ -191,39 +185,34 @@ describe('validateAdjustmentSet()', () => {
   it('returns valid=true with full AAPL confounders', () => {
     const result = validateAdjustmentSet(
       AAPL_DAG,
-      'CAPEX_Growth',
-      'Future_Return',
-      AAPL_DEFAULT_CONFIG.confounders
+      AAPL_DEFAULT_CONFIG.treatment,
+      AAPL_DEFAULT_CONFIG.outcome,
+      AAPL_DEFAULT_CONFIG.confounders,
     )
     expect(result.valid).toBe(true)
     expect(result.reason).toBeTruthy()
   })
 
   it('returns valid=false with empty adjustment set (confounders not blocked)', () => {
-    const result = validateAdjustmentSet(AAPL_DAG, 'CAPEX_Growth', 'Future_Return', [])
+    const result = validateAdjustmentSet(AAPL_DAG, 'FED_RATE', 'FutureReturn', [])
     expect(result.valid).toBe(false)
     expect(result.reason).toBeTruthy()
   })
 
-  it('returns valid=false when a descendant of treatment is in the adjustment set', () => {
+  it('returns valid=false when a descendant of FED_RATE is in the adjustment set', () => {
     const result = validateAdjustmentSet(
       AAPL_DAG,
-      'CAPEX_Growth',
-      'Future_Return',
-      [...AAPL_DEFAULT_CONFIG.confounders, 'TRAIL_12M_EPS']
+      'FED_RATE',
+      'FutureReturn',
+      [...AAPL_DEFAULT_CONFIG.confounders, 'FutureReturn'],
     )
     expect(result.valid).toBe(false)
-    expect(result.reason).toMatch(/TRAIL_12M_EPS/)
+    expect(result.reason).toMatch(/FutureReturn/)
   })
 
   it('returns valid=false when only a subset of confounders is provided', () => {
-    // Only 2 of 5 confounders — should fail because others are not blocked
-    const result = validateAdjustmentSet(
-      AAPL_DAG,
-      'CAPEX_Growth',
-      'Future_Return',
-      ['YIELD_10Y', 'FED_RATE']
-    )
+    // Only YIELD_10Y — VIX is a common ancestor and not blocked
+    const result = validateAdjustmentSet(AAPL_DAG, 'FED_RATE', 'FutureReturn', ['YIELD_10Y'])
     expect(result.valid).toBe(false)
   })
 

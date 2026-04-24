@@ -136,14 +136,13 @@ export function benjaminiHochberg(pValues: number[], fdr = 0.05): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Decision Sharpe Ratio (DSR) — from López de Prado.
- * DSR = sqrt(max(R², 0.0001)) * sqrt(n)
- *
- * Uses max(R²_adj, 0.0001) to avoid NaN when R²_adj is negative.
+ * Decision Sharpe Ratio (DSR) proxy — significance-based per López de Prado.
+ * Returns |t_treatment| - 1.96 so that DSR > 0 ↔ treatment is significant at 95%.
+ * Replaces the incorrect sqrt(R²)·sqrt(n) formula.
  */
-export function computeDSR(model: OLSResult): number {
-  const r2safe = Math.max(model.r2adj, 0.0001)
-  return Math.sqrt(r2safe) * Math.sqrt(model.n)
+export function computeDSR(model: OLSResult, treatment: string): number {
+  const tAbs = Math.abs(model.tStats[treatment] ?? 0)
+  return tAbs - 1.96
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +167,7 @@ export function runMultipleTesting(
     nPermutations
   )
 
-  const dsr = computeDSR(model)
+  const dsr = computeDSR(model, config.treatment)
 
   // Collect all relevant p-values for BH correction
   // Include treatment p-value and all confounder p-values from the model

@@ -160,11 +160,32 @@ export function olsRegression(
   const k = p - 1 // number of predictors excluding intercept
   const r2adj = 1 - (1 - r2) * ((n - 1) / (n - k - 1))
 
-  // σ² = SSR / (n - k - 1)
-  const sigma2 = ssr / (n - k - 1)
-
-  // Var(β) = σ² (X'X)^-1
+  // HC3 (White's heteroskedasticity-robust) covariance: (X'X)^-1 S (X'X)^-1
+  // where S = Σ eᵢ²/(1-hᵢᵢ)² · xᵢxᵢ'  and  hᵢᵢ = xᵢ'(X'X)^-1 xᵢ
   const XtXinvArr: number[][] = XtXinv
+  const XtXinvMat = matrix(XtXinvArr)
+
+  // Leverage values h_ii
+  const hats = X.map((xi) => {
+    const xRow = matrix([xi])
+    const val = multiply(multiply(xRow, XtXinvMat), transpose(xRow))
+    return (val.toArray() as number[][])[0][0]
+  })
+
+  // Sandwich meat S
+  const S: number[][] = Array.from({ length: p }, () => new Array<number>(p).fill(0))
+  for (let i = 0; i < n; i++) {
+    const h = Math.min(hats[i], 0.9999)
+    const w = (residuals[i] ** 2) / ((1 - h) ** 2)
+    for (let r = 0; r < p; r++) {
+      for (let c = 0; c < p; c++) {
+        S[r][c] += w * X[i][r] * X[i][c]
+      }
+    }
+  }
+
+  const HC3Cov = multiply(multiply(XtXinvMat, matrix(S)), XtXinvMat)
+  const HC3CovArr = (HC3Cov as { toArray(): number[][] }).toArray()
 
   const coefficients: Record<string, number> = {}
   const standardErrors: Record<string, number> = {}
@@ -176,8 +197,8 @@ export function olsRegression(
   for (let i = 0; i < p; i++) {
     const name = predictorNames[i]
     const beta = betaArr[i]
-    const se = Math.sqrt(sigma2 * XtXinvArr[i][i])
-    const t = beta / se
+    const se = Math.sqrt(Math.max(HC3CovArr[i][i], 0))
+    const t = se > 0 ? beta / se : 0
     const pVal = 2 * (1 - tCDF(Math.abs(t), dof))
 
     coefficients[name] = beta
@@ -235,6 +256,19 @@ function buildMatrix(
 
     X.push([1, ...xVals])
     y.push(yVal)
+  }
+
+  // Z-score standardize each predictor column (col 0 is the intercept — skip it)
+  const n = X.length
+  if (n > 1) {
+    for (let j = 1; j <= predictors.length; j++) {
+      const col = X.map((row) => row[j])
+      const mu = col.reduce((s, v) => s + v, 0) / n
+      const sd = Math.sqrt(col.reduce((s, v) => s + (v - mu) ** 2, 0) / (n - 1))
+      if (sd > 1e-10) {
+        for (let i = 0; i < n; i++) X[i][j] = (X[i][j] - mu) / sd
+      }
+    }
   }
 
   return { X, y, names: ['intercept', ...predictors] }

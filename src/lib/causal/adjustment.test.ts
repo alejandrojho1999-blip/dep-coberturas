@@ -4,9 +4,9 @@ import { AAPL_DEFAULT_CONFIG } from './dag'
 import type { CausalConfig } from './types'
 
 describe('backdoorCriterion()', () => {
-  it('AAPL: adjustmentSet equals the 5 confounders', () => {
+  it('AAPL: adjustmentSet equals the 2 confounders', () => {
     const { adjustmentSet } = backdoorCriterion(AAPL_DEFAULT_CONFIG)
-    expect(adjustmentSet).toHaveLength(5)
+    expect(adjustmentSet).toHaveLength(2)
     for (const confounder of AAPL_DEFAULT_CONFIG.confounders) {
       expect(adjustmentSet).toContain(confounder)
     }
@@ -18,9 +18,9 @@ describe('backdoorCriterion()', () => {
     expect(validation.reason).toBeTruthy()
   })
 
-  it('AAPL: mediator TRAIL_12M_EPS is NOT in adjustmentSet', () => {
+  it('AAPL: collider Return is NOT in adjustmentSet', () => {
     const { adjustmentSet } = backdoorCriterion(AAPL_DEFAULT_CONFIG)
-    expect(adjustmentSet).not.toContain('TRAIL_12M_EPS')
+    expect(adjustmentSet).not.toContain('Return')
   })
 
   it('AAPL: backdoorPaths is non-empty array', () => {
@@ -38,13 +38,13 @@ describe('backdoorCriterion()', () => {
   })
 
   it('excludes descendants of treatment from adjustmentSet', () => {
-    // Config where NET_INCOME is a descendant and also listed as a confounder
+    // Config where NET_INCOME is a descendant of FED_RATE and also listed as a confounder
     const config: CausalConfig = {
       ...AAPL_DEFAULT_CONFIG,
       confounders: [...AAPL_DEFAULT_CONFIG.confounders, 'NET_INCOME'],
       dagEdges: [
         ...AAPL_DEFAULT_CONFIG.dagEdges,
-        { from: 'CAPEX_Growth', to: 'NET_INCOME', label: 'Capex→ingresos netos' },
+        { from: 'FED_RATE', to: 'NET_INCOME', label: 'Fed rate→net income' },
       ],
     }
     const { adjustmentSet } = backdoorCriterion(config)

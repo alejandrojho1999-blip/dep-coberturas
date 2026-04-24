@@ -59,7 +59,7 @@ export function computeCausalScore(
   const score = scoreLdP(betaStd, tStat, r2adj, pValue, placeboOk, dsrOk, bhFdrOk)
 
   let signal: 'AUMENTAR' | 'MANTENER' | 'REDUCIR'
-  if (score > 60) signal = 'AUMENTAR'
+  if (score >= 65) signal = 'AUMENTAR'
   else if (score >= 40) signal = 'MANTENER'
   else signal = 'REDUCIR'
 
