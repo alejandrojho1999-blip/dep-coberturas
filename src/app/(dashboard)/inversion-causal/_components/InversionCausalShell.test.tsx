@@ -25,6 +25,13 @@ vi.mock('./AssetSelector', () => ({
     </div>
   ),
 }))
+vi.mock('./EmptyState', () => ({
+  default: ({ onStart }: { onStart: () => void }) => (
+    <div data-testid="empty-state">
+      <button onClick={onStart}>Agregar primer activo</button>
+    </div>
+  ),
+}))
 vi.mock('./NewAssetForm', () => ({
   default: ({ onCancel, onCreated }: {
     onCancel: () => void
@@ -71,9 +78,17 @@ describe('InversionCausalShell', () => {
     expect(screen.getByTestId('causal-client')).toBeInTheDocument()
   })
 
-  it('renders AAPL_DEFAULT_CONFIG when no assets provided', () => {
+  it('shows EmptyState when no assets provided', () => {
     render(<InversionCausalShell initialAssets={[]} />)
-    expect(screen.getByTestId('causal-client')).toHaveTextContent('AAPL')
+    expect(screen.getByTestId('empty-state')).toBeInTheDocument()
+    expect(screen.queryByTestId('causal-client')).not.toBeInTheDocument()
+  })
+
+  it('shows NewAssetForm when EmptyState CTA is clicked', () => {
+    render(<InversionCausalShell initialAssets={[]} />)
+    fireEvent.click(screen.getByText('Agregar primer activo'))
+    expect(screen.getByTestId('new-form')).toBeInTheDocument()
+    expect(screen.queryByTestId('empty-state')).not.toBeInTheDocument()
   })
 
   it('adds new asset to list and sets it active when onCreated is called', () => {

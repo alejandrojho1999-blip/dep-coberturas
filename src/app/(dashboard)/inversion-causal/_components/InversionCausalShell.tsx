@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import type { CausalConfig } from '@/lib/causal/types'
-import { AAPL_DEFAULT_CONFIG } from '@/lib/causal/dag'
 import AssetSelector from './AssetSelector'
 import NewAssetForm from './NewAssetForm'
 import CausalAnalysisClient from './CausalAnalysisClient'
 import IRChatPanel from './IRChatPanel'
+import EmptyState from './EmptyState'
 
 interface CausalAsset {
   id: string
@@ -29,7 +29,7 @@ export default function InversionCausalShell({ initialAssets, userId }: Props) {
   const [chatOpen, setChatOpen] = useState(false)
 
   const activeAsset = assets.find((a) => a.id === activeId) ?? null
-  const activeConfig: CausalConfig = activeAsset?.config ?? AAPL_DEFAULT_CONFIG
+  const activeConfig: CausalConfig | null = activeAsset?.config ?? null
 
   function handleAssetCreated(asset: CausalAsset) {
     setAssets((prev) => [asset, ...prev])
@@ -59,6 +59,22 @@ export default function InversionCausalShell({ initialAssets, userId }: Props) {
     }
   }
 
+  // Empty state: no assets and not creating one
+  if (assets.length === 0 && !showNewForm) {
+    return (
+      <div className="space-y-6">
+        <AssetSelector
+          assets={assets}
+          activeId={activeId}
+          onSelect={handleSelect}
+          onNewAsset={() => setShowNewForm(true)}
+          onDelete={handleDelete}
+        />
+        <EmptyState onStart={() => setShowNewForm(true)} />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <AssetSelector
@@ -74,7 +90,7 @@ export default function InversionCausalShell({ initialAssets, userId }: Props) {
           onCreated={handleAssetCreated}
           onCancel={() => setShowNewForm(false)}
         />
-      ) : (
+      ) : activeConfig ? (
         <div className="relative">
           <CausalAnalysisClient
             config={activeConfig}
@@ -94,7 +110,7 @@ export default function InversionCausalShell({ initialAssets, userId }: Props) {
             </button>
           )}
         </div>
-      )}
+      ) : null}
 
       {activeAsset && (
         <IRChatPanel
