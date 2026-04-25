@@ -21,11 +21,15 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ detail: 'OPENROUTER_API_KEY no configurada' }, { status: 500 })
   }
 
-  // Get next informe number for this user
-  const { count } = await supabase
+  // Get next informe number — per operator when solicitante is provided
+  const solicitanteKey = body.solicitante?.trim() || null
+  const countBase = supabase
     .from('informes_history')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
+  const { count } = solicitanteKey
+    ? await countBase.eq('solicitante', solicitanteKey)
+    : await countBase
   const informeNumero = (count ?? 0) + 1
 
   // Fetch market data
@@ -76,9 +80,10 @@ export async function POST(request: Request): Promise<Response> {
       ticker:           content.ticker,
       empresa:          content.empresa,
       bolsa:            content.bolsa,
-      solicitante:      body.solicitante?.trim() || null,
+      solicitante:      solicitanteKey,
       filename,
       informe_numero:   informeNumero,
+      content_json:     content,
     })
 
   if (dbErr) {

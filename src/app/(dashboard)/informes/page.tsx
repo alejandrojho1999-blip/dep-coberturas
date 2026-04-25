@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { BarChart2, Download, FileText, Loader2, Search, Trash2 } from 'lucide-react'
-import type { HistoryEntry } from '@/lib/informes/types'
+import { BarChart2, Download, Eye, FileText, Loader2, Search, Trash2, X } from 'lucide-react'
+import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -26,26 +26,204 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function fmtNum(n: number | null | undefined): string {
+  if (n == null) return 'N/D'
+  return n.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// ─── Preview Modal ────────────────────────────────────────────────────────────
+
+function PreviewModal({
+  entry,
+  onClose,
+  onDownload,
+}: {
+  entry: HistoryEntry
+  onClose: () => void
+  onDownload: (e: HistoryEntry) => void
+}) {
+  const content: ReportContent | null = (entry.content_json as ReportContent) ?? null
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 md:p-8"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="relative my-auto w-full max-w-3xl rounded-xl border border-[#1e1e2e] bg-[#12121a] shadow-2xl">
+
+        {/* Modal header */}
+        <div className="flex items-center justify-between border-b border-[#1e1e2e] px-6 py-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <FileText size={16} style={{ color: '#00ff88' }} />
+              <span className="font-semibold text-[#e2e8f0]">
+                {entry.empresa ?? entry.ticker} — Informe #{entry.informe_numero}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-[#64748b]">
+              {entry.bolsa ?? ''} · {formatDate(entry.fecha_generacion)}
+              {entry.solicitante ? ` · ${entry.solicitante}` : ''}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onDownload(entry)}
+              className="flex items-center gap-1.5 rounded-lg border border-[#1e1e2e] px-3 py-1.5 text-xs font-medium text-[#00ff88] transition-colors hover:bg-[#1e1e2e]"
+            >
+              <Download size={13} />
+              Descargar
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-[#64748b] transition-colors hover:bg-[#1e1e2e] hover:text-[#e2e8f0]"
+              aria-label="Cerrar"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Modal body */}
+        <div className="overflow-y-auto p-6" style={{ maxHeight: '75vh' }}>
+          {!content ? (
+            <p className="text-center text-sm text-[#475569] py-8">
+              Preview no disponible para informes generados antes de esta actualización.
+            </p>
+          ) : (
+            <div className="space-y-6 text-sm">
+
+              {/* Metadata cards */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  { label: 'Ticker', value: content.ticker },
+                  { label: 'Bolsa', value: content.bolsa },
+                  { label: 'Precio Actual', value: `$${fmtNum(content.precio_actual)}` },
+                  { label: 'Precio Objetivo', value: `$${fmtNum(content.precio_objetivo)}` },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-3">
+                    <p className="text-xs text-[#64748b]">{label}</p>
+                    <p className="mt-0.5 font-semibold text-[#e2e8f0]">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Resumen ejecutivo */}
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                  Resumen Ejecutivo
+                </h3>
+                <p className="leading-relaxed text-[#94a3b8]">{content.resumen}</p>
+              </section>
+
+              {/* Modelo de negocio */}
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                  Modelo de Negocio
+                </h3>
+                <p className="leading-relaxed text-[#94a3b8]">{content.negocio}</p>
+              </section>
+
+              {/* Financieros */}
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                  Desempeño Financiero
+                </h3>
+                <p className="leading-relaxed text-[#94a3b8]">{content.financieros}</p>
+              </section>
+
+              {/* Valoración */}
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                  Valoración
+                </h3>
+                <p className="leading-relaxed text-[#94a3b8]">{content.valoracion}</p>
+              </section>
+
+              {/* Factores positivos / riesgo */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#4ade80' }}>
+                    Factores Positivos
+                  </h3>
+                  <ul className="space-y-2">
+                    {content.factores_positivos.map((f, i) => (
+                      <li key={i} className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-3">
+                        <p className="font-medium text-[#e2e8f0]">{f.titulo}</p>
+                        <p className="mt-1 text-xs text-[#64748b]">{f.desc}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#f87171' }}>
+                    Factores de Riesgo
+                  </h3>
+                  <ul className="space-y-2">
+                    {content.factores_riesgo.map((f, i) => (
+                      <li key={i} className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-3">
+                        <p className="font-medium text-[#e2e8f0]">{f.titulo}</p>
+                        <p className="mt-1 text-xs text-[#64748b]">{f.desc}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+
+              {/* Conclusión */}
+              <section className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-4">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                  Conclusión y Recomendación
+                </h3>
+                <p className="leading-relaxed text-[#e2e8f0]">{content.conclusion}</p>
+              </section>
+
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function InformesPage() {
-  const [ticker, setTicker]           = useState('')
-  const [solicitante, setSolicitante] = useState('')
-  const [loading, setLoading]         = useState(false)
-  const [history, setHistory]         = useState<HistoryEntry[]>([])
-  const [historyLoading, setHistoryLoading] = useState(true)
-  const [toasts, setToasts]           = useState<Toast[]>([])
-  const toastId                       = useRef(0)
+  const [ticker, setTicker]                   = useState('')
+  const [solicitante, setSolicitante]         = useState('')
+  const [loading, setLoading]                 = useState(false)
+  const [history, setHistory]                 = useState<HistoryEntry[]>([])
+  const [historyLoading, setHistoryLoading]   = useState(true)
+  const [filterSolicitante, setFilterSolicitante] = useState('')
+  const [previewEntry, setPreviewEntry]       = useState<HistoryEntry | null>(null)
+  const [toasts, setToasts]                   = useState<Toast[]>([])
+  const toastId                               = useRef(0)
 
-  // Autocomplete state
-  const [suggestions, setSuggestions]       = useState<SearchResult[]>([])
-  const [showDropdown, setShowDropdown]     = useState(false)
-  const [selectedIdx, setSelectedIdx]       = useState(-1)
-  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null)
-  const debounceRef                         = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const dropdownRef                         = useRef<HTMLDivElement>(null)
+  // Autocomplete
+  const [suggestions, setSuggestions]         = useState<SearchResult[]>([])
+  const [showDropdown, setShowDropdown]       = useState(false)
+  const [selectedIdx, setSelectedIdx]         = useState(-1)
+  const [selectedResult, setSelectedResult]   = useState<SearchResult | null>(null)
+  const debounceRef                           = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dropdownRef                           = useRef<HTMLDivElement>(null)
 
-  // ── Toast helpers ──────────────────────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────────────────────
+
+  const uniqueSolicitantes = Array.from(
+    new Set(history.map((h) => h.solicitante).filter(Boolean) as string[])
+  ).sort()
+
+  const displayed = filterSolicitante
+    ? history.filter((h) => h.solicitante === filterSolicitante)
+    : history
+
+  // ── Toasts ─────────────────────────────────────────────────────────────────
 
   const addToast = useCallback((message: string, variant: 'success' | 'error') => {
     const id = ++toastId.current
@@ -58,10 +236,7 @@ export default function InformesPage() {
   const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch('/api/informes/history')
-      if (res.ok) {
-        const data = await res.json() as HistoryEntry[]
-        setHistory(data)
-      }
+      if (res.ok) setHistory(await res.json() as HistoryEntry[])
     } finally {
       setHistoryLoading(false)
     }
@@ -75,10 +250,8 @@ export default function InformesPage() {
     setTicker(value.toUpperCase())
     setSelectedResult(null)
     setSelectedIdx(-1)
-
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (!value.trim()) { setSuggestions([]); setShowDropdown(false); return }
-
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/informes/search?q=${encodeURIComponent(value)}`)
@@ -90,41 +263,27 @@ export default function InformesPage() {
   }
 
   const selectSuggestion = (s: SearchResult) => {
-    setTicker(s.symbol)
-    setSelectedResult(s)
-    setShowDropdown(false)
-    setSuggestions([])
-    setSelectedIdx(-1)
+    setTicker(s.symbol); setSelectedResult(s)
+    setShowDropdown(false); setSuggestions([]); setSelectedIdx(-1)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showDropdown || suggestions.length === 0) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setSelectedIdx((i) => Math.min(i + 1, suggestions.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setSelectedIdx((i) => Math.max(i - 1, 0))
-    } else if (e.key === 'Enter' && selectedIdx >= 0) {
-      e.preventDefault()
-      selectSuggestion(suggestions[selectedIdx])
-    } else if (e.key === 'Escape') {
-      setShowDropdown(false)
-    }
+    if (!showDropdown || !suggestions.length) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIdx((i) => Math.min(i + 1, suggestions.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIdx((i) => Math.max(i - 1, 0)) }
+    else if (e.key === 'Enter' && selectedIdx >= 0) { e.preventDefault(); selectSuggestion(suggestions[selectedIdx]) }
+    else if (e.key === 'Escape') setShowDropdown(false)
   }
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false)
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowDropdown(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // ── Delete history entry ────────────────────────────────────────────────────
+  // ── Actions ────────────────────────────────────────────────────────────────
 
   const deleteEntry = async (id: string) => {
     try {
@@ -134,26 +293,8 @@ export default function InformesPage() {
         body: JSON.stringify({ id }),
       })
       setHistory((prev) => prev.filter((h) => h.id !== id))
-    } catch {
-      addToast('Error al eliminar el registro', 'error')
-    }
-  }
-
-  // ── Re-download history entry ───────────────────────────────────────────────
-
-  const redownload = async (entry: HistoryEntry) => {
-    try {
-      const res = await fetch('/api/informes/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: entry.ticker, solicitante: entry.solicitante }),
-      })
-      if (!res.ok) { addToast('Error al regenerar el informe', 'error'); return }
-      const blob = await res.blob()
-      triggerDownload(blob, entry.filename)
-    } catch {
-      addToast('Error de red al regenerar', 'error')
-    }
+      if (previewEntry?.id === id) setPreviewEntry(null)
+    } catch { addToast('Error al eliminar el registro', 'error') }
   }
 
   function triggerDownload(blob: Blob, filename: string) {
@@ -163,56 +304,63 @@ export default function InformesPage() {
     URL.revokeObjectURL(url)
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  const redownload = async (entry: HistoryEntry) => {
+    try {
+      const res = await fetch('/api/informes/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: entry.ticker, solicitante: entry.solicitante }),
+      })
+      if (!res.ok) { addToast('Error al regenerar el informe', 'error'); return }
+      triggerDownload(await res.blob(), entry.filename)
+    } catch { addToast('Error de red al regenerar', 'error') }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!ticker.trim() || loading) return
     setLoading(true)
-
     try {
       const res = await fetch('/api/informes/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticker: ticker.trim(), solicitante: solicitante.trim() }),
       })
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { detail?: string }
         throw new Error(err.detail ?? `Error ${res.status}`)
       }
-
       const metaHeader = res.headers.get('X-Informe-Meta')
-      const blob       = await res.blob()
-
+      const blob = await res.blob()
       let filename = `${ticker.trim()}_Informe.docx`
       if (metaHeader) {
-        try {
-          const meta = JSON.parse(atob(metaHeader)) as { filename?: string; ticker?: string; empresa?: string }
-          if (meta.filename) filename = meta.filename
-        } catch { /* use default */ }
+        try { const m = JSON.parse(atob(metaHeader)) as { filename?: string }; if (m.filename) filename = m.filename } catch { /**/ }
       }
-
       triggerDownload(blob, filename)
       addToast(`Informe de ${ticker.trim()} generado correctamente.`, 'success')
-
       await fetchHistory()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error desconocido'
-      addToast(msg, 'error')
-    } finally {
-      setLoading(false)
-    }
+      addToast(err instanceof Error ? err.message : 'Error desconocido', 'error')
+    } finally { setLoading(false) }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-full">
+      {/* Preview modal */}
+      {previewEntry && (
+        <PreviewModal
+          entry={previewEntry}
+          onClose={() => setPreviewEntry(null)}
+          onDownload={redownload}
+        />
+      )}
+
       {/* Page header */}
       <div className="mb-6 flex items-center gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-lg"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
           style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)' }}
         >
           <BarChart2 size={20} style={{ color: '#00ff88' }} />
@@ -235,7 +383,7 @@ export default function InformesPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {/* Ticker input + autocomplete */}
+              {/* Ticker */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-[#94a3b8]">Ticker / Nombre</label>
                 <div className="relative" ref={dropdownRef}>
@@ -253,18 +401,17 @@ export default function InformesPage() {
                       style={{ textTransform: 'uppercase' }}
                     />
                   </div>
-
                   {showDropdown && suggestions.length > 0 && (
-                    <div className="absolute z-50 mt-1 w-full rounded-lg border border-[#1e1e2e] bg-[#12121a] py-1 shadow-xl"
-                         style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                    <div
+                      className="absolute z-50 mt-1 w-full rounded-lg border border-[#1e1e2e] bg-[#12121a] py-1 shadow-xl"
+                      style={{ maxHeight: '220px', overflowY: 'auto' }}
+                    >
                       {suggestions.map((s, idx) => (
                         <button
                           key={s.symbol}
                           type="button"
                           onMouseDown={() => selectSuggestion(s)}
-                          className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
-                            idx === selectedIdx ? 'bg-[#1e1e2e]' : 'hover:bg-[#1a1a28]'
-                          }`}
+                          className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${idx === selectedIdx ? 'bg-[#1e1e2e]' : 'hover:bg-[#1a1a28]'}`}
                         >
                           <span className="font-semibold text-[#00ff88]">{s.symbol}</span>
                           <span className="flex-1 truncate text-[#94a3b8]">{s.name}</span>
@@ -274,11 +421,8 @@ export default function InformesPage() {
                     </div>
                   )}
                 </div>
-
                 {selectedResult && (
-                  <p className="text-xs text-[#64748b]">
-                    {selectedResult.name} · {selectedResult.exchange}
-                  </p>
+                  <p className="text-xs text-[#64748b]">{selectedResult.name} · {selectedResult.exchange}</p>
                 )}
               </div>
 
@@ -298,31 +442,21 @@ export default function InformesPage() {
               <button
                 type="submit"
                 disabled={!ticker.trim() || loading}
-                className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:brightness-90 active:scale-[0.98]"
                 style={{ background: '#00ff88', color: '#0a0a0f' }}
-                onMouseEnter={(e) => { if (!loading && ticker.trim()) (e.currentTarget as HTMLButtonElement).style.background = '#00cc6a' }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#00ff88' }}
               >
-                {loading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <FileText size={16} />
-                )}
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
                 {loading ? 'Generando…' : 'Generar Informe'}
               </button>
             </form>
 
-            {/* Status box */}
             {loading && (
               <div className="mt-4 flex items-start gap-3 rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-3">
                 <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin text-[#00ff88]" />
-                <p className="text-xs text-[#94a3b8]">
-                  Generando informe con IA… puede tardar 30–60 segundos.
-                </p>
+                <p className="text-xs text-[#94a3b8]">Generando informe con IA… puede tardar 30–60 segundos.</p>
               </div>
             )}
 
-            {/* Footer note */}
             <p className="mt-4 text-xs text-[#475569]">
               Incluye resumen ejecutivo, modelo de negocio, análisis financiero, factores de inversión y recomendación. Generado con DeepSeek via OpenRouter.
             </p>
@@ -331,13 +465,29 @@ export default function InformesPage() {
 
         {/* ── RIGHT: Historial ─────────────────────────────────── */}
         <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
-          <div className="flex items-center justify-between border-b border-[#1e1e2e] px-5 py-3.5">
-            <h2 className="text-sm font-semibold text-[#e2e8f0]">Historial de Informes</h2>
-            {history.length > 0 && (
-              <span className="rounded-full px-2 py-0.5 text-xs font-medium"
-                    style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
-                {history.length}
-              </span>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-[#e2e8f0]">Historial de Informes</h2>
+              {history.length > 0 && (
+                <span className="rounded-full px-2 py-0.5 text-xs font-medium"
+                      style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
+                  {displayed.length}
+                </span>
+              )}
+            </div>
+
+            {/* Filter by Responsable */}
+            {uniqueSolicitantes.length > 0 && (
+              <select
+                value={filterSolicitante}
+                onChange={(e) => setFilterSolicitante(e.target.value)}
+                className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] px-2.5 py-1.5 text-xs text-[#e2e8f0] transition-colors focus:border-[#00ff88] focus:outline-none"
+              >
+                <option value="">Todos los operadores</option>
+                {uniqueSolicitantes.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             )}
           </div>
 
@@ -345,15 +495,18 @@ export default function InformesPage() {
             <div className="flex items-center justify-center py-16">
               <Loader2 size={20} className="animate-spin text-[#475569]" />
             </div>
-          ) : history.length === 0 ? (
+          ) : displayed.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl"
-                   style={{ background: 'rgba(30,30,46,0.6)' }}>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: 'rgba(30,30,46,0.6)' }}>
                 <FileText size={22} className="text-[#475569]" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#64748b]">Sin informes generados</p>
-                <p className="mt-1 text-xs text-[#475569]">Ingresa un ticker para comenzar.</p>
+                <p className="text-sm font-medium text-[#64748b]">
+                  {filterSolicitante ? `Sin informes de "${filterSolicitante}"` : 'Sin informes generados'}
+                </p>
+                <p className="mt-1 text-xs text-[#475569]">
+                  {filterSolicitante ? 'Prueba otro filtro.' : 'Ingresa un ticker para comenzar.'}
+                </p>
               </div>
             </div>
           ) : (
@@ -363,13 +516,13 @@ export default function InformesPage() {
                   <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
                     <th className="px-4 py-3 text-left font-medium text-[#64748b]">Ticker</th>
                     <th className="px-4 py-3 text-left font-medium text-[#64748b]">Empresa</th>
-                    <th className="px-4 py-3 text-left font-medium text-[#64748b]">Fecha</th>
+                    <th className="hidden px-4 py-3 text-left font-medium text-[#64748b] sm:table-cell">Fecha</th>
                     <th className="px-4 py-3 text-left font-medium text-[#64748b]">Responsable</th>
-                    <th className="px-4 py-3 text-right font-medium text-[#64748b]">Acción</th>
+                    <th className="px-4 py-3 text-right font-medium text-[#64748b]">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {history.map((entry, i) => (
+                  {displayed.map((entry, i) => (
                     <tr
                       key={entry.id}
                       className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]"
@@ -379,21 +532,28 @@ export default function InformesPage() {
                         <span className="font-semibold text-[#00ff88]">{entry.ticker}</span>
                         <span className="ml-1.5 text-[#475569]">#{entry.informe_numero}</span>
                       </td>
-                      <td className="max-w-[180px] truncate px-4 py-3 text-[#94a3b8]">
+                      <td className="max-w-[140px] truncate px-4 py-3 text-[#94a3b8]">
                         {entry.empresa ?? '—'}
                       </td>
-                      <td className="px-4 py-3 text-[#64748b]">
+                      <td className="hidden px-4 py-3 text-[#64748b] sm:table-cell">
                         {formatDate(entry.fecha_generacion)}
                       </td>
-                      <td className="max-w-[140px] truncate px-4 py-3 text-[#64748b]">
+                      <td className="max-w-[120px] truncate px-4 py-3 text-[#64748b]">
                         {entry.solicitante ?? '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <button
+                            title="Ver informe"
+                            onClick={() => setPreviewEntry(entry)}
+                            className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-[#64748b] transition-colors hover:bg-[#1e1e2e] hover:text-[#e2e8f0]"
+                          >
+                            <Eye size={13} />
+                          </button>
                           <button
                             title="Descargar .docx"
                             onClick={() => redownload(entry)}
-                            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-[#1e1e2e]"
+                            className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:bg-[#1e1e2e]"
                             style={{ color: '#00ff88' }}
                           >
                             <Download size={13} />
@@ -417,18 +577,17 @@ export default function InformesPage() {
         </div>
       </div>
 
-      {/* ── Toasts ─────────────────────────────────────────────── */}
+      {/* Toasts */}
       <div className="fixed bottom-5 left-4 right-4 z-[999] flex flex-col gap-2 md:left-auto md:right-5 md:w-auto">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="flex items-center gap-2.5 rounded-lg border px-4 py-3 shadow-lg text-sm font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
+            className="flex items-center gap-2.5 rounded-lg border px-4 py-3 text-sm font-medium shadow-lg"
             style={{
               background: t.variant === 'success' ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)',
               borderColor: t.variant === 'success' ? 'rgba(22,163,74,0.4)' : 'rgba(220,38,38,0.4)',
               color: t.variant === 'success' ? '#4ade80' : '#f87171',
               minWidth: '280px',
-              maxWidth: '400px',
             }}
           >
             {t.message}

@@ -10,7 +10,7 @@ export async function GET(): Promise<Response> {
 
   const { data, error } = await supabase
     .from('informes_history')
-    .select('id, ticker, empresa, bolsa, solicitante, filename, informe_numero, fecha_generacion')
+    .select('id, ticker, empresa, bolsa, solicitante, filename, informe_numero, fecha_generacion, content_json')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(50)

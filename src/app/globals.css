@@ -21,3 +21,7 @@ body {
   color: #e2e8f0;
   font-family: var(--font-geist-sans), sans-serif;
 }
+
+button, a, [role="button"] {
+  cursor: pointer;
+}

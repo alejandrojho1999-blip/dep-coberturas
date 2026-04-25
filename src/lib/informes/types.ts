@@ -76,4 +76,5 @@ export interface HistoryEntry {
   filename: string
   informe_numero: number
   fecha_generacion: string
+  content_json?: ReportContent | null
 }
