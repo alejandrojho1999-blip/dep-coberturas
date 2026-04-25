@@ -216,12 +216,17 @@ export default function InformesPage() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const uniqueSolicitantes = Array.from(
-    new Set(history.map((h) => h.solicitante?.trim()).filter(Boolean) as string[])
-  ).sort()
+  const uniqueSolicitantes = (() => {
+    const seen = new Map<string, string>()
+    history.forEach((h) => {
+      const v = h.solicitante?.trim()
+      if (v) seen.set(v.toLowerCase(), v)
+    })
+    return Array.from(seen.values()).sort()
+  })()
 
   const displayed = filterSolicitante
-    ? history.filter((h) => (h.solicitante?.trim() ?? '') === filterSolicitante)
+    ? history.filter((h) => (h.solicitante?.trim() ?? '').toLowerCase() === filterSolicitante.toLowerCase())
     : history
 
   // ── Toasts ─────────────────────────────────────────────────────────────────
