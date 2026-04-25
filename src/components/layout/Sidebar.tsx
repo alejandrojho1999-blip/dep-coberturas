@@ -54,6 +54,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   }
 
   const desktopWidth = collapsed ? 'md:w-[60px]' : 'md:w-[240px]'
+  const showLabels = !collapsed || mobileOpen
 
   return (
     <>
@@ -78,7 +79,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       >
         {/* Header */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#1e1e2e] px-3">
-          {!collapsed && (
+          {showLabels && (
             <span className="truncate text-sm font-semibold text-[#00ff88]">
               Dep. Coberturas
             </span>
@@ -120,8 +121,8 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 ].join(' ')}
               >
                 <Icon size={18} className="shrink-0" />
-                {!collapsed && <span className="truncate">{label}</span>}
-                {isActive && !collapsed && (
+                {showLabels && <span className="truncate">{label}</span>}
+                {isActive && showLabels && (
                   <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#00ff88]" />
                 )}
               </Link>
@@ -142,7 +143,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             ].join(' ')}
           >
             <PROFILE_ITEM.icon size={18} className="shrink-0" />
-            {!collapsed && <span className="truncate">{PROFILE_ITEM.label}</span>}
+            {showLabels && <span className="truncate">{PROFILE_ITEM.label}</span>}
           </Link>
         </div>
       </aside>
