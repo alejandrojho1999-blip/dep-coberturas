@@ -202,6 +202,7 @@ export default function InformesPage() {
   const [historyLoading, setHistoryLoading]   = useState(true)
   const [filterSolicitante, setFilterSolicitante] = useState('')
   const [previewEntry, setPreviewEntry]       = useState<HistoryEntry | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [toasts, setToasts]                   = useState<Toast[]>([])
   const toastId                               = useRef(0)
 
@@ -542,31 +543,49 @@ export default function InformesPage() {
                         {entry.solicitante ?? '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-0.5">
-                          <button
-                            title="Ver informe"
-                            onClick={() => setPreviewEntry(entry)}
-                            className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-[#64748b] transition-colors hover:bg-[#1e1e2e] hover:text-[#e2e8f0]"
-                          >
-                            <Eye size={13} />
-                          </button>
-                          <button
-                            title="Descargar .docx"
-                            onClick={() => redownload(entry)}
-                            className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:bg-[#1e1e2e]"
-                            style={{ color: '#00ff88' }}
-                          >
-                            <Download size={13} />
-                            .docx
-                          </button>
-                          <button
-                            title="Eliminar"
-                            onClick={() => deleteEntry(entry.id)}
-                            className="rounded-md p-1.5 text-[#475569] transition-colors hover:bg-[#1e1e2e] hover:text-red-400"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                        {confirmDeleteId === entry.id ? (
+                          <div className="flex items-center justify-end gap-1.5 text-xs">
+                            <span className="text-[#94a3b8]">¿Eliminar?</span>
+                            <button
+                              onClick={() => { void deleteEntry(entry.id); setConfirmDeleteId(null) }}
+                              className="rounded px-2 py-1 font-medium text-red-400 transition-colors hover:bg-red-400/10"
+                            >
+                              Sí
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="rounded px-2 py-1 text-[#64748b] transition-colors hover:bg-[#1e1e2e]"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-0.5">
+                            <button
+                              title="Ver informe"
+                              onClick={() => setPreviewEntry(entry)}
+                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-[#64748b] transition-colors hover:bg-[#1e1e2e] hover:text-[#e2e8f0]"
+                            >
+                              <Eye size={13} />
+                            </button>
+                            <button
+                              title="Descargar .docx"
+                              onClick={() => redownload(entry)}
+                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:bg-[#1e1e2e]"
+                              style={{ color: '#00ff88' }}
+                            >
+                              <Download size={13} />
+                              .docx
+                            </button>
+                            <button
+                              title="Eliminar"
+                              onClick={() => setConfirmDeleteId(entry.id)}
+                              className="rounded-md p-1.5 text-[#475569] transition-colors hover:bg-[#1e1e2e] hover:text-red-400"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
