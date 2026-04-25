@@ -45,10 +45,20 @@ export default function IRChatPanel({ assetId, ticker, open, onClose }: Props) {
         body: JSON.stringify({ assetId, message: text.trim() }),
       })
 
-      if (!res.ok || !res.body) {
-        const errBody = await res.json().catch(() => ({})) as { error?: string }
-        const errMsg = errBody.error ?? 'Error al conectar con el analista IA.'
+      if (!res.ok) {
+        let errMsg = `Error ${res.status} al conectar con el analista IA.`
+        try {
+          const ct = res.headers.get('content-type') ?? ''
+          if (ct.includes('application/json')) {
+            const body = await res.json() as { error?: string }
+            if (body.error) errMsg = body.error
+          }
+        } catch { /* ignore */ }
         setMessages((prev) => [...prev, { role: 'assistant', content: errMsg }])
+        return
+      }
+      if (!res.body) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: 'Sin respuesta del analista IA.' }])
         return
       }
 

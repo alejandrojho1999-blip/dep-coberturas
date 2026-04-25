@@ -140,7 +140,7 @@ export function olsRegression(
   try {
     XtXinvMatrix = inv(XtX)
   } catch {
-    throw new Error('Design matrix is singular — check for collinear predictors or insufficient data')
+    throw new Error('Matriz de diseño singular — verifica que las variables de tratamiento y confusores tengan variación real entre trimestres y no estén correlacionadas perfectamente entre sí')
   }
   const XtXinv: number[][] = (XtXinvMatrix as { toArray(): number[][] }).toArray()
   const Xty = multiply(Xt, mY)

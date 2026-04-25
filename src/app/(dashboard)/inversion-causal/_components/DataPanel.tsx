@@ -92,6 +92,16 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
   configManualValuesRef.current = config.manualValues
   const [editingTreatment, setEditingTreatment] = useState(false)
 
+  const [rowEdits, setRowEdits] = useState<Record<string, string>>(() => {
+    const saved = config.manualRowValues?.[config.treatment] ?? {}
+    return Object.fromEntries(Object.entries(saved).map(([k, v]) => [k, String(v)]))
+  })
+  const rowEditsRef = useRef(rowEdits)
+  rowEditsRef.current = rowEdits
+  const [editingRowDate, setEditingRowDate] = useState<string | null>(null)
+  const configManualRowValuesRef = useRef(config.manualRowValues)
+  configManualRowValuesRef.current = config.manualRowValues
+
   const loadFred = useCallback(async (start: string, end: string) => {
     setFredState({ status: 'loading', data: null, error: null })
     try {
@@ -148,13 +158,14 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
   }, [config.ticker, config.horizon])
 
   const serializedManualValues = JSON.stringify(config.manualValues ?? {})
+  const serializedRowEdits = JSON.stringify(rowEdits)
 
   useEffect(() => {
     if (fredState.status === 'success' && yahooState.status === 'success') {
       mergeAndNotify()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fredState.status, yahooState.status, manualTreatmentValue, serializedManualValues])
+  }, [fredState.status, yahooState.status, manualTreatmentValue, serializedManualValues, serializedRowEdits])
 
   function mergeAndNotify() {
     if (fredState.status !== 'success' || yahooState.status !== 'success') return
@@ -191,11 +202,18 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
         }
       }
 
-      // Treatment local state overrides stored value (real-time editing)
+      // Treatment: use per-row edits when available, fall back to single value
       if (!treatmentIsFred) {
-        const num = parseFloat(manualTreatmentRef.current)
-        if (!isNaN(num) && isFinite(num)) {
-          for (const row of merged) {
+        for (const row of merged) {
+          const dateKey = row.date as string
+          const perRowStr = rowEditsRef.current[dateKey]
+          const perRowSaved = configManualRowValuesRef.current?.[config.treatment]?.[dateKey]
+          const num = perRowStr != null
+            ? parseFloat(perRowStr)
+            : perRowSaved != null
+              ? perRowSaved
+              : parseFloat(manualTreatmentRef.current)
+          if (!isNaN(num) && isFinite(num)) {
             ;(row as Record<string, number | string>)[config.treatment] = num
           }
         }
@@ -205,6 +223,22 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
     } finally {
       setMerging(false)
     }
+  }
+
+  async function saveRowValues(edits: Record<string, string>) {
+    if (!assetId) return
+    const parsed: Record<string, number> = {}
+    for (const [date, val] of Object.entries(edits)) {
+      const num = parseFloat(val)
+      if (!isNaN(num) && isFinite(num)) parsed[date] = num
+    }
+    try {
+      await fetch('/api/causal/assets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: assetId, manualRowValues: { [config.treatment]: parsed } }),
+      })
+    } catch { /* silent */ }
   }
 
   async function saveManualValue(value: string) {
@@ -479,10 +513,44 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
                       {row.VIX != null ? row.VIX.toFixed(1) : '—'}
                     </td>
                     {!treatmentIsFred && (
-                      <td className="py-2 text-right font-mono tabular-nums text-[#3b82f6]">
-                        {config.manualValues?.[config.treatment] != null
-                          ? config.manualValues[config.treatment].toFixed(2)
-                          : '—'}
+                      <td className="py-2 text-right font-mono tabular-nums">
+                        {editingRowDate === row.date ? (
+                          <input
+                            type="text"
+                            autoFocus
+                            value={rowEdits[row.date] ?? ''}
+                            onChange={(e) => setRowEdits((prev) => ({ ...prev, [row.date]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === 'Escape') {
+                                setEditingRowDate(null)
+                                void saveRowValues(rowEditsRef.current)
+                              }
+                            }}
+                            onBlur={() => { setEditingRowDate(null); void saveRowValues(rowEditsRef.current) }}
+                            className="w-20 px-1.5 py-0.5 rounded bg-[#12121a] border border-[#3b82f6]/40 text-[#e2e8f0] text-right text-xs focus:outline-none focus:border-[#3b82f6]"
+                          />
+                        ) : (
+                          <span
+                            className="flex items-center justify-end gap-1.5 cursor-pointer group"
+                            onClick={() => setEditingRowDate(row.date)}
+                          >
+                            <span className={
+                              rowEdits[row.date] != null || config.manualRowValues?.[config.treatment]?.[row.date] != null
+                                ? 'text-[#3b82f6]'
+                                : config.manualValues?.[config.treatment] != null
+                                  ? 'text-[#3b82f6]/60'
+                                  : 'text-[#475569]'
+                            }>
+                              {rowEdits[row.date]
+                                ?? (config.manualRowValues?.[config.treatment]?.[row.date] != null
+                                  ? String(config.manualRowValues[config.treatment]![row.date])
+                                  : config.manualValues?.[config.treatment] != null
+                                    ? config.manualValues[config.treatment].toFixed(2)
+                                    : '—')}
+                            </span>
+                            <span className="text-[#334155] group-hover:text-[#3b82f6] transition-colors text-[0.65rem]">✏</span>
+                          </span>
+                        )}
                       </td>
                     )}
                   </tr>
@@ -491,9 +559,9 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
             </table>
           </div>
         )}
-        {!treatmentIsFred && !config.manualValues?.[config.treatment] && fredState.status === 'success' && (
+        {!treatmentIsFred && Object.keys(rowEdits).length === 0 && !config.manualValues?.[config.treatment] && fredState.status === 'success' && (
           <p className="text-xs text-yellow-400/70 mt-1.5 px-1">
-            ⚠ Sin valor para {config.treatment} — ingrésalo en la fila de Tratamiento arriba
+            ⚠ Sin valores para {config.treatment} — haz clic en ✏ en cada fila para ingresar un valor distinto por trimestre
           </p>
         )}
         {fredState.status === 'success' && fredState.data && (

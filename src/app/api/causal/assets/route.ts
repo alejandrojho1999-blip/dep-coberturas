@@ -64,6 +64,7 @@ export async function PATCH(request: Request): Promise<Response> {
   const body = await request.json() as {
     id?: string
     manualValues?: Record<string, number>
+    manualRowValues?: Record<string, Record<string, number>>
     configPatch?: Record<string, unknown>
   }
   if (!body.id) return Response.json({ error: 'Missing id' }, { status: 400 })
@@ -81,6 +82,14 @@ export async function PATCH(request: Request): Promise<Response> {
     ...(asset.config as object),
     ...(body.configPatch ?? {}),
     ...(body.manualValues !== undefined ? { manualValues: body.manualValues } : {}),
+    ...(body.manualRowValues !== undefined
+      ? {
+          manualRowValues: {
+            ...((asset.config as CausalConfig).manualRowValues ?? {}),
+            ...body.manualRowValues,
+          },
+        }
+      : {}),
   }
 
   const { error } = await supabase

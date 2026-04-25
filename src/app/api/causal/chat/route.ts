@@ -12,7 +12,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
-    return Response.json({ error: 'OPENROUTER_API_KEY not configured' }, { status: 500 })
+    console.error('[causal/chat] OPENROUTER_API_KEY is not set in environment')
+    return Response.json({ error: 'OPENROUTER_API_KEY no configurada en el servidor' }, { status: 500 })
   }
 
   const { data: asset } = await supabase
@@ -33,29 +34,37 @@ ${asset.ir_content ? `Contexto de la página Investor Relations:\n${asset.ir_con
 
 Responde de forma concisa y técnica. Usa términos del análisis causal cuando sea relevante.`
 
-  const aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://dep-coberturas.vercel.app',
-      'X-Title': 'Dep Coberturas — Causal Chat',
-    },
-    body: JSON.stringify({
-      model: 'deepseek/deepseek-chat',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: body.message },
-      ],
-      max_tokens: 600,
-      temperature: 0.3,
-      stream: true,
-    }),
-  })
+  let aiRes: Response
+  try {
+    aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      signal: AbortSignal.timeout(15000),
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://dep-coberturas.vercel.app',
+        'X-Title': 'Dep Coberturas — Causal Chat',
+      },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: body.message },
+        ],
+        max_tokens: 600,
+        temperature: 0.3,
+        stream: true,
+      }),
+    })
+  } catch (fetchErr) {
+    console.error('[causal/chat] Network error calling OpenRouter:', fetchErr)
+    return Response.json({ error: 'Error de red al conectar con OpenRouter' }, { status: 500 })
+  }
 
   if (!aiRes.ok) {
     const err = await aiRes.text()
-    return Response.json({ error: err }, { status: 500 })
+    console.error('[causal/chat] OpenRouter error', aiRes.status, err)
+    return Response.json({ error: `OpenRouter ${aiRes.status}: ${err}` }, { status: 500 })
   }
 
   return new Response(aiRes.body, {

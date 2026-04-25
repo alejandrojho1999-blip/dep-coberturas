@@ -22,7 +22,8 @@ export interface CausalConfig {
   excluded: Record<string, string>  // variable -> reason (collider)
   mediators?: string[]
   dagEdges: DAGEdge[]
-  manualValues?: Record<string, number>  // user-entered values for non-FRED variables
+  manualValues?: Record<string, number>  // user-entered values for non-FRED variables (single value applied to all rows)
+  manualRowValues?: Record<string, Record<string, number>>  // per-row values: { [varName]: { [isoDate]: value } }
 }
 
 export interface DataRow {

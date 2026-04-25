@@ -39,6 +39,25 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
+  // Variance pre-check — catches constant predictors before OLS fails with singular matrix
+  const predictors = [config.treatment, ...config.confounders]
+  for (const varName of predictors) {
+    const vals = data
+      .filter((r) => typeof r[varName] === 'number' && isFinite(r[varName] as number))
+      .map((r) => r[varName] as number)
+    if (vals.length < 2) continue
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+    const variance = vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length
+    if (variance < 1e-10) {
+      return Response.json(
+        {
+          error: `La variable "${varName}" tiene valor constante (sin variación entre trimestres). El análisis causal requiere variación. Si ingresaste un valor manual único, el modelo no puede estimar un efecto — usa una variable macro (FED_RATE, YIELD_10Y, VIX) como tratamiento.`,
+        },
+        { status: 400 },
+      )
+    }
+  }
+
   try {
     // Step 3: Backdoor criterion (adjustment set)
     const { adjustmentSet, backdoorPaths } = backdoorCriterion(config)
