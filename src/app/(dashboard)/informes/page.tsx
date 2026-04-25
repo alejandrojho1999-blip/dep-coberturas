@@ -217,11 +217,11 @@ export default function InformesPage() {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const uniqueSolicitantes = Array.from(
-    new Set(history.map((h) => h.solicitante).filter(Boolean) as string[])
+    new Set(history.map((h) => h.solicitante?.trim()).filter(Boolean) as string[])
   ).sort()
 
   const displayed = filterSolicitante
-    ? history.filter((h) => h.solicitante === filterSolicitante)
+    ? history.filter((h) => (h.solicitante?.trim() ?? '') === filterSolicitante)
     : history
 
   // ── Toasts ─────────────────────────────────────────────────────────────────
@@ -531,7 +531,7 @@ export default function InformesPage() {
                     >
                       <td className="px-4 py-3">
                         <span className="font-semibold text-[#00ff88]">{entry.ticker}</span>
-                        <span className="ml-1.5 text-[#475569]">#{entry.informe_numero}</span>
+                        <span className="ml-1.5 text-[#475569]">#{i + 1}</span>
                       </td>
                       <td className="max-w-[140px] truncate px-4 py-3 text-[#94a3b8]">
                         {entry.empresa ?? '—'}

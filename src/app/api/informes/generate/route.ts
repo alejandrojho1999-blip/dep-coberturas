@@ -72,8 +72,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const filename = buildFilename(ticker, content.mes_año)
 
-  // Persist to Supabase (fire-and-forget — don't block the response)
-  supabase
+  // Persist to Supabase
+  const { error: dbErr } = await supabase
     .from('informes_history')
     .insert({
       user_id:          user.id,
@@ -85,9 +85,10 @@ export async function POST(request: Request): Promise<Response> {
       informe_numero:   informeNumero,
       content_json:     content,
     })
-    .then(({ error: dbErr }) => {
-      if (dbErr) console.error('[informes/generate] DB insert error:', dbErr.message)
-    })
+
+  if (dbErr) {
+    console.error('[informes/generate] DB insert error:', dbErr.message)
+  }
 
   const meta = {
     ticker:            content.ticker,
