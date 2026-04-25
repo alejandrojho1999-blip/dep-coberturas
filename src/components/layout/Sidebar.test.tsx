@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({
 
 describe('Sidebar', () => {
   it('renderiza los items de navegación', () => {
-    render(<Sidebar />)
+    render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Inversión Causal')).toBeInTheDocument()
     expect(screen.getByText('Portafolios Híbridos')).toBeInTheDocument()
@@ -18,7 +18,7 @@ describe('Sidebar', () => {
   })
 
   it('colapsa y expande al hacer click en el toggle', () => {
-    render(<Sidebar />)
+    render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
     const toggle = screen.getByRole('button', { name: /colapsar|expandir/i })
     fireEvent.click(toggle)
     expect(toggle).toBeInTheDocument()

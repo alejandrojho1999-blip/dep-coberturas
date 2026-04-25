@@ -115,7 +115,7 @@ export async function createDocxBuffer(
   solicitante?: string
 ): Promise<Buffer> {
   const today = new Date()
-  const firmante = solicitante?.trim() || 'Ing. Luis Riofrio, Mgs.'
+  const firmante = solicitante?.trim() || 'Operador — Emporium Quality Funds'
   const currency = marketData.moneda ?? 'USD'
 
   // Load logo

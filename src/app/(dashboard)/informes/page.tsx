@@ -219,12 +219,12 @@ export default function InformesPage() {
         </div>
         <div>
           <h1 className="text-lg font-semibold text-[#e2e8f0]">Informes de Inversión</h1>
-          <p className="text-sm text-[#64748b]">Emporium Quality Funds — Ing. Luis Riofrio, Mgs.</p>
+          <p className="text-sm text-[#64748b]">Emporium Quality Funds — Generador de Informes</p>
         </div>
       </div>
 
       {/* 2-column grid */}
-      <div className="grid gap-5" style={{ gridTemplateColumns: '320px 1fr' }}>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-[320px_1fr]">
 
         {/* ── LEFT: Generar informe ─────────────────────────────── */}
         <div className="flex flex-col gap-5">
@@ -418,7 +418,7 @@ export default function InformesPage() {
       </div>
 
       {/* ── Toasts ─────────────────────────────────────────────── */}
-      <div className="fixed bottom-5 right-5 z-[999] flex flex-col gap-2">
+      <div className="fixed bottom-5 left-4 right-4 z-[999] flex flex-col gap-2 md:left-auto md:right-5 md:w-auto">
         {toasts.map((t) => (
           <div
             key={t.id}
