@@ -9,6 +9,7 @@ import {
   BarChart2,
   Bot,
   Shield,
+  FileText,
   UserCircle,
   ChevronLeft,
   ChevronRight,
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { icon: BarChart2, label: 'Portafolios Híbridos', href: '/portafolios' },
   { icon: Bot, label: 'Agente PPO', href: '/agente-ppo' },
   { icon: Shield, label: 'Coberturas', href: '/coberturas' },
+  { icon: FileText, label: 'Informes', href: '/informes' },
 ] as const
 
 const PROFILE_ITEM = { icon: UserCircle, label: 'Mi Perfil', href: '/perfil' }
