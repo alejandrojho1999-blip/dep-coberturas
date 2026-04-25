@@ -5,7 +5,7 @@ import { createDocxBuffer, buildFilename } from '@/lib/informes/docx'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function POST(request: Request): Promise<Response> {
   const supabase = await createClient()
@@ -72,8 +72,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const filename = buildFilename(ticker, content.mes_año)
 
-  // Persist to Supabase
-  const { error: dbErr } = await supabase
+  // Persist to Supabase (fire-and-forget — don't block the response)
+  supabase
     .from('informes_history')
     .insert({
       user_id:          user.id,
@@ -85,10 +85,9 @@ export async function POST(request: Request): Promise<Response> {
       informe_numero:   informeNumero,
       content_json:     content,
     })
-
-  if (dbErr) {
-    console.error('[informes/generate] DB insert error:', dbErr.message)
-  }
+    .then(({ error: dbErr }) => {
+      if (dbErr) console.error('[informes/generate] DB insert error:', dbErr.message)
+    })
 
   const meta = {
     ticker:            content.ticker,

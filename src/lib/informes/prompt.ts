@@ -90,7 +90,7 @@ Responde SOLO con el JSON.`
         { role: 'user', content: userMessage },
       ],
       temperature: 0.15,
-      max_tokens: 4096,
+      max_tokens: 2048,
     }),
   })
 

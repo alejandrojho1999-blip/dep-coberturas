@@ -1,8 +1,6 @@
 import YahooFinance from 'yahoo-finance2'
 import type { MarketData, HistorialIngreso } from './types'
 
-const yf = new YahooFinance()
-
 function fmt(n: number | null | undefined, decimals = 2): string {
   if (n == null) return 'N/D'
   if (Math.abs(n) >= 1e12) return `$${(n / 1e12).toFixed(decimals)}T`
@@ -20,8 +18,11 @@ function pct(n: number | null | undefined): string {
 type AnyRecord = Record<string, any>
 
 export async function fetchMarketData(ticker: string): Promise<MarketData> {
+  const yf = new YahooFinance()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fetchOptions = { signal: AbortSignal.timeout(20_000) } as any
   const [quote, summary] = await Promise.all([
-    yf.quote(ticker) as Promise<AnyRecord>,
+    yf.quote(ticker, {}, fetchOptions) as Promise<AnyRecord>,
     (async (): Promise<AnyRecord | null> => {
       try {
         return await (yf.quoteSummary(ticker, {
@@ -34,7 +35,7 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
             'recommendationTrend',
             'assetProfile',
           ],
-        }) as Promise<AnyRecord>)
+        }, fetchOptions) as Promise<AnyRecord>)
       } catch { return null }
     })(),
   ])
