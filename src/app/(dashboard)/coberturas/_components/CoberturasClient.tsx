@@ -95,7 +95,7 @@ export default function CoberturasClient() {
       </div>
 
       <Tabs defaultValue="opciones">
-        <div className="overflow-x-auto">
+        <div className="sticky top-0 z-10 bg-[#0a0a0f] overflow-x-auto pb-0.5">
           <TabsList className="bg-[#0f0f17] border border-[#1e2035] h-9 p-0.5 gap-0 min-w-max">
             {(['opciones', 'cfds', 'futuros'] as const).map(tab => (
               <TabsTrigger

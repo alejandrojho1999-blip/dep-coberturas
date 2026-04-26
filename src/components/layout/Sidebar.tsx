@@ -60,6 +60,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       <Link
         key={href}
         href={href}
+        onClick={() => {
+          if (isActive) document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
         title={collapsed ? label : undefined}
         className={[
           'mx-2 my-0.5 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors relative',
