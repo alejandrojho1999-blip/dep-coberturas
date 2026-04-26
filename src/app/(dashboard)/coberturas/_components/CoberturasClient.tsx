@@ -1,19 +1,22 @@
 'use client'
 
 import { useState } from 'react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { PricingResult, OptionInput, HedgeAnalysis } from '@/lib/options/types'
 import { analyzeHedge } from '@/lib/options/hedge'
 import OptionsPricer from './OptionsPricer'
 import GreeksPanel from './GreeksPanel'
 import HedgeAnalyzer from './HedgeAnalyzer'
 import PositionBuilder from './PositionBuilder'
+import CfdsTrading from './CfdsTrading'
+import FuturosPlaceholder from './FuturosPlaceholder'
 
 interface PricingState {
   result: PricingResult
   input: OptionInput
 }
 
-export default function CoberturasClient() {
+function OpcionesTab() {
   const [pricing, setPricing] = useState<PricingState | null>(null)
 
   function handleResult(result: PricingResult, input: OptionInput) {
@@ -41,29 +44,22 @@ export default function CoberturasClient() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#e2e8f0]">Coberturas</h1>
-        <p className="text-[#64748b] text-sm mt-1">
-          Pricing de opciones Black-Scholes con Greeks en tiempo real
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pricer form */}
-        <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-6">
-          <h2 className="text-sm font-medium text-[#e2e8f0] mb-4">Parámetros</h2>
+        <div className="rounded-xl border border-[#1e2035] bg-[#0f0f17] p-6">
+          <h2 className="text-[9px] font-mono font-bold tracking-[0.15em] text-[#374151] uppercase mb-4">
+            Parámetros Black-Scholes
+          </h2>
           <OptionsPricer onResult={handleResult} />
         </div>
 
-        {/* Greeks result */}
         <div>
           {pricing ? (
             <GreeksPanel result={pricing.result} />
           ) : (
-            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-6 flex items-center justify-center h-full min-h-[200px]">
+            <div className="rounded-xl border border-[#1e2035] bg-[#0f0f17] p-6 flex items-center justify-center h-full min-h-[200px]">
               <p className="text-[#64748b] text-sm text-center">
                 Ingresa los parámetros y presiona{' '}
-                <span className="text-[#e2e8f0]">Calcular</span>{' '}
+                <span className="text-[#F0EFE8]">Calcular</span>{' '}
                 para ver el precio y las Greeks.
               </p>
             </div>
@@ -71,7 +67,6 @@ export default function CoberturasClient() {
         </div>
       </div>
 
-      {/* Hedge analyzer — shown after first calculation */}
       {hedgeData && (
         <HedgeAnalyzer
           analysis={hedgeData.analysis}
@@ -79,11 +74,51 @@ export default function CoberturasClient() {
         />
       )}
 
-      {/* Divider */}
-      <div className="border-t border-[#1e1e2e]" />
+      <div className="border-t border-[#1e2035]" />
 
-      {/* Multi-position portfolio builder */}
       <PositionBuilder defaultOption={pricing?.input ?? undefined} />
+    </div>
+  )
+}
+
+export default function CoberturasClient() {
+  return (
+    <div className="space-y-5">
+      {/* Page header */}
+      <div>
+        <h1 className="text-xl font-bold font-mono text-[#F0EFE8] tracking-tight">
+          COBERTURAS
+        </h1>
+        <p className="text-xs text-[#64748b] mt-0.5 font-mono">
+          Trading de opciones, CFDs y futuros · Análisis técnico MAIA
+        </p>
+      </div>
+
+      <Tabs defaultValue="opciones">
+        <TabsList className="bg-[#0f0f17] border border-[#1e2035] h-9 p-0.5 gap-0">
+          {(['opciones', 'cfds', 'futuros'] as const).map(tab => (
+            <TabsTrigger
+              key={tab}
+              value={tab}
+              className="font-mono text-[10px] font-bold tracking-[0.12em] uppercase px-5 h-8 rounded-sm data-[state=active]:bg-[#161622] data-[state=active]:text-[#F59E0B] data-[state=inactive]:text-[#374151] data-[state=inactive]:hover:text-[#64748b]"
+            >
+              {tab}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value="opciones" className="mt-5">
+          <OpcionesTab />
+        </TabsContent>
+
+        <TabsContent value="cfds" className="mt-5">
+          <CfdsTrading />
+        </TabsContent>
+
+        <TabsContent value="futuros" className="mt-5">
+          <FuturosPlaceholder />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
