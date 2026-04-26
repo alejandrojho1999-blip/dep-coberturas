@@ -181,8 +181,8 @@ export default function OptionsPricer({ onResult }: Props) {
         </div>
       </div>
 
-      {/* Numeric fields — 2 column grid */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Numeric fields — 1 col on mobile, 2 col on sm+ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className={labelClass}>
             Precio subyacente (S)

@@ -291,9 +291,13 @@ export default function CfdsTrading() {
             className="w-full bg-[#F59E0B] hover:bg-[#D97706] disabled:opacity-40 text-[#07070b] font-mono font-bold text-sm h-10 gap-2"
           >
             {loading ? (
-              <><Loader2 size={14} className="animate-spin" /> Analizando mercados…</>
+              <><Loader2 size={14} className="animate-spin" /> <span className="sm:hidden">Analizando…</span><span className="hidden sm:inline">Analizando mercados…</span></>
             ) : (
-              <><TrendingUp size={14} /> Analizar Mercados{riskProfile ? ` — Perfil ${riskProfile.charAt(0).toUpperCase() + riskProfile.slice(1)}` : ''}</>
+              <>
+                <TrendingUp size={14} />
+                <span className="sm:hidden">Analizar{riskProfile ? ` · ${riskProfile.charAt(0).toUpperCase() + riskProfile.slice(1)}` : ''}</span>
+                <span className="hidden sm:inline">Analizar Mercados{riskProfile ? ` — Perfil ${riskProfile.charAt(0).toUpperCase() + riskProfile.slice(1)}` : ''}</span>
+              </>
             )}
           </Button>
         </div>
@@ -318,19 +322,25 @@ export default function CfdsTrading() {
             className="rounded-xl border p-5"
             style={{ borderColor: `${biasCfg.color}30`, backgroundColor: `${biasCfg.color}06` }}
           >
-            <div className="flex items-start gap-4">
-              <div
-                className="flex items-center justify-center w-14 h-14 rounded-xl shrink-0"
-                style={{ backgroundColor: `${biasCfg.color}15`, border: `1px solid ${biasCfg.color}30` }}
-              >
-                <BiasIcon size={24} style={{ color: biasCfg.color }} />
+            <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:contents">
+                <div
+                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl shrink-0"
+                  style={{ backgroundColor: `${biasCfg.color}15`, border: `1px solid ${biasCfg.color}30` }}
+                >
+                  <BiasIcon size={22} style={{ color: biasCfg.color }} />
+                </div>
+                <div className="sm:hidden">
+                  <p className="text-[9px] font-mono text-[#374151] uppercase tracking-wide">Sesgo General del Mercado</p>
+                  <p className="text-lg font-mono font-bold" style={{ color: biasCfg.color }}>{biasCfg.label}</p>
+                </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-mono text-[#374151] uppercase tracking-wide mb-1">Sesgo General del Mercado</p>
-                <p className="text-xl font-mono font-bold" style={{ color: biasCfg.color }}>{biasCfg.label}</p>
+                <p className="hidden sm:block text-[9px] font-mono text-[#374151] uppercase tracking-wide mb-1">Sesgo General del Mercado</p>
+                <p className="hidden sm:block text-xl font-mono font-bold" style={{ color: biasCfg.color }}>{biasCfg.label}</p>
                 <p className="text-xs text-[#64748b] mt-1 leading-relaxed max-w-xl">{result.marketNarrative}</p>
               </div>
-              <div className="text-right shrink-0">
+              <div className="hidden sm:block text-right shrink-0">
                 <p className="text-[9px] font-mono text-[#374151]">{result.assetsAnalyzed} activos</p>
                 <p className="text-[9px] font-mono text-[#374151]">
                   {new Date(result.analyzedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
@@ -396,7 +406,7 @@ export default function CfdsTrading() {
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={[
-                        'px-3 sm:px-4 py-2.5 text-[10px] font-mono font-bold whitespace-nowrap transition-colors border-b-2',
+                        'px-4 py-3 sm:py-2.5 text-[10px] font-mono font-bold whitespace-nowrap transition-colors border-b-2',
                         activeCategory === cat
                           ? 'text-[#F59E0B] border-[#F59E0B] bg-[#F59E0B]/5'
                           : 'text-[#374151] border-transparent hover:text-[#64748b]',

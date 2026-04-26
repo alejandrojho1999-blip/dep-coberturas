@@ -193,7 +193,7 @@ export default function PositionBuilder({ defaultOption }: Props) {
                 type="number"
                 value={form.quantity}
                 onChange={(e) => setForm((f) => ({ ...f, quantity: Number(e.target.value) }))}
-                className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-2 py-1 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
+                className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-3 py-2 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
               />
             </label>
             <label className="flex flex-col gap-1">
@@ -203,7 +203,7 @@ export default function PositionBuilder({ defaultOption }: Props) {
                 value={form.S}
                 step="0.01"
                 onChange={(e) => setForm((f) => ({ ...f, S: Number(e.target.value) }))}
-                className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-2 py-1 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
+                className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-3 py-2 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
               />
             </label>
           </div>
@@ -218,7 +218,7 @@ export default function PositionBuilder({ defaultOption }: Props) {
                   value={form.K}
                   step="0.01"
                   onChange={(e) => setForm((f) => ({ ...f, K: Number(e.target.value) }))}
-                  className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-2 py-1 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
+                  className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-3 py-2 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
                 />
               </label>
               <label className="flex flex-col gap-1">
@@ -228,7 +228,7 @@ export default function PositionBuilder({ defaultOption }: Props) {
                   value={form.T}
                   step="0.01"
                   onChange={(e) => setForm((f) => ({ ...f, T: Number(e.target.value) }))}
-                  className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-2 py-1 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
+                  className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-3 py-2 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
                 />
               </label>
               <label className="flex flex-col gap-1">
@@ -238,7 +238,7 @@ export default function PositionBuilder({ defaultOption }: Props) {
                   value={form.r}
                   step="0.001"
                   onChange={(e) => setForm((f) => ({ ...f, r: Number(e.target.value) }))}
-                  className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-2 py-1 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
+                  className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-3 py-2 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
                 />
               </label>
               <label className="flex flex-col gap-1">
@@ -248,7 +248,7 @@ export default function PositionBuilder({ defaultOption }: Props) {
                   value={form.sigma}
                   step="0.01"
                   onChange={(e) => setForm((f) => ({ ...f, sigma: Number(e.target.value) }))}
-                  className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-2 py-1 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
+                  className="bg-[#0a0a0f] border border-[#1e1e2e] rounded px-3 py-2 text-xs text-[#e2e8f0] focus:outline-none focus:border-[#00ff88]/50"
                 />
               </label>
             </div>
