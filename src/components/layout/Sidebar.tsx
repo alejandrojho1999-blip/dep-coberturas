@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Terminal,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -24,10 +23,6 @@ const NAV_ITEMS = [
   { icon: Bot,             label: 'Agente PPO',           href: '/agente-ppo' },
   { icon: Shield,          label: 'Coberturas',           href: '/coberturas' },
   { icon: FileText,        label: 'Informes',             href: '/informes' },
-] as const
-
-const INTEGRATION_ITEMS = [
-  { icon: Terminal, label: 'EQF Terminal', href: '/eqf-terminal' },
 ] as const
 
 const PROFILE_ITEM = { icon: UserCircle, label: 'Mi Perfil', href: '/perfil' }
@@ -140,15 +135,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             </p>
           )}
           {NAV_ITEMS.map(({ icon, label, href }) => navItem(icon, label, href))}
-
-          <div className="my-3 mx-4 h-px bg-[#1e2035]" />
-
-          {showLabels && (
-            <p className="mb-1 px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#374151]">
-              Integraciones
-            </p>
-          )}
-          {INTEGRATION_ITEMS.map(({ icon, label, href }) => navItem(icon, label, href))}
         </nav>
 
         {/* Mi Perfil — pinned bottom */}

@@ -79,4 +79,3 @@
 | 2026-04-26 | Bloomberg amber (#F59E0B) as primary accent | User selected. Reads "institutional finance" vs neon green |
 | 2026-04-26 | Dark-only theme maintained | Target users work in low-light trading environments |
 | 2026-04-26 | Geist Mono for all data labels | Tabular numbers, ticker codes need monospace alignment |
-| 2026-04-26 | EQF Terminal page as integration hub | FinceptTerminal is native C++ — not embeddable; page provides roadmap + download |
