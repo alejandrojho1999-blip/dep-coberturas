@@ -1,15 +1,66 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
-  --color-background: #0a0a0f;
-  --color-surface: #12121a;
-  --color-border: #1e1e2e;
-  --color-accent-green: #00ff88;
-  --color-accent-green-hover: #00cc6a;
-  --color-accent-blue: #3b82f6;
-  --color-text-primary: #e2e8f0;
+  --color-background: #07070b;
+  --color-surface: #0f0f17;
+  --color-surface-raised: #161622;
+  --color-border: #1e2035;
+  --color-accent: #F59E0B;
+  --color-accent-hover: #D97706;
+  --color-accent-muted: rgba(245,158,11,0.08);
+  --color-positive: #22c55e;
+  --color-negative: #ef4444;
+  --color-neutral: #3b82f6;
+  --color-text-primary: #F0EFE8;
   --color-text-secondary: #64748b;
-  --color-danger: #ef4444;
+  --color-text-muted: #374151;
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  --animate-gradient: gradient 8s linear infinite;
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+    }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+    }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes gradient {
+  to {
+    background-position: var(--bg-size, 300%) 0;
+    }
+  }
+  @keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+  @keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+    }
+  15%, 35% {
+    transform: translateZ(0) rotate(90deg);
+    }
+  65%, 85% {
+    transform: translateZ(0) rotate(270deg);
+    }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+    }
+  }
 }
 
 * {
@@ -17,8 +68,8 @@
 }
 
 body {
-  background-color: #0a0a0f;
-  color: #e2e8f0;
+  background-color: #07070b;
+  color: #F0EFE8;
   font-family: var(--font-geist-sans), sans-serif;
 }
 
