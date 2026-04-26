@@ -2,6 +2,8 @@ import YahooFinance from 'yahoo-finance2'
 const yahooFinance = new YahooFinance()
 import { NextRequest, NextResponse } from 'next/server'
 
+export const maxDuration = 60
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type RiskProfile = 'conservador' | 'moderado' | 'agresivo'
@@ -116,6 +118,17 @@ function computeEMA(closes: number[], period: number): number {
 
 function fmt(n: number, d = 2): string { return n.toFixed(d) }
 
+// ── Timeout wrapper ───────────────────────────────────────────────────────────
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout ${ms}ms`)), ms)
+    ),
+  ])
+}
+
 // ── Single asset analysis ─────────────────────────────────────────────────────
 
 async function analyzeAsset(config: AssetConfig): Promise<AssetAnalysis> {
@@ -123,11 +136,12 @@ async function analyzeAsset(config: AssetConfig): Promise<AssetAnalysis> {
   period1.setDate(period1.getDate() - 160)
 
   const [historical, quote] = await Promise.all([
-    yahooFinance.historical(config.ticker, {
-      period1: period1.toISOString().split('T')[0],
-      interval: '1d',
-    }),
-    yahooFinance.quote(config.ticker) as Promise<{
+    yahooFinance.historical(
+      config.ticker,
+      { period1: period1.toISOString().split('T')[0], interval: '1d' },
+      { validateResult: false }
+    ),
+    yahooFinance.quote(config.ticker, {}, { validateResult: false }) as Promise<{
       regularMarketPrice?: number
       regularMarketChangePercent?: number
     } | null>,
@@ -273,7 +287,7 @@ export async function POST(request: NextRequest) {
 
   // Run all assets in parallel — allSettled so one failure doesn't kill the rest
   const settled = await Promise.allSettled(
-    ASSET_UNIVERSE.map(config => analyzeAsset(config))
+    ASSET_UNIVERSE.map(config => withTimeout(analyzeAsset(config), 9000))
   )
 
   const assets: AssetAnalysis[] = []

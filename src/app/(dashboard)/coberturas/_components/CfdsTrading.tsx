@@ -140,17 +140,17 @@ function RankingRow({ asset, rank }: { asset: AssetAnalysis; rank: number }) {
   const sig = SIGNAL_CFG[asset.signal]
   const shortTicker = asset.ticker.replace('-USD', '').replace('=X', '').replace('=F', '').replace('^', '')
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-[#1e2035] last:border-0">
-      <span className="text-[10px] font-mono text-[#374151] w-4 text-right shrink-0">{rank}</span>
-      <span className="text-xs font-mono font-bold text-[#F0EFE8] w-14 shrink-0">{shortTicker}</span>
-      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${sig.bg}`} style={{ color: sig.color }}>
-        {sig.arrow} {sig.label}
+    <div className="flex items-center gap-2 py-2 border-b border-[#1e2035] last:border-0 min-w-0">
+      <span className="text-[10px] font-mono text-[#374151] w-3 text-right shrink-0">{rank}</span>
+      <span className="text-xs font-mono font-bold text-[#F0EFE8] w-10 sm:w-14 shrink-0 truncate">{shortTicker}</span>
+      <span className={`text-[9px] font-mono font-bold px-1 py-0.5 rounded shrink-0 ${sig.bg}`} style={{ color: sig.color }}>
+        {sig.arrow} <span className="hidden xs:inline">{sig.label}</span>
       </span>
-      <div className="flex-1 flex items-center gap-1.5">
+      <div className="flex-1 flex items-center gap-1.5 min-w-0">
         <div className="flex-1 h-1 rounded-full bg-[#161622] overflow-hidden">
           <div className="h-full rounded-full" style={{ width: `${asset.confidence}%`, backgroundColor: sig.color }} />
         </div>
-        <span className="text-[10px] font-mono font-bold tabular-nums" style={{ color: sig.color }}>
+        <span className="text-[10px] font-mono font-bold tabular-nums shrink-0" style={{ color: sig.color }}>
           {asset.confidence}%
         </span>
       </div>
@@ -385,27 +385,29 @@ export default function CfdsTrading() {
 
           {/* Category tabs + asset grid */}
           <div className="rounded-xl border border-[#1e2035] bg-[#0f0f17] overflow-hidden">
-            {/* Tabs */}
-            <div className="flex border-b border-[#1e2035] overflow-x-auto">
-              {CATEGORIES.map(cat => {
-                const count = result.byCategory[cat]?.length ?? 0
-                if (count === 0) return null
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={[
-                      'px-4 py-2.5 text-[10px] font-mono font-bold whitespace-nowrap transition-colors border-b-2',
-                      activeCategory === cat
-                        ? 'text-[#F59E0B] border-[#F59E0B] bg-[#F59E0B]/5'
-                        : 'text-[#374151] border-transparent hover:text-[#64748b]',
-                    ].join(' ')}
-                  >
-                    {cat}
-                    <span className="ml-1.5 text-[8px] opacity-60">({count})</span>
-                  </button>
-                )
-              })}
+            {/* Tabs — horizontal scroll on mobile */}
+            <div className="overflow-x-auto border-b border-[#1e2035]">
+              <div className="flex min-w-max">
+                {CATEGORIES.map(cat => {
+                  const count = result.byCategory[cat]?.length ?? 0
+                  if (count === 0) return null
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      className={[
+                        'px-3 sm:px-4 py-2.5 text-[10px] font-mono font-bold whitespace-nowrap transition-colors border-b-2',
+                        activeCategory === cat
+                          ? 'text-[#F59E0B] border-[#F59E0B] bg-[#F59E0B]/5'
+                          : 'text-[#374151] border-transparent hover:text-[#64748b]',
+                      ].join(' ')}
+                    >
+                      {cat}
+                      <span className="ml-1 text-[8px] opacity-60">({count})</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {/* Grid */}

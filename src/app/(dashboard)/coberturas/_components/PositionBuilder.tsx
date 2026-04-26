@@ -107,12 +107,12 @@ export default function PositionBuilder({ defaultOption }: Props) {
 
   return (
     <div className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-5 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-2">
         <h2 className="text-sm font-semibold text-[#e2e8f0]">Portafolio de posiciones</h2>
         {defaultOption && (
           <button
             onClick={handleAddFromDefault}
-            className="text-xs text-[#00ff88] hover:text-[#00cc66] transition-colors border border-[#00ff88]/30 hover:border-[#00ff88]/60 rounded px-2 py-1"
+            className="text-xs text-[#00ff88] hover:text-[#00cc66] transition-colors border border-[#00ff88]/30 hover:border-[#00ff88]/60 rounded px-2 py-1 shrink-0"
           >
             + Agregar opción analizada
           </button>

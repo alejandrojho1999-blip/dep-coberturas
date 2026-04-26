@@ -95,17 +95,19 @@ export default function CoberturasClient() {
       </div>
 
       <Tabs defaultValue="opciones">
-        <TabsList className="bg-[#0f0f17] border border-[#1e2035] h-9 p-0.5 gap-0">
-          {(['opciones', 'cfds', 'futuros'] as const).map(tab => (
-            <TabsTrigger
-              key={tab}
-              value={tab}
-              className="font-mono text-[10px] font-bold tracking-[0.12em] uppercase px-5 h-8 rounded-sm data-[state=active]:bg-[#161622] data-[state=active]:text-[#F59E0B] data-[state=inactive]:text-[#374151] data-[state=inactive]:hover:text-[#64748b]"
-            >
-              {tab}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="bg-[#0f0f17] border border-[#1e2035] h-9 p-0.5 gap-0 w-full min-w-max">
+            {(['opciones', 'cfds', 'futuros'] as const).map(tab => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="font-mono text-[10px] font-bold tracking-[0.12em] uppercase px-3 sm:px-5 h-8 rounded-sm data-[state=active]:bg-[#161622] data-[state=active]:text-[#F59E0B] data-[state=inactive]:text-[#374151] data-[state=inactive]:hover:text-[#64748b] whitespace-nowrap"
+              >
+                {tab}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         <TabsContent value="opciones" className="mt-5">
           <OpcionesTab />

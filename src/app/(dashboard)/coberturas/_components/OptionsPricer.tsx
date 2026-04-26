@@ -133,7 +133,7 @@ export default function OptionsPricer({ onResult }: Props) {
       {/* Ticker lookup */}
       <div>
         <label className={labelClass}>Ticker (opcional)</label>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             value={form.ticker}
@@ -150,9 +150,9 @@ export default function OptionsPricer({ onResult }: Props) {
             type="button"
             onClick={handleFetchTicker}
             disabled={tickerLoading || !form.ticker.trim()}
-            className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white text-sm font-medium hover:bg-[#3b82f6]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+            className="px-4 py-2 rounded-lg bg-[#3b82f6] text-white text-sm font-medium hover:bg-[#3b82f6]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap shrink-0"
           >
-            {tickerLoading ? 'Obteniendo...' : 'Obtener precio'}
+            {tickerLoading ? 'Obteniendo...' : <><span className="sm:hidden">Obtener</span><span className="hidden sm:inline">Obtener precio</span></>}
           </button>
         </div>
         {tickerError && (
