@@ -32,7 +32,7 @@ export async function GET() {
   try {
     const settled = await Promise.allSettled(
       TICKERS.map(async ({ ticker, label, decimals }) => {
-        const q = await yahooFinance.quote(ticker, undefined, { validateResult: false }) as {
+        const q = await yahooFinance.quote(ticker) as {
           regularMarketPrice?: number
           regularMarketChangePercent?: number
         } | null

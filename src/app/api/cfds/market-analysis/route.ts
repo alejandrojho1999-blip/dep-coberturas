@@ -11,6 +11,7 @@ type MarketSignal = 'COMPRA' | 'VENTA' | 'NEUTRAL'
 type RiskLevel = 'BAJO' | 'MEDIO' | 'MODERADO' | 'ALTO'
 type AssetCategory = 'Acciones' | 'Crypto' | 'Divisas' | 'Materiales' | 'Índices'
 type MarketBias = 'ALCISTA' | 'BAJISTA' | 'NEUTRAL'
+type TechSignal = 'bullish' | 'bearish' | 'neutral'
 
 interface AssetConfig {
   ticker: string
@@ -50,31 +51,31 @@ export interface MarketAnalysisResponse {
 
 const ASSET_UNIVERSE: AssetConfig[] = [
   // Acciones
-  { ticker: 'AAPL',     name: 'Apple',              category: 'Acciones',   riskLevel: 'MEDIO' },
-  { ticker: 'MSFT',     name: 'Microsoft',          category: 'Acciones',   riskLevel: 'MEDIO' },
-  { ticker: 'AMZN',     name: 'Amazon',             category: 'Acciones',   riskLevel: 'MEDIO' },
-  { ticker: 'NVDA',     name: 'Nvidia',             category: 'Acciones',   riskLevel: 'ALTO' },
-  { ticker: 'META',     name: 'Meta',               category: 'Acciones',   riskLevel: 'MEDIO' },
-  { ticker: 'GOOGL',    name: 'Alphabet',           category: 'Acciones',   riskLevel: 'MEDIO' },
-  { ticker: 'TSLA',     name: 'Tesla',              category: 'Acciones',   riskLevel: 'ALTO' },
+  { ticker: 'AAPL',     name: 'Apple',               category: 'Acciones',   riskLevel: 'MEDIO' },
+  { ticker: 'MSFT',     name: 'Microsoft',           category: 'Acciones',   riskLevel: 'MEDIO' },
+  { ticker: 'AMZN',     name: 'Amazon',              category: 'Acciones',   riskLevel: 'MEDIO' },
+  { ticker: 'NVDA',     name: 'Nvidia',              category: 'Acciones',   riskLevel: 'ALTO' },
+  { ticker: 'META',     name: 'Meta',                category: 'Acciones',   riskLevel: 'MEDIO' },
+  { ticker: 'GOOGL',    name: 'Alphabet',            category: 'Acciones',   riskLevel: 'MEDIO' },
+  { ticker: 'TSLA',     name: 'Tesla',               category: 'Acciones',   riskLevel: 'ALTO' },
   // Crypto
-  { ticker: 'BTC-USD',  name: 'Bitcoin',            category: 'Crypto',     riskLevel: 'ALTO' },
-  { ticker: 'ETH-USD',  name: 'Ethereum',           category: 'Crypto',     riskLevel: 'ALTO' },
-  { ticker: 'BNB-USD',  name: 'BNB',                category: 'Crypto',     riskLevel: 'MEDIO' },
-  { ticker: 'XRP-USD',  name: 'XRP',                category: 'Crypto',     riskLevel: 'ALTO' },
+  { ticker: 'BTC-USD',  name: 'Bitcoin',             category: 'Crypto',     riskLevel: 'ALTO' },
+  { ticker: 'ETH-USD',  name: 'Ethereum',            category: 'Crypto',     riskLevel: 'ALTO' },
+  { ticker: 'BNB-USD',  name: 'BNB',                 category: 'Crypto',     riskLevel: 'MEDIO' },
+  { ticker: 'XRP-USD',  name: 'XRP',                 category: 'Crypto',     riskLevel: 'ALTO' },
   // Divisas
-  { ticker: 'EURUSD=X', name: 'EUR/USD',            category: 'Divisas',    riskLevel: 'MODERADO' },
-  { ticker: 'DX-Y.NYB', name: 'Índice Dólar (DXY)', category: 'Divisas',   riskLevel: 'MODERADO' },
+  { ticker: 'EURUSD=X', name: 'EUR/USD',             category: 'Divisas',    riskLevel: 'MODERADO' },
+  { ticker: 'DX-Y.NYB', name: 'Índice Dólar (DXY)', category: 'Divisas',    riskLevel: 'MODERADO' },
   { ticker: 'GBPUSD=X', name: 'GBP/USD',            category: 'Divisas',    riskLevel: 'MODERADO' },
-  { ticker: 'USDJPY=X', name: 'USD/JPY',            category: 'Divisas',    riskLevel: 'ALTO' },
-  { ticker: 'USDCAD=X', name: 'USD/CAD',            category: 'Divisas',    riskLevel: 'ALTO' },
+  { ticker: 'USDJPY=X', name: 'USD/JPY',             category: 'Divisas',    riskLevel: 'ALTO' },
+  { ticker: 'USDCAD=X', name: 'USD/CAD',             category: 'Divisas',    riskLevel: 'ALTO' },
   // Materiales
-  { ticker: 'GC=F',     name: 'Oro',                category: 'Materiales', riskLevel: 'BAJO' },
-  { ticker: 'SI=F',     name: 'Plata',              category: 'Materiales', riskLevel: 'MEDIO' },
+  { ticker: 'GC=F',     name: 'Oro',                 category: 'Materiales', riskLevel: 'BAJO' },
+  { ticker: 'SI=F',     name: 'Plata',               category: 'Materiales', riskLevel: 'MEDIO' },
   // Índices
-  { ticker: '^GSPC',    name: 'S&P 500',            category: 'Índices',    riskLevel: 'BAJO' },
-  { ticker: '^NDX',     name: 'NASDAQ 100',         category: 'Índices',    riskLevel: 'MEDIO' },
-  { ticker: '^DJI',     name: 'Dow Jones',          category: 'Índices',    riskLevel: 'BAJO' },
+  { ticker: '^GSPC',    name: 'S&P 500',             category: 'Índices',    riskLevel: 'BAJO' },
+  { ticker: '^NDX',     name: 'NASDAQ 100',          category: 'Índices',    riskLevel: 'MEDIO' },
+  { ticker: '^DJI',     name: 'Dow Jones',           category: 'Índices',    riskLevel: 'BAJO' },
 ]
 
 // ── Portfolio distribution by risk profile ────────────────────────────────────
@@ -85,114 +86,63 @@ const PORTFOLIO_DISTRIBUTION: Record<RiskProfile, Record<AssetCategory, number>>
   agresivo:    { Acciones: 35, Crypto: 25, Divisas: 20, Materiales: 10, Índices: 10 },
 }
 
-// ── Technical indicator helpers ───────────────────────────────────────────────
-
-function computeRSI(closes: number[], period = 14): number {
-  if (closes.length < period + 1) return 50
-  const changes = closes.slice(1).map((c, i) => c - closes[i])
-  const gains = changes.map(c => Math.max(c, 0))
-  const losses = changes.map(c => Math.max(-c, 0))
-  let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period
-  let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period
-  for (let i = period; i < gains.length; i++) {
-    avgGain = (avgGain * (period - 1) + gains[i]) / period
-    avgLoss = (avgLoss * (period - 1) + losses[i]) / period
-  }
-  if (avgLoss === 0) return 100
-  return 100 - 100 / (1 + avgGain / avgLoss)
-}
-
-function computeSMA(closes: number[], period: number): number {
-  const slice = closes.slice(-period)
-  return slice.reduce((a, b) => a + b, 0) / slice.length
-}
-
-function computeEMA(closes: number[], period: number): number {
-  const k = 2 / (period + 1)
-  let ema = closes[0]
-  for (let i = 1; i < closes.length; i++) {
-    ema = closes[i] * k + ema * (1 - k)
-  }
-  return ema
-}
-
-function fmt(n: number, d = 2): string { return n.toFixed(d) }
-
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-// ── Single asset analysis ─────────────────────────────────────────────────────
+// ── Single asset analysis — quote-only, 1 call per asset ─────────────────────
 
 async function analyzeAsset(config: AssetConfig): Promise<AssetAnalysis> {
-  // 90 days — sufficient for SMA50 (needs 50 points) + RSI14 + momentum
-  const period1 = new Date()
-  period1.setDate(period1.getDate() - 120) // 120 calendar days ≈ ~85 trading days
+  const q = await yahooFinance.quote(config.ticker) as {
+    regularMarketPrice?: number
+    regularMarketChangePercent?: number
+    fiftyDayAverage?: number
+    twoHundredDayAverage?: number
+    regularMarketVolume?: number
+    averageDailyVolume3Month?: number
+    fiftyTwoWeekHigh?: number
+    fiftyTwoWeekLow?: number
+  } | null
 
-  const [historical, quote] = await Promise.all([
-    yahooFinance.historical(
-      config.ticker,
-      { period1: period1.toISOString().split('T')[0], interval: '1d' },
-      { validateResult: false }
-    ),
-    yahooFinance.quote(
-      config.ticker,
-      undefined,
-      { validateResult: false }
-    ) as Promise<{
-      regularMarketPrice?: number
-      regularMarketChangePercent?: number
-    } | null>,
-  ])
+  const price = q?.regularMarketPrice
+  if (!price) throw new Error(`No price for ${config.ticker}`)
 
-  if (!historical || historical.length < 20) {
-    throw new Error(`Insufficient data for ${config.ticker}`)
-  }
+  const changePct  = q?.regularMarketChangePercent ?? 0
+  const sma50      = q?.fiftyDayAverage
+  const sma200     = q?.twoHundredDayAverage
+  const vol        = q?.regularMarketVolume ?? 0
+  const avgVol3M   = q?.averageDailyVolume3Month ?? 0
+  const high52     = q?.fiftyTwoWeekHigh ?? price
+  const low52      = q?.fiftyTwoWeekLow  ?? price
 
-  const currentPrice = (quote as { regularMarketPrice?: number } | null)?.regularMarketPrice
-  if (!currentPrice) throw new Error(`No price for ${config.ticker}`)
+  // 1. Price vs SMA50 (medium-term trend)
+  const sma50Signal: TechSignal = sma50 ? (price > sma50 ? 'bullish' : 'bearish') : 'neutral'
 
-  const changePercent24h = (quote as { regularMarketChangePercent?: number } | null)?.regularMarketChangePercent ?? 0
+  // 2. Price vs SMA200 (long-term trend)
+  const sma200Signal: TechSignal = sma200 ? (price > sma200 ? 'bullish' : 'bearish') : 'neutral'
 
-  const sorted = [...historical].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  const closes = sorted.map(d => d.close).filter(Boolean) as number[]
-  const volumes = sorted.map(d => d.volume).filter(Boolean) as number[]
+  // 3. Volume vs 3-month average
+  const volPct = avgVol3M > 0 ? ((vol - avgVol3M) / avgVol3M) * 100 : 0
+  const volSignal: TechSignal = volPct > 15 ? 'bullish' : volPct < -15 ? 'bearish' : 'neutral'
 
-  const rsi = computeRSI(closes)
-  const sma20 = computeSMA(closes, Math.min(20, closes.length))
-  const sma50 = computeSMA(closes, Math.min(50, closes.length))
-  const ema9 = computeEMA(closes.slice(-Math.min(30, closes.length)), 9)
+  // 4. 52-week range position (RSI proxy: >0.65 overbought → bullish strength, <0.35 oversold → bearish)
+  const range = high52 - low52
+  const position = range > 0 ? (price - low52) / range : 0.5
+  const rangeSignal: TechSignal = position > 0.65 ? 'bullish' : position < 0.35 ? 'bearish' : 'neutral'
 
-  const avgVol20 = volumes.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, volumes.length)
-  const lastVol = volumes[volumes.length - 1] ?? avgVol20
-  const volChangePct = avgVol20 > 0 ? ((lastVol - avgVol20) / avgVol20) * 100 : 0
+  // 5. Daily momentum
+  const momentumSignal: TechSignal = changePct > 1.0 ? 'bullish' : changePct < -1.0 ? 'bearish' : 'neutral'
 
-  const refClose = closes[Math.max(0, closes.length - 45)] // ~2-month momentum
-  const momentum3m = ((currentPrice - refClose) / refClose) * 100
-  const priceVsEma9Pct = ((currentPrice - ema9) / ema9) * 100
-
-  type TechSignal = 'bullish' | 'bearish' | 'neutral'
-  const rsiSignal: TechSignal = rsi > 60 ? 'bullish' : rsi < 40 ? 'bearish' : 'neutral'
-  const smaSignal: TechSignal = sma20 > sma50 ? 'bullish' : 'bearish'
-  const volSignal: TechSignal = volChangePct > 10 ? 'bullish' : volChangePct < -10 ? 'bearish' : 'neutral'
-  const momentumSignal: TechSignal = momentum3m > 5 ? 'bullish' : momentum3m < -5 ? 'bearish' : 'neutral'
-  const emaSignal: TechSignal = priceVsEma9Pct > 0 ? 'bullish' : 'bearish'
-
-  const score = [rsiSignal, smaSignal, volSignal, momentumSignal, emaSignal]
+  const score = [sma50Signal, sma200Signal, volSignal, rangeSignal, momentumSignal]
     .reduce((s, sig) => s + (sig === 'bullish' ? 1 : sig === 'bearish' ? -1 : 0), 0)
 
-  const bias = score >= 2 ? 'LARGO' : score <= -2 ? 'CORTO' : 'NEUTRAL'
-  const signal: MarketSignal = bias === 'LARGO' ? 'COMPRA' : bias === 'CORTO' ? 'VENTA' : 'NEUTRAL'
+  const signal: MarketSignal = score >= 2 ? 'COMPRA' : score <= -2 ? 'VENTA' : 'NEUTRAL'
   const confidence = Math.max(20, Math.round((Math.abs(score) / 5) * 100 / 5) * 5)
-  const reason = generateReason(signal, rsi, sma20, sma50, momentum3m, priceVsEma9Pct)
+  const reason = generateReason(signal, position, sma50Signal, sma200Signal, changePct)
 
   return {
     ticker: config.ticker,
     name: config.name,
     category: config.category,
     signal,
-    price: +currentPrice.toFixed(4),
-    changePercent24h: +changePercent24h.toFixed(4),
+    price: +price.toFixed(4),
+    changePercent24h: +changePct.toFixed(4),
     confidence,
     reason,
     riskLevel: config.riskLevel,
@@ -200,81 +150,37 @@ async function analyzeAsset(config: AssetConfig): Promise<AssetAnalysis> {
   }
 }
 
-// ── Batch processor — sequential batches to avoid Yahoo Finance rate limiting ──
-
-const BATCH_SIZE = 5
-const BATCH_DELAY_MS = 300
-
-async function processBatches(configs: AssetConfig[]): Promise<{ assets: AssetAnalysis[]; failed: number }> {
-  const assets: AssetAnalysis[] = []
-  let failed = 0
-
-  for (let i = 0; i < configs.length; i += BATCH_SIZE) {
-    const batch = configs.slice(i, i + BATCH_SIZE)
-
-    // Each asset in the batch runs in parallel, but batches are sequential
-    const settled = await Promise.allSettled(
-      batch.map(config =>
-        Promise.race([
-          analyzeAsset(config),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`Timeout for ${config.ticker}`)), 15000)
-          ),
-        ])
-      )
-    )
-
-    for (const result of settled) {
-      if (result.status === 'fulfilled') {
-        assets.push(result.value)
-      } else {
-        failed++
-        console.warn('[market-analysis] asset failed:', result.reason?.message ?? result.reason)
-      }
-    }
-
-    // Wait between batches (except after the last one)
-    if (i + BATCH_SIZE < configs.length) {
-      await sleep(BATCH_DELAY_MS)
-    }
-  }
-
-  return { assets, failed }
-}
-
 // ── Reason generator ──────────────────────────────────────────────────────────
 
 function generateReason(
   signal: MarketSignal,
-  rsi: number,
-  sma20: number,
-  sma50: number,
-  momentum3m: number,
-  priceVsEma9: number,
+  rangePosition: number,
+  sma50Signal: TechSignal,
+  sma200Signal: TechSignal,
+  changePct: number,
 ): string {
-  const smaDir = sma20 > sma50 ? 'alcista' : 'bajista'
-  const mom = momentum3m >= 0 ? `+${fmt(momentum3m, 1)}%` : `${fmt(momentum3m, 1)}%`
+  const trend50  = sma50Signal  === 'bullish' ? 'sobre SMA50'  : sma50Signal  === 'bearish' ? 'bajo SMA50'  : 'en SMA50'
+  const trend200 = sma200Signal === 'bullish' ? 'tendencia larga alcista' : sma200Signal === 'bearish' ? 'tendencia larga bajista' : ''
+  const rangeDesc = rangePosition > 0.65 ? 'parte alta del rango anual' : rangePosition < 0.35 ? 'parte baja del rango anual' : 'zona media del rango anual'
 
   if (signal === 'COMPRA') {
-    if (rsi > 65) return `fuerte momentum alcista con RSI ${fmt(rsi, 0)} y tendencia ${smaDir}`
-    if (momentum3m > 8) return `momentum positivo ${mom} en 2M con estructura ${smaDir}`
-    if (priceVsEma9 > 1) return `precio sobre EMA9 y tendencia ${smaDir} confirmada`
-    return `confluencia técnica alcista en ${smaDir}`
+    if (rangePosition > 0.75) return `precio en ${rangeDesc} — ${trend50}${trend200 ? ', ' + trend200 : ''}`
+    if (changePct > 1) return `momentum diario +${changePct.toFixed(1)}% — ${trend50}`
+    return `confluencia alcista: ${trend50}${trend200 ? ', ' + trend200 : ''}`
   }
   if (signal === 'VENTA') {
-    if (rsi < 35) return `RSI ${fmt(rsi, 0)} en zona de debilidad con tendencia ${smaDir}`
-    if (momentum3m < -8) return `caída ${mom} en 2M con presión vendedora estructural`
-    if (priceVsEma9 < -1) return `ruptura bajista con precio bajo EMA9 y estructura ${smaDir}`
-    return `señales bajistas confluentes — tendencia ${smaDir}`
+    if (rangePosition < 0.25) return `precio en ${rangeDesc} — ${trend50}${trend200 ? ', ' + trend200 : ''}`
+    if (changePct < -1) return `presión bajista ${changePct.toFixed(1)}% — ${trend50}`
+    return `confluencia bajista: ${trend50}${trend200 ? ', ' + trend200 : ''}`
   }
-  return `señales mixtas — consolidación lateral sin dirección clara`
+  return `señales mixtas — ${rangeDesc}, ${trend50}`
 }
 
 // ── Narrative generators ──────────────────────────────────────────────────────
 
 function buildMarketNarrative(bias: MarketBias, assets: AssetAnalysis[]): string {
-  const compra = [...assets].filter(a => a.signal === 'COMPRA').sort((a, b) => b.confidence - a.confidence)
-  const venta  = [...assets].filter(a => a.signal === 'VENTA').sort((a, b) => b.confidence - a.confidence)
+  const compra   = [...assets].filter(a => a.signal === 'COMPRA').sort((a, b) => b.confidence - a.confidence)
+  const venta    = [...assets].filter(a => a.signal === 'VENTA').sort((a, b) => b.confidence - a.confidence)
   const topCompra = compra.slice(0, 2).map(a => a.name).join(' y ')
   const topVenta  = venta.slice(0, 2).map(a => a.name).join(' y ')
 
@@ -290,7 +196,7 @@ function buildMarketNarrative(bias: MarketBias, assets: AssetAnalysis[]): string
 function buildOpportunity(assets: AssetAnalysis[]): string {
   const top = [...assets].filter(a => a.signal === 'COMPRA').sort((a, b) => b.confidence - a.confidence).slice(0, 3)
   if (top.length === 0) return 'No se identifican oportunidades claras de compra en el mercado actual.'
-  const names = top.map(a => `${a.name} (${a.ticker.replace('-USD','').replace('=X','').replace('=F','').replace('^','')})`).join(', ')
+  const names = top.map(a => `${a.name} (${a.ticker.replace('-USD', '').replace('=X', '').replace('=F', '').replace('^', '')})`).join(', ')
   return `${names} ${top.length === 1 ? 'muestra' : 'muestran'} señales de compra con confianza destacada.`
 }
 
@@ -325,7 +231,20 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { assets, failed } = await processBatches(ASSET_UNIVERSE)
+  const settled = await Promise.allSettled(
+    ASSET_UNIVERSE.map(config => analyzeAsset(config))
+  )
+
+  const assets: AssetAnalysis[] = []
+  let failed = 0
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      assets.push(result.value)
+    } else {
+      failed++
+      console.warn('[market-analysis] asset failed:', result.reason?.message ?? result.reason)
+    }
+  }
 
   if (assets.length === 0) {
     return NextResponse.json(
