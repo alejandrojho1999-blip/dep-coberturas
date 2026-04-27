@@ -147,7 +147,7 @@ async function fetchChartImage(
     const res = await fetch('https://quickchart.io/chart', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ width: 620, height: 240, backgroundColor: 'white', chart: chartConfig }),
+      body: JSON.stringify({ version: 2, width: 620, height: 240, backgroundColor: 'white', chart: chartConfig }),
       signal: AbortSignal.timeout(12_000),
     })
     if (!res.ok) return null
