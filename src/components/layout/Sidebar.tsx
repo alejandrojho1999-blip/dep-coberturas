@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Settings2,
+  Terminal,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -25,8 +27,7 @@ const NAV_ITEMS = [
   { icon: FileText,        label: 'Informes',             href: '/informes' },
 ] as const
 
-const PROFILE_ITEM = { icon: UserCircle, label: 'Mi Perfil', href: '/perfil' }
-const STORAGE_KEY  = 'sidebar-collapsed'
+const STORAGE_KEY = 'sidebar-collapsed'
 
 interface SidebarProps {
   mobileOpen: boolean
@@ -38,6 +39,11 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem(STORAGE_KEY) === 'true'
+  })
+  const [settingsOpen, setSettingsOpen] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const p = window.location.pathname
+    return p === '/perfil' || p === '/fincept-terminal'
   })
 
   useEffect(() => {
@@ -140,21 +146,67 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           {NAV_ITEMS.map(({ icon, label, href }) => navItem(icon, label, href))}
         </nav>
 
-        {/* Mi Perfil — pinned bottom */}
-        <div className="shrink-0 border-t border-[#1e2035] py-3">
-          <Link
-            href={PROFILE_ITEM.href}
-            title={collapsed ? PROFILE_ITEM.label : undefined}
+        {/* Settings — pinned bottom */}
+        <div className="shrink-0 border-t border-[#1e2035] py-3 space-y-0.5">
+          {/* Toggle button */}
+          <button
+            onClick={() => setSettingsOpen(v => !v)}
+            title={collapsed && !mobileOpen ? 'Configuración' : undefined}
             className={[
-              'mx-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors border-l-2 pl-[10px]',
-              pathname === PROFILE_ITEM.href
+              'mx-2 flex w-[calc(100%-16px)] items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors border-l-2 pl-[10px]',
+              settingsOpen
                 ? 'bg-[#161622] text-[#F59E0B] border-[#F59E0B]'
                 : 'text-[#64748b] hover:bg-[#161622] hover:text-[#F0EFE8] border-transparent',
             ].join(' ')}
           >
-            <PROFILE_ITEM.icon size={18} className="shrink-0" />
-            {showLabels && <span className="truncate">{PROFILE_ITEM.label}</span>}
-          </Link>
+            <Settings2 size={18} className="shrink-0" />
+            {showLabels && <span className="flex-1 truncate text-left">Configuración</span>}
+            {showLabels && (
+              <ChevronRight
+                size={14}
+                className={`shrink-0 transition-transform duration-150 ${settingsOpen ? 'rotate-90' : ''}`}
+              />
+            )}
+          </button>
+
+          {/* Submenu */}
+          {settingsOpen && (
+            <div className="space-y-0.5">
+              <Link
+                href="/perfil"
+                onClick={() => {
+                  if (pathname === '/perfil') document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+                title={collapsed && !mobileOpen ? 'Mi Perfil' : undefined}
+                className={[
+                  'mx-2 flex items-center gap-3 rounded-md pl-[22px] pr-3 py-2 text-xs transition-colors border-l-2',
+                  pathname === '/perfil'
+                    ? 'bg-[#161622] text-[#F59E0B] border-[#F59E0B]'
+                    : 'text-[#64748b] hover:bg-[#161622] hover:text-[#F0EFE8] border-transparent',
+                ].join(' ')}
+              >
+                <UserCircle size={15} className="shrink-0" />
+                {showLabels && <span className="truncate">Mi Perfil</span>}
+              </Link>
+
+              <Link
+                href="/fincept-terminal"
+                onClick={() => {
+                  if (pathname === '/fincept-terminal') document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+                title={collapsed && !mobileOpen ? 'Fincept Terminal' : undefined}
+                className={[
+                  'mx-2 flex items-center gap-3 rounded-md pl-[22px] pr-3 py-2 text-xs transition-colors border-l-2',
+                  pathname === '/fincept-terminal'
+                    ? 'bg-[#161622] text-[#F59E0B] border-[#F59E0B]'
+                    : 'text-[#64748b] hover:bg-[#161622] hover:text-[#F0EFE8] border-transparent',
+                ].join(' ')}
+              >
+                <Terminal size={15} className="shrink-0" />
+                {showLabels && <span className="truncate">Fincept Terminal</span>}
+              </Link>
+            </div>
+          )}
         </div>
       </aside>
     </>
