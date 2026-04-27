@@ -38,10 +38,12 @@ function PreviewModal({
   entry,
   onClose,
   onDownload,
+  downloadingId,
 }: {
   entry: HistoryEntry
   onClose: () => void
   onDownload: (e: HistoryEntry) => void
+  downloadingId: string | null
 }) {
   const content: ReportContent | null = (entry.content_json as ReportContent) ?? null
 
@@ -76,10 +78,13 @@ function PreviewModal({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onDownload(entry)}
-              className="flex items-center gap-1.5 rounded-lg border border-[#1e1e2e] px-3 py-1.5 text-xs font-medium text-[#00ff88] transition-colors hover:bg-[#1e1e2e]"
+              disabled={downloadingId === entry.id}
+              className="flex items-center gap-1.5 rounded-lg border border-[#1e1e2e] px-3 py-1.5 text-xs font-medium text-[#00ff88] transition-colors hover:bg-[#1e1e2e] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Download size={13} />
-              Descargar
+              {downloadingId === entry.id
+                ? <Loader2 size={13} className="animate-spin" />
+                : <Download size={13} />}
+              {downloadingId === entry.id ? 'Descargando…' : 'Descargar'}
             </button>
             <button
               onClick={onClose}
@@ -205,6 +210,7 @@ export default function InformesPage() {
   const [currentUserId, setCurrentUserId]     = useState<string | null>(null)
   const [previewEntry, setPreviewEntry]       = useState<HistoryEntry | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [downloadingId,   setDownloadingId]   = useState<string | null>(null)
   const [toasts, setToasts]                   = useState<Toast[]>([])
   const toastId                               = useRef(0)
 
@@ -324,6 +330,8 @@ export default function InformesPage() {
   }
 
   const redownload = async (entry: HistoryEntry) => {
+    if (downloadingId) { addToast('Ya hay una descarga en progreso', 'error'); return }
+    setDownloadingId(entry.id)
     try {
       const res = await fetch('/api/informes/generate', {
         method: 'POST',
@@ -333,6 +341,7 @@ export default function InformesPage() {
       if (!res.ok) { addToast('Error al regenerar el informe', 'error'); return }
       triggerDownload(await res.blob(), entry.filename)
     } catch { addToast('Error de red al regenerar', 'error') }
+    finally { setDownloadingId(null) }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -373,6 +382,7 @@ export default function InformesPage() {
           entry={previewEntry}
           onClose={() => setPreviewEntry(null)}
           onDownload={redownload}
+          downloadingId={downloadingId}
         />
       )}
 
@@ -590,13 +600,16 @@ export default function InformesPage() {
                               <Eye size={13} />
                             </button>
                             <button
-                              title="Descargar .docx"
+                              title={downloadingId === entry.id ? 'Descargando…' : 'Descargar .docx'}
                               onClick={() => redownload(entry)}
-                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:bg-[#1e1e2e]"
-                              style={{ color: '#00ff88' }}
+                              disabled={downloadingId !== null}
+                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:bg-[#1e1e2e] disabled:cursor-not-allowed disabled:opacity-50"
+                              style={{ color: downloadingId === entry.id ? '#94a3b8' : '#00ff88' }}
                             >
-                              <Download size={13} />
-                              .docx
+                              {downloadingId === entry.id
+                                ? <Loader2 size={13} className="animate-spin" />
+                                : <Download size={13} />}
+                              {downloadingId === entry.id ? '…' : '.docx'}
                             </button>
                             <button
                               title="Eliminar"

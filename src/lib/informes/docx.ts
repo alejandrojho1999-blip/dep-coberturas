@@ -114,45 +114,69 @@ function fmtPct(n: number | null): string {
   return `${(n * 100).toFixed(2)}%`
 }
 
-async function fetchChartImage(
-  prices: { fecha: string; cierre: number }[],
-): Promise<Buffer | null> {
+// Minimal 1×1 transparent PNG — required fallback for SVG in older Word versions
+const SVG_FALLBACK_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+)
+
+function buildChartSvg(prices: { fecha: string; cierre: number }[]): Buffer | null {
   if (prices.length < 5) return null
-  const chartConfig = {
-    type: 'line',
-    data: {
-      labels: prices.map((p) => {
-        const d = new Date(p.fecha + 'T12:00:00Z')
-        return d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' })
-      }),
-      datasets: [{
-        data: prices.map((p) => p.cierre),
-        fill: true,
-        borderColor: '#1F3964',
-        backgroundColor: 'rgba(31,57,100,0.1)',
-        pointRadius: 0,
-        tension: 0.3,
-        borderWidth: 2,
-      }],
-    },
-    options: {
-      legend: { display: false },
-      scales: {
-        xAxes: [{ ticks: { maxTicksLimit: 13, fontSize: 10, autoSkipPadding: 10 } }],
-        yAxes: [{ ticks: { fontSize: 10 } }],
-      },
-    },
+
+  const W = 620, H = 220
+  const padL = 58, padR = 15, padT = 15, padB = 36
+  const cW = W - padL - padR
+  const cH = H - padT - padB
+
+  const vals = prices.map((p) => p.cierre)
+  const lo   = Math.min(...vals)
+  const hi   = Math.max(...vals)
+  const span = hi - lo || 1
+
+  const sx = (i: number) => padL + (i / (prices.length - 1)) * cW
+  const sy = (v: number) => padT + cH - ((v - lo) / span) * cH
+
+  const pts     = prices.map((p, i) => `${sx(i).toFixed(1)},${sy(p.cierre).toFixed(1)}`).join(' ')
+  const fillPts = `${padL},${padT + cH} ` + pts + ` ${sx(prices.length - 1).toFixed(1)},${padT + cH}`
+
+  // X-axis: ~10 evenly spaced labels
+  const nX = 10
+  const xLabels = Array.from({ length: nX }, (_, li) => {
+    const idx = Math.min(Math.round((li * (prices.length - 1)) / (nX - 1)), prices.length - 1)
+    const d   = new Date(prices[idx].fecha + 'T12:00:00Z')
+    const lbl = d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' })
+    return `<text x="${sx(idx).toFixed(1)}" y="${H - 8}" font-size="9" fill="#555" text-anchor="middle" font-family="Calibri,Arial,sans-serif">${lbl}</text>`
+  }).join('\n  ')
+
+  // Y-axis: 4 levels
+  const yParts: string[] = []
+  for (let yi = 0; yi <= 4; yi++) {
+    const v   = lo + (span * yi) / 4
+    const y   = sy(v)
+    const lbl = v >= 10000 ? `${(v / 1000).toFixed(0)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)
+    yParts.push(
+      `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#ececec" stroke-width="0.8"/>`,
+      `<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" font-size="9" fill="#555" text-anchor="end" font-family="Calibri,Arial,sans-serif">${lbl}</text>`,
+    )
   }
-  try {
-    const res = await fetch('https://quickchart.io/chart', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ version: 2, width: 620, height: 240, backgroundColor: 'white', chart: chartConfig }),
-      signal: AbortSignal.timeout(12_000),
-    })
-    if (!res.ok) return null
-    return Buffer.from(await res.arrayBuffer())
-  } catch { return null }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+  <rect width="${W}" height="${H}" fill="white"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1F3964" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#1F3964" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+  ${yParts.join('\n  ')}
+  <polygon points="${fillPts}" fill="url(#g)"/>
+  <polyline points="${pts}" fill="none" stroke="#1F3964" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  ${xLabels}
+  <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + cH}" stroke="#ccc" stroke-width="1"/>
+  <line x1="${padL}" y1="${padT + cH}" x2="${W - padR}" y2="${padT + cH}" stroke="#ccc" stroke-width="1"/>
+</svg>`
+
+  return Buffer.from(svg)
 }
 
 export async function createDocxBuffer(
@@ -254,8 +278,7 @@ export async function createDocxBuffer(
     ],
   })
 
-  // Price chart
-  const chartBuffer = await fetchChartImage(marketData.historial_precios)
+  const svgBuffer = buildChartSvg(marketData.historial_precios)
 
   // Fuentes de ingresos table
   const fuentesRows: TableRow[] = [
@@ -376,11 +399,16 @@ export async function createDocxBuffer(
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
           subheading('2.5 Evolución del Precio — Últimas 52 Semanas'),
-          ...(chartBuffer
+          ...(svgBuffer
             ? [new Paragraph({
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 100 },
-                children: [new ImageRun({ data: chartBuffer, transformation: { width: 560, height: 212 }, type: 'png' })],
+                children: [new ImageRun({
+                  data: svgBuffer,
+                  transformation: { width: 560, height: 212 },
+                  type: 'svg',
+                  fallback: { type: 'png', data: SVG_FALLBACK_PNG },
+                })],
               })]
             : [body('Gráfica no disponible.')]),
 
