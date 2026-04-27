@@ -85,4 +85,5 @@ export interface HistoryEntry {
   informe_numero: number
   fecha_generacion: string
   content_json?: ReportContent | null
+  custom_docx_path: string | null
 }

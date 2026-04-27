@@ -12,7 +12,7 @@ export async function POST(request: Request): Promise<Response> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json() as { ticker?: string; solicitante?: string }
+  const body = await request.json() as { ticker?: string }
   const ticker = body.ticker?.trim().toUpperCase()
   if (!ticker) return Response.json({ detail: 'ticker requerido' }, { status: 400 })
 
@@ -21,15 +21,16 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ detail: 'OPENROUTER_API_KEY no configurada' }, { status: 500 })
   }
 
-  // Get next informe number — per operator when solicitante is provided
-  const solicitanteKey = body.solicitante?.trim() || null
-  const countBase = supabase
+  // Auto-fill solicitante from the user's registered full_name
+  const autoSolicitante = (user.user_metadata?.full_name as string | null)
+    ?? user.email
+    ?? null
+
+  // Get next informe number for this user
+  const { count } = await supabase
     .from('informes_history')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
-  const { count } = solicitanteKey
-    ? await countBase.eq('solicitante', solicitanteKey)
-    : await countBase
   const informeNumero = (count ?? 0) + 1
 
   // Fetch market data
@@ -64,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
   // Build DOCX
   let docxBuffer: Buffer
   try {
-    docxBuffer = await createDocxBuffer(content, marketData, body.solicitante)
+    docxBuffer = await createDocxBuffer(content, marketData, autoSolicitante ?? undefined)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return Response.json({ detail: `Error generando DOCX: ${msg}` }, { status: 500 })
@@ -81,7 +82,7 @@ export async function POST(request: Request): Promise<Response> {
       ticker:           content.ticker,
       empresa:          content.empresa,
       bolsa:            content.bolsa,
-      solicitante:      solicitanteKey,
+      solicitante:      autoSolicitante,
       filename,
       informe_numero:   informeNumero,
       content_json:     content,
@@ -96,7 +97,7 @@ export async function POST(request: Request): Promise<Response> {
     empresa:           content.empresa,
     bolsa:             content.bolsa,
     filename,
-    solicitante:       body.solicitante?.trim() || null,
+    solicitante:       autoSolicitante,
     informe_numero:    informeNumero,
     fecha_generacion:  new Date().toISOString(),
   }

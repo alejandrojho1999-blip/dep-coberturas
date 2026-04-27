@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { BarChart2, Download, Eye, FileText, Loader2, Search, Trash2, X } from 'lucide-react'
+import { BarChart2, Download, Eye, FileText, Loader2, Search, Trash2, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
 
@@ -202,7 +202,6 @@ function PreviewModal({
 
 export default function InformesPage() {
   const [ticker, setTicker]                   = useState('')
-  const [solicitante, setSolicitante]         = useState('')
   const [loading, setLoading]                 = useState(false)
   const [history, setHistory]                 = useState<HistoryEntry[]>([])
   const [historyLoading, setHistoryLoading]   = useState(true)
@@ -211,6 +210,9 @@ export default function InformesPage() {
   const [previewEntry, setPreviewEntry]       = useState<HistoryEntry | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [downloadingId,   setDownloadingId]   = useState<string | null>(null)
+  const [uploadingId,     setUploadingId]     = useState<string | null>(null)
+  const fileInputRef                          = useRef<HTMLInputElement>(null)
+  const uploadTargetRef                       = useRef<HistoryEntry | null>(null)
   const [toasts, setToasts]                   = useState<Toast[]>([])
   const toastId                               = useRef(0)
 
@@ -333,15 +335,52 @@ export default function InformesPage() {
     if (downloadingId) { addToast('Ya hay una descarga en progreso', 'error'); return }
     setDownloadingId(entry.id)
     try {
+      // If user uploaded a custom version, download that from Storage
+      if (entry.custom_docx_path) {
+        const supabase = createClient()
+        const { data } = await supabase.storage.from('informes-docx').download(entry.custom_docx_path)
+        if (data) { triggerDownload(data, entry.filename); return }
+      }
+      // Fallback: regenerate via LLM
       const res = await fetch('/api/informes/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: entry.ticker, solicitante: entry.solicitante }),
+        body: JSON.stringify({ ticker: entry.ticker }),
       })
       if (!res.ok) { addToast('Error al regenerar el informe', 'error'); return }
       triggerDownload(await res.blob(), entry.filename)
     } catch { addToast('Error de red al regenerar', 'error') }
     finally { setDownloadingId(null) }
+  }
+
+  const triggerUpload = (entry: HistoryEntry) => {
+    uploadTargetRef.current = entry
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    const entry = uploadTargetRef.current
+    if (!file || !entry || !currentUserId) return
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+    setUploadingId(entry.id)
+    try {
+      const supabase = createClient()
+      const storagePath = `${currentUserId}/${entry.id}.docx`
+      const { error: upErr } = await supabase.storage
+        .from('informes-docx')
+        .upload(storagePath, file, { upsert: true, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+      if (upErr) { addToast(`Error al subir: ${upErr.message}`, 'error'); return }
+      const { error: dbErr } = await supabase
+        .from('informes_history')
+        .update({ custom_docx_path: storagePath })
+        .eq('id', entry.id)
+      if (dbErr) { addToast(`Error actualizando registro: ${dbErr.message}`, 'error'); return }
+      addToast('Archivo Word actualizado. Al descargar obtendrás tu versión.', 'success')
+      await fetchHistory()
+    } catch { addToast('Error inesperado al subir el archivo', 'error') }
+    finally { setUploadingId(null); uploadTargetRef.current = null }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -352,7 +391,7 @@ export default function InformesPage() {
       const res = await fetch('/api/informes/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: ticker.trim(), solicitante: solicitante.trim() }),
+        body: JSON.stringify({ ticker: ticker.trim() }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { detail?: string }
@@ -376,6 +415,14 @@ export default function InformesPage() {
 
   return (
     <div className="min-h-full">
+      {/* Hidden file input for Word upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
       {/* Preview modal */}
       {previewEntry && (
         <PreviewModal
@@ -453,18 +500,6 @@ export default function InformesPage() {
                 {selectedResult && (
                   <p className="text-xs text-[#64748b]">{selectedResult.name} · {selectedResult.exchange}</p>
                 )}
-              </div>
-
-              {/* Solicitante */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[#94a3b8]">Solicitante</label>
-                <input
-                  type="text"
-                  value={solicitante}
-                  onChange={(e) => setSolicitante(e.target.value)}
-                  placeholder="Nombre de quien solicita"
-                  className="w-full rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] px-3 py-2.5 text-sm text-[#e2e8f0] placeholder-[#475569] transition-colors focus:border-[#00ff88] focus:outline-none"
-                />
               </div>
 
               {/* Submit */}
@@ -563,6 +598,9 @@ export default function InformesPage() {
                       <td className="px-4 py-3">
                         <span className="font-semibold text-[#00ff88]">{entry.ticker}</span>
                         <span className="ml-1.5 text-[#475569]">#{i + 1}</span>
+                        {entry.custom_docx_path && (
+                          <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#00ff88]" title="Tiene versión personalizada" />
+                        )}
                       </td>
                       <td className="max-w-[140px] truncate px-4 py-3 text-[#94a3b8]">
                         {entry.empresa ?? '—'}
@@ -600,7 +638,7 @@ export default function InformesPage() {
                               <Eye size={13} />
                             </button>
                             <button
-                              title={downloadingId === entry.id ? 'Descargando…' : 'Descargar .docx'}
+                              title={downloadingId === entry.id ? 'Descargando…' : entry.custom_docx_path ? 'Descargar versión personalizada' : 'Descargar .docx'}
                               onClick={() => redownload(entry)}
                               disabled={downloadingId !== null}
                               className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:bg-[#1e1e2e] disabled:cursor-not-allowed disabled:opacity-50"
@@ -610,6 +648,16 @@ export default function InformesPage() {
                                 ? <Loader2 size={13} className="animate-spin" />
                                 : <Download size={13} />}
                               {downloadingId === entry.id ? '…' : '.docx'}
+                            </button>
+                            <button
+                              title={uploadingId === entry.id ? 'Subiendo…' : entry.custom_docx_path ? 'Reemplazar Word' : 'Subir Word editado'}
+                              onClick={() => triggerUpload(entry)}
+                              disabled={uploadingId !== null || downloadingId !== null}
+                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-[#64748b] transition-colors hover:bg-[#1e1e2e] hover:text-[#e2e8f0] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {uploadingId === entry.id
+                                ? <Loader2 size={13} className="animate-spin" />
+                                : <Upload size={13} />}
                             </button>
                             <button
                               title="Eliminar"
