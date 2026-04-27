@@ -121,7 +121,10 @@ async function fetchChartImage(
   const chartConfig = {
     type: 'line',
     data: {
-      labels: prices.map((p) => p.fecha.slice(5)),
+      labels: prices.map((p) => {
+        const d = new Date(p.fecha + 'T12:00:00Z')
+        return d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' })
+      }),
       datasets: [{
         data: prices.map((p) => p.cierre),
         fill: true,
@@ -135,7 +138,7 @@ async function fetchChartImage(
     options: {
       legend: { display: false },
       scales: {
-        xAxes: [{ ticks: { maxTicksLimit: 10, fontSize: 10 } }],
+        xAxes: [{ ticks: { maxTicksLimit: 13, fontSize: 10, autoSkipPadding: 10 } }],
         yAxes: [{ ticks: { fontSize: 10 } }],
       },
     },

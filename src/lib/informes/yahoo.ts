@@ -40,7 +40,7 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
     })(),
     (async (): Promise<AnyRecord[]> => {
       try {
-        const from = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+        const from = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
         return await (yf.historical(ticker, { period1: from, period2: new Date(), interval: '1d' }, fetchOptions) as Promise<AnyRecord[]>)
       } catch { return [] }
     })(),
