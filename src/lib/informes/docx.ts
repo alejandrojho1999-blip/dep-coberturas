@@ -109,6 +109,49 @@ function formatDate(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 }
 
+function fmtPct(n: number | null): string {
+  if (n == null) return 'N/D'
+  return `${(n * 100).toFixed(2)}%`
+}
+
+async function fetchChartImage(
+  prices: { fecha: string; cierre: number }[],
+): Promise<Buffer | null> {
+  if (prices.length < 5) return null
+  const chartConfig = {
+    type: 'line',
+    data: {
+      labels: prices.map((p) => p.fecha.slice(5)),
+      datasets: [{
+        data: prices.map((p) => p.cierre),
+        fill: true,
+        borderColor: '#1F3964',
+        backgroundColor: 'rgba(31,57,100,0.1)',
+        pointRadius: 0,
+        tension: 0.3,
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      legend: { display: false },
+      scales: {
+        xAxes: [{ ticks: { maxTicksLimit: 10, fontSize: 10 } }],
+        yAxes: [{ ticks: { fontSize: 10 } }],
+      },
+    },
+  }
+  try {
+    const res = await fetch('https://quickchart.io/chart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ width: 620, height: 240, backgroundColor: 'white', chart: chartConfig }),
+      signal: AbortSignal.timeout(12_000),
+    })
+    if (!res.ok) return null
+    return Buffer.from(await res.arrayBuffer())
+  } catch { return null }
+}
+
 export async function createDocxBuffer(
   content: ReportContent,
   marketData: MarketData,
@@ -188,6 +231,28 @@ export async function createDocxBuffer(
     borders: TableBorders.NONE,
     rows: incomeRows,
   })
+
+  // TTM key metrics table
+  const ttmLabels = ['EPS (TTM)', 'EV/EBITDA', 'P/E (TTM)', 'Margen Bruto', 'Margen Neto']
+  const ttmValues = [
+    marketData.eps      != null ? marketData.eps.toFixed(2)      : 'N/D',
+    marketData.ev_ebitda != null ? marketData.ev_ebitda.toFixed(2) : 'N/D',
+    marketData.pe_ratio != null ? marketData.pe_ratio.toFixed(2) : 'N/D',
+    fmtPct(marketData.margen_bruto),
+    fmtPct(marketData.margen_neto),
+  ]
+
+  const ttmTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: TableBorders.NONE,
+    rows: [
+      new TableRow({ children: ttmLabels.map((label) => cellBg(COLOR_MID, label, true, half(9))) }),
+      new TableRow({ children: ttmValues.map((val) => cellVal(val, true, half(10))) }),
+    ],
+  })
+
+  // Price chart
+  const chartBuffer = await fetchChartImage(marketData.historial_precios)
 
   // Fuentes de ingresos table
   const fuentesRows: TableRow[] = [
@@ -302,6 +367,19 @@ export async function createDocxBuffer(
           subheading('2.3 Histórico Anual de Ingresos'),
           incomeTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
+
+          subheading('2.4 Indicadores Financieros Clave (TTM)'),
+          ttmTable,
+          new Paragraph({ spacing: { after: 100 }, children: [] }),
+
+          subheading('2.5 Evolución del Precio — Últimos 3 Meses'),
+          ...(chartBuffer
+            ? [new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 100 },
+                children: [new ImageRun({ data: chartBuffer, transformation: { width: 560, height: 212 }, type: 'png' })],
+              })]
+            : [body('Gráfica no disponible.')]),
 
           separator(),
 

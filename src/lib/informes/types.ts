@@ -5,6 +5,11 @@ export interface HistorialIngreso {
   net_income: number | null
 }
 
+export interface HistorialPrecio {
+  fecha: string
+  cierre: number
+}
+
 export interface MarketData {
   ticker: string
   empresa: string
@@ -36,6 +41,7 @@ export interface MarketData {
   sell: number
   strong_sell: number
   historial_ingresos: HistorialIngreso[]
+  historial_precios: HistorialPrecio[]
 }
 
 export interface FuenteIngreso {

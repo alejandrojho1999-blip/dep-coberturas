@@ -1,5 +1,5 @@
 import YahooFinance from 'yahoo-finance2'
-import type { MarketData, HistorialIngreso } from './types'
+import type { MarketData, HistorialIngreso, HistorialPrecio } from './types'
 
 function fmt(n: number | null | undefined, decimals = 2): string {
   if (n == null) return 'N/D'
@@ -21,7 +21,7 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
   const yf = new YahooFinance()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fetchOptions = { signal: AbortSignal.timeout(20_000) } as any
-  const [quote, summary] = await Promise.all([
+  const [quote, summary, historico] = await Promise.all([
     yf.quote(ticker, {}, fetchOptions) as Promise<AnyRecord>,
     (async (): Promise<AnyRecord | null> => {
       try {
@@ -38,6 +38,12 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
         }, fetchOptions) as Promise<AnyRecord>)
       } catch { return null }
     })(),
+    (async (): Promise<AnyRecord[]> => {
+      try {
+        const from = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+        return await (yf.historical(ticker, { period1: from, period2: new Date(), interval: '1d' }, fetchOptions) as Promise<AnyRecord[]>)
+      } catch { return [] }
+    })(),
   ])
 
   const profile    = (summary?.summaryProfile ?? summary?.assetProfile ?? {}) as AnyRecord
@@ -47,12 +53,22 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
   const recTrend   = (summary?.recommendationTrend?.trend ?? []) as AnyRecord[]
   const latestRec  = recTrend[0] ?? {}
 
-  const historial: HistorialIngreso[] = incomeList.slice(0, 3).map((s) => ({
-    año:          new Date(s.endDate as string | number).getFullYear(),
-    revenue:      (s.totalRevenue as number | null) ?? null,
-    gross_profit: (s.grossProfit as number | null) ?? null,
-    net_income:   (s.netIncome as number | null) ?? null,
-  }))
+  const historial: HistorialIngreso[] = incomeList.slice(0, 3).map((s) => {
+    const _gp  = (s.grossProfit   as number | null) ?? null
+    const _rev = (s.totalRevenue  as number | null) ?? null
+    const _cog = (s.costOfRevenue as number | null) ?? null
+    return {
+      año:          new Date(s.endDate as string | number).getFullYear(),
+      revenue:      _rev,
+      gross_profit: (_gp !== null && _gp !== 0) ? _gp : (_rev !== null && _cog !== null) ? _rev - _cog : _gp,
+      net_income:   (s.netIncome as number | null) ?? null,
+    }
+  })
+
+  const historialPrecios: HistorialPrecio[] = historico.map((h) => ({
+    fecha:  (h.date as Date).toISOString().split('T')[0],
+    cierre: (h.close as number) ?? 0,
+  })).filter((h) => h.cierre > 0)
 
   return {
     ticker:            (quote.symbol as string)   ?? ticker.toUpperCase(),
@@ -85,6 +101,7 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
     sell:        (latestRec.sell       as number) ?? 0,
     strong_sell: (latestRec.strongSell as number) ?? 0,
     historial_ingresos: historial,
+    historial_precios:  historialPrecios,
   }
 }
 
