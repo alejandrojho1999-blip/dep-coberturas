@@ -40,11 +40,15 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     if (typeof window === 'undefined') return false
     return localStorage.getItem(STORAGE_KEY) === 'true'
   })
-  const [settingsOpen, setSettingsOpen] = useState(() => {
-    if (typeof window === 'undefined') return false
-    const p = window.location.pathname
-    return p === '/perfil' || p === '/fincept-terminal'
-  })
+  const [settingsOpen, setSettingsOpen] = useState(
+    pathname === '/perfil' || pathname === '/fincept-terminal'
+  )
+
+  useEffect(() => {
+    if (pathname === '/perfil' || pathname === '/fincept-terminal') {
+      setSettingsOpen(true)
+    }
+  }, [pathname])
 
   useEffect(() => {
     onMobileClose()
