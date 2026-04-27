@@ -43,9 +43,11 @@ export default function RegisterPage() {
       })
 
       if (error) {
+        const msg = error.message.toLowerCase()
+        const isRateLimit = msg.includes('rate limit') || msg.includes('email rate') || msg.includes('over_email_send')
         setError(
-          error.message.includes('rate limit')
-            ? 'Demasiados intentos. Espera unos minutos e intenta de nuevo.'
+          isRateLimit
+            ? 'El sistema alcanzó el límite de registros por hora. Por favor espera unos minutos o contacta al administrador.'
             : error.message
         )
         return
