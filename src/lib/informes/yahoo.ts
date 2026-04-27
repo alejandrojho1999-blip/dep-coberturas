@@ -40,8 +40,24 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
     })(),
     (async (): Promise<AnyRecord[]> => {
       try {
-        const from = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-        return await (yf.historical(ticker, { period1: from, period2: new Date(), interval: '1d' }, fetchOptions) as Promise<AnyRecord[]>)
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=1y&interval=1d&includePrePost=false`
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InformesEQF/1.0)' },
+          signal: AbortSignal.timeout(15_000),
+        })
+        if (!res.ok) return []
+        const json = await res.json() as {
+          chart: { result: Array<{
+            timestamp: number[]
+            indicators: { quote: Array<{ close: (number | null)[] }> }
+          }> | null }
+        }
+        const result = json.chart.result?.[0]
+        if (!result) return []
+        return result.timestamp.map((ts, i) => ({
+          date:  new Date(ts * 1000),
+          close: result.indicators.quote[0].close[i] ?? 0,
+        }))
       } catch { return [] }
     })(),
   ])

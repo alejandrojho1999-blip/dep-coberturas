@@ -375,7 +375,7 @@ export async function createDocxBuffer(
           ttmTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.5 Evolución del Precio — Últimos 3 Meses'),
+          subheading('2.5 Evolución del Precio — Últimas 52 Semanas'),
           ...(chartBuffer
             ? [new Paragraph({
                 alignment: AlignmentType.CENTER,
