@@ -69,6 +69,8 @@ export interface ReportContent {
 
 export interface HistoryEntry {
   id: string
+  user_id: string
+  user_email: string | null
   ticker: string
   empresa: string | null
   bolsa: string | null

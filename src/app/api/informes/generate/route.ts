@@ -77,6 +77,7 @@ export async function POST(request: Request): Promise<Response> {
     .from('informes_history')
     .insert({
       user_id:          user.id,
+      user_email:       user.email ?? null,
       ticker:           content.ticker,
       empresa:          content.empresa,
       bolsa:            content.bolsa,

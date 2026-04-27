@@ -10,10 +10,9 @@ export async function GET(): Promise<Response> {
 
   const { data, error } = await supabase
     .from('informes_history')
-    .select('id, ticker, empresa, bolsa, solicitante, filename, informe_numero, fecha_generacion, content_json')
-    .eq('user_id', user.id)
+    .select('id, user_id, user_email, ticker, empresa, bolsa, solicitante, filename, informe_numero, fecha_generacion, content_json')
     .order('created_at', { ascending: false })
-    .limit(50)
+    .limit(100)
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
 

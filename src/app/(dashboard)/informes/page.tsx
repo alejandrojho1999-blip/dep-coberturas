@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { BarChart2, Download, Eye, FileText, Loader2, Search, Trash2, X } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -200,7 +201,8 @@ export default function InformesPage() {
   const [loading, setLoading]                 = useState(false)
   const [history, setHistory]                 = useState<HistoryEntry[]>([])
   const [historyLoading, setHistoryLoading]   = useState(true)
-  const [filterSolicitante, setFilterSolicitante] = useState('')
+  const [filterUserId, setFilterUserId]       = useState('')
+  const [currentUserId, setCurrentUserId]     = useState<string | null>(null)
   const [previewEntry, setPreviewEntry]       = useState<HistoryEntry | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [toasts, setToasts]                   = useState<Toast[]>([])
@@ -216,17 +218,18 @@ export default function InformesPage() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const uniqueSolicitantes = (() => {
-    const seen = new Map<string, string>()
+  const uniqueUsers = (() => {
+    const seen = new Map<string, { user_id: string; user_email: string | null }>()
     history.forEach((h) => {
-      const v = h.solicitante?.trim()
-      if (v) seen.set(v.toLowerCase(), v)
+      if (!seen.has(h.user_id)) seen.set(h.user_id, { user_id: h.user_id, user_email: h.user_email })
     })
-    return Array.from(seen.values()).sort()
+    return Array.from(seen.values()).sort((a, b) =>
+      (a.user_email ?? a.user_id).localeCompare(b.user_email ?? b.user_id)
+    )
   })()
 
-  const displayed = filterSolicitante
-    ? history.filter((h) => (h.solicitante?.trim() ?? '').toLowerCase() === filterSolicitante.toLowerCase())
+  const displayed = filterUserId
+    ? history.filter((h) => h.user_id === filterUserId)
     : history
 
   // ── Toasts ─────────────────────────────────────────────────────────────────
@@ -249,6 +252,16 @@ export default function InformesPage() {
   }, [])
 
   useEffect(() => { fetchHistory() }, [fetchHistory])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setCurrentUserId(data.user.id)
+        setFilterUserId(data.user.id)
+      }
+    })
+  }, [])
 
   // ── Autocomplete ───────────────────────────────────────────────────────────
 
@@ -482,16 +495,19 @@ export default function InformesPage() {
               )}
             </div>
 
-            {/* Filter by Responsable */}
-            {uniqueSolicitantes.length > 0 && (
+            {/* Filter by operator/user */}
+            {uniqueUsers.length > 1 && (
               <select
-                value={filterSolicitante}
-                onChange={(e) => setFilterSolicitante(e.target.value)}
+                value={filterUserId}
+                onChange={(e) => setFilterUserId(e.target.value)}
                 className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] px-2.5 py-1.5 text-xs text-[#e2e8f0] transition-colors focus:border-[#00ff88] focus:outline-none"
               >
                 <option value="">Todos los operadores</option>
-                {uniqueSolicitantes.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                {uniqueUsers.map((u) => (
+                  <option key={u.user_id} value={u.user_id}>
+                    {u.user_email ?? u.user_id}
+                    {u.user_id === currentUserId ? ' (yo)' : ''}
+                  </option>
                 ))}
               </select>
             )}
@@ -508,10 +524,10 @@ export default function InformesPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-[#64748b]">
-                  {filterSolicitante ? `Sin informes de "${filterSolicitante}"` : 'Sin informes generados'}
+                  {filterUserId ? 'Sin informes para este operador' : 'Sin informes generados'}
                 </p>
                 <p className="mt-1 text-xs text-[#475569]">
-                  {filterSolicitante ? 'Prueba otro filtro.' : 'Ingresa un ticker para comenzar.'}
+                  {filterUserId ? 'Prueba otro filtro.' : 'Ingresa un ticker para comenzar.'}
                 </p>
               </div>
             </div>
