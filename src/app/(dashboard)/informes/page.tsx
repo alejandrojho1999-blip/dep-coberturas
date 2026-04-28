@@ -213,6 +213,9 @@ export default function InformesPage() {
   const [uploadingId,     setUploadingId]     = useState<string | null>(null)
   const fileInputRef                          = useRef<HTMLInputElement>(null)
   const uploadTargetRef                       = useRef<HistoryEntry | null>(null)
+  const [livePrices,    setLivePrices]        = useState<Record<string, number>>({})
+  const [pricesLoading, setPricesLoading]     = useState(false)
+  const [rowEdits,      setRowEdits]          = useState<Record<string, Record<string, string>>>({})
   const [toasts, setToasts]                   = useState<Toast[]>([])
   const toastId                               = useRef(0)
 
@@ -382,6 +385,87 @@ export default function InformesPage() {
     } catch { addToast('Error inesperado al subir el archivo', 'error') }
     finally { setUploadingId(null); uploadTargetRef.current = null }
   }
+
+  // ── Live prices ────────────────────────────────────────────────────────────
+
+  const fetchLivePrices = useCallback(async (hist: HistoryEntry[]) => {
+    const tickers = [...new Set(hist.map((h) => h.ticker))].join(',')
+    if (!tickers) return
+    setPricesLoading(true)
+    try {
+      const res = await fetch(`/api/informes/live-prices?tickers=${encodeURIComponent(tickers)}`)
+      if (res.ok) setLivePrices(await res.json() as Record<string, number>)
+    } finally { setPricesLoading(false) }
+  }, [])
+
+  useEffect(() => {
+    if (history.length > 0) void fetchLivePrices(history)
+  }, [history, fetchLivePrices])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (history.length > 0) void fetchLivePrices(history)
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [history, fetchLivePrices])
+
+  // ── Portfolio inline editing ────────────────────────────────────────────────
+
+  const setRowEdit = (id: string, field: string, val: string) =>
+    setRowEdits((prev) => ({ ...prev, [id]: { ...prev[id], [field]: val } }))
+
+  const clearRowEdit = (id: string, field: string) =>
+    setRowEdits((prev) => {
+      const copy = { ...prev }
+      if (copy[id]) { const f = { ...copy[id] }; delete f[field]; copy[id] = f }
+      return copy
+    })
+
+  const getEditVal = (entry: HistoryEntry, field: 'precio_compra' | 'cantidad_acciones' | 'precio_objetivo_personal'): string => {
+    const inFlight = rowEdits[entry.id]?.[field]
+    if (inFlight !== undefined) return inFlight
+    const v = entry[field]
+    return v != null ? String(v) : ''
+  }
+
+  const saveField = async (id: string, updates: Record<string, unknown>) => {
+    const supabase = createClient()
+    const { error } = await supabase.from('informes_history').update(updates).eq('id', id)
+    if (!error) {
+      setHistory((prev) => prev.map((h) => h.id === id ? { ...h, ...updates } as HistoryEntry : h))
+    } else {
+      addToast('Error al guardar', 'error')
+    }
+  }
+
+  const handleEstadoChange = async (entry: HistoryEntry, newEstado: string) => {
+    const updates: Record<string, unknown> = { estado: newEstado }
+    if (newEstado === 'Vender') {
+      updates.precio_venta = livePrices[entry.ticker] ?? null
+    }
+    await saveField(entry.id, updates)
+  }
+
+  function calcRendimiento(entry: HistoryEntry): number | null {
+    const compra = entry.precio_compra
+    if (compra == null || compra === 0) return null
+    const ref = entry.estado === 'Vender' && entry.precio_venta != null
+      ? entry.precio_venta
+      : (livePrices[entry.ticker] ?? null)
+    if (ref == null) return null
+    return ((ref - compra) / compra) * 100
+  }
+
+  function estadoBadge(estado: string | null) {
+    switch (estado) {
+      case 'Comprar':  return { bg: 'rgba(74,222,128,0.15)',  border: 'rgba(74,222,128,0.35)',  text: '#4ade80' }
+      case 'Mantener': return { bg: 'rgba(251,191,36,0.15)',  border: 'rgba(251,191,36,0.35)',  text: '#fbbf24' }
+      case 'Vender':   return { bg: 'rgba(248,113,113,0.15)', border: 'rgba(248,113,113,0.35)', text: '#f87171' }
+      default:         return { bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.3)',  text: '#64748b' }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -581,11 +665,19 @@ export default function InformesPage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
-                    <th className="px-4 py-3 text-left font-medium text-[#64748b]">Ticker</th>
-                    <th className="px-4 py-3 text-left font-medium text-[#64748b]">Empresa</th>
-                    <th className="hidden px-4 py-3 text-left font-medium text-[#64748b] sm:table-cell">Fecha</th>
-                    <th className="px-4 py-3 text-left font-medium text-[#64748b]">Responsable</th>
-                    <th className="px-4 py-3 text-right font-medium text-[#64748b]">Acciones</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
+                    <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
+                    <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Compra</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">
+                      P.Actual
+                      {pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}
+                    </th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Obj.</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -595,23 +687,108 @@ export default function InformesPage() {
                       className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]"
                       style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <span className="font-semibold text-[#00ff88]">{entry.ticker}</span>
-                        <span className="ml-1.5 text-[#475569]">#{i + 1}</span>
+                        <span className="ml-1 text-[#475569]">#{i + 1}</span>
                         {entry.custom_docx_path && (
-                          <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[#00ff88]" title="Tiene versión personalizada" />
+                          <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-[#00ff88]" title="Tiene versión personalizada" />
                         )}
                       </td>
-                      <td className="max-w-[140px] truncate px-4 py-3 text-[#94a3b8]">
+                      {/* Empresa */}
+                      <td className="hidden max-w-[130px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">
                         {entry.empresa ?? '—'}
                       </td>
-                      <td className="hidden px-4 py-3 text-[#64748b] sm:table-cell">
+                      {/* Fecha */}
+                      <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">
                         {formatDate(entry.fecha_generacion)}
                       </td>
-                      <td className="max-w-[120px] truncate px-4 py-3 text-[#64748b]">
-                        {entry.solicitante ?? '—'}
+                      {/* P. Compra — inline editable */}
+                      <td className="hidden px-3 py-2.5 text-right xl:table-cell">
+                        <input
+                          type="number" min="0" step="0.01" placeholder="—"
+                          value={getEditVal(entry, 'precio_compra')}
+                          onChange={(e) => setRowEdit(entry.id, 'precio_compra', e.target.value)}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value)
+                            clearRowEdit(entry.id, 'precio_compra')
+                            if (!isNaN(val) && val >= 0) void saveField(entry.id, { precio_compra: val })
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                          className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                        />
                       </td>
-                      <td className="px-4 py-3">
+                      {/* Cantidad */}
+                      <td className="hidden px-3 py-2.5 text-right xl:table-cell">
+                        <input
+                          type="number" min="0" step="1" placeholder="—"
+                          value={getEditVal(entry, 'cantidad_acciones')}
+                          onChange={(e) => setRowEdit(entry.id, 'cantidad_acciones', e.target.value)}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value)
+                            clearRowEdit(entry.id, 'cantidad_acciones')
+                            if (!isNaN(val) && val >= 0) void saveField(entry.id, { cantidad_acciones: val })
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                          className="w-16 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                        />
+                      </td>
+                      {/* P. Actual — live */}
+                      <td className="px-3 py-2.5 text-right font-mono text-xs">
+                        {livePrices[entry.ticker] != null
+                          ? <span className="text-[#e2e8f0]">{livePrices[entry.ticker]!.toFixed(2)}</span>
+                          : <span className="text-[#475569]">—</span>}
+                      </td>
+                      {/* P. Objetivo — inline editable */}
+                      <td className="hidden px-3 py-2.5 text-right lg:table-cell">
+                        <input
+                          type="number" min="0" step="0.01" placeholder="—"
+                          value={getEditVal(entry, 'precio_objetivo_personal')}
+                          onChange={(e) => setRowEdit(entry.id, 'precio_objetivo_personal', e.target.value)}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value)
+                            clearRowEdit(entry.id, 'precio_objetivo_personal')
+                            if (!isNaN(val) && val >= 0) void saveField(entry.id, { precio_objetivo_personal: val })
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                          className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                        />
+                      </td>
+                      {/* Rendimiento */}
+                      <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
+                        {(() => {
+                          const r = calcRendimiento(entry)
+                          const locked = entry.estado === 'Vender'
+                          if (r == null) return <span className="text-[#475569]">—</span>
+                          const pos = r >= 0
+                          return (
+                            <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? '#4ade80' : '#f87171' }}>
+                              {locked && <span title="Rendimiento final al vender" className="text-[10px]">🔒</span>}
+                              {pos ? '+' : ''}{r.toFixed(2)}%
+                            </span>
+                          )
+                        })()}
+                      </td>
+                      {/* Estado */}
+                      <td className="px-3 py-2.5">
+                        {(() => {
+                          const badge = estadoBadge(entry.estado)
+                          return (
+                            <select
+                              value={entry.estado ?? 'Observacion'}
+                              onChange={(e) => void handleEstadoChange(entry, e.target.value)}
+                              className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
+                              style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}
+                            >
+                              <option value="Comprar">Comprar</option>
+                              <option value="Mantener">Mantener</option>
+                              <option value="Vender">Vender</option>
+                              <option value="Observacion">Observar</option>
+                            </select>
+                          )
+                        })()}
+                      </td>
+                      {/* Acciones */}
+                      <td className="px-3 py-2.5">
                         {confirmDeleteId === entry.id ? (
                           <div className="flex items-center justify-end gap-1.5 text-xs">
                             <span className="text-[#94a3b8]">¿Eliminar?</span>

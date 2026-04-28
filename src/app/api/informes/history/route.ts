@@ -10,7 +10,7 @@ export async function GET(): Promise<Response> {
 
   const { data, error } = await supabase
     .from('informes_history')
-    .select('id, user_id, user_email, ticker, empresa, bolsa, solicitante, filename, informe_numero, fecha_generacion, content_json, custom_docx_path')
+    .select('id, user_id, user_email, ticker, empresa, bolsa, solicitante, filename, informe_numero, fecha_generacion, content_json, custom_docx_path, precio_compra, cantidad_acciones, precio_objetivo_personal, estado, precio_venta')
     .order('created_at', { ascending: false })
     .limit(100)
 

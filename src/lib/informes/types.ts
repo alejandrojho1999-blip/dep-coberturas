@@ -86,4 +86,9 @@ export interface HistoryEntry {
   fecha_generacion: string
   content_json?: ReportContent | null
   custom_docx_path: string | null
+  precio_compra: number | null
+  cantidad_acciones: number | null
+  precio_objetivo_personal: number | null
+  estado: 'Comprar' | 'Mantener' | 'Vender' | 'Observacion' | null
+  precio_venta: number | null
 }

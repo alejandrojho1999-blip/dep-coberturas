@@ -82,10 +82,13 @@ export async function POST(request: Request): Promise<Response> {
       ticker:           content.ticker,
       empresa:          content.empresa,
       bolsa:            content.bolsa,
-      solicitante:      autoSolicitante,
+      solicitante:               autoSolicitante,
       filename,
-      informe_numero:   informeNumero,
-      content_json:     content,
+      informe_numero:            informeNumero,
+      content_json:              content,
+      precio_compra:             marketData.precio_actual ?? null,
+      precio_objetivo_personal:  marketData.precio_objetivo ?? null,
+      estado:                    'Observacion',
     })
 
   if (dbErr) {
