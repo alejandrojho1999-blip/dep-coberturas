@@ -27,11 +27,12 @@ export async function DELETE(request: Request): Promise<Response> {
   const { id } = await request.json() as { id?: string }
   if (!id) return Response.json({ error: 'Missing id' }, { status: 400 })
 
-  const { error } = await supabase
-    .from('informes_history')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id)
+  const ADMIN_EMAILS = new Set(['lriofrio915@gmail.com'])
+  const isAdmin = ADMIN_EMAILS.has(user.email ?? '')
+
+  let deleteQuery = supabase.from('informes_history').delete().eq('id', id)
+  if (!isAdmin) deleteQuery = deleteQuery.eq('user_id', user.id)
+  const { error } = await deleteQuery
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
   return Response.json({ ok: true })

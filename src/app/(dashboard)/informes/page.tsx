@@ -531,87 +531,69 @@ export default function InformesPage() {
         </div>
       </div>
 
-      {/* 2-column grid */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-[320px_1fr]">
+      {/* Vertical stack: compact form top, full-width table below */}
+      <div className="flex flex-col gap-5">
 
-        {/* ── LEFT: Generar informe ─────────────────────────────── */}
-        <div className="flex flex-col gap-5">
-          <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-5">
-            <div className="mb-4">
-              <h2 className="text-sm font-semibold text-[#e2e8f0]">Generar Informe</h2>
-              <p className="mt-0.5 text-xs text-[#64748b]">Analiza cualquier acción, ETF o fondo global</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {/* Ticker */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[#94a3b8]">Ticker / Nombre</label>
-                <div className="relative" ref={dropdownRef}>
-                  <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" />
-                    <input
-                      type="text"
-                      value={ticker}
-                      onChange={(e) => handleTickerChange(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
-                      placeholder="Ej: AAPL, NVDA, Apple…"
-                      autoComplete="off"
-                      className="w-full rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] py-2.5 pl-9 pr-3 text-sm text-[#e2e8f0] placeholder-[#475569] transition-colors focus:border-[#00ff88] focus:outline-none"
-                      style={{ textTransform: 'uppercase' }}
-                    />
-                  </div>
-                  {showDropdown && suggestions.length > 0 && (
-                    <div
-                      className="absolute z-50 mt-1 w-full rounded-lg border border-[#1e1e2e] bg-[#12121a] py-1 shadow-xl"
-                      style={{ maxHeight: '220px', overflowY: 'auto' }}
+        {/* ── TOP: Generar informe (compact bar) ────────────────── */}
+        <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] px-5 py-4">
+          <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+            {/* Ticker input */}
+            <div className="relative min-w-[200px] flex-1 max-w-sm" ref={dropdownRef}>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" />
+                <input
+                  type="text"
+                  value={ticker}
+                  onChange={(e) => handleTickerChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+                  placeholder="Ej: AAPL, NVDA, Apple…"
+                  autoComplete="off"
+                  className="w-full rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] py-2.5 pl-9 pr-3 text-sm text-[#e2e8f0] placeholder-[#475569] transition-colors focus:border-[#00ff88] focus:outline-none"
+                  style={{ textTransform: 'uppercase' }}
+                />
+              </div>
+              {showDropdown && suggestions.length > 0 && (
+                <div
+                  className="absolute z-50 mt-1 w-full rounded-lg border border-[#1e1e2e] bg-[#12121a] py-1 shadow-xl"
+                  style={{ maxHeight: '220px', overflowY: 'auto' }}
+                >
+                  {suggestions.map((s, idx) => (
+                    <button
+                      key={s.symbol}
+                      type="button"
+                      onMouseDown={() => selectSuggestion(s)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${idx === selectedIdx ? 'bg-[#1e1e2e]' : 'hover:bg-[#1a1a28]'}`}
                     >
-                      {suggestions.map((s, idx) => (
-                        <button
-                          key={s.symbol}
-                          type="button"
-                          onMouseDown={() => selectSuggestion(s)}
-                          className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${idx === selectedIdx ? 'bg-[#1e1e2e]' : 'hover:bg-[#1a1a28]'}`}
-                        >
-                          <span className="font-semibold text-[#00ff88]">{s.symbol}</span>
-                          <span className="flex-1 truncate text-[#94a3b8]">{s.name}</span>
-                          <span className="shrink-0 text-[#475569]">{s.exchange}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                      <span className="font-semibold text-[#00ff88]">{s.symbol}</span>
+                      <span className="flex-1 truncate text-[#94a3b8]">{s.name}</span>
+                      <span className="shrink-0 text-[#475569]">{s.exchange}</span>
+                    </button>
+                  ))}
                 </div>
-                {selectedResult && (
-                  <p className="text-xs text-[#64748b]">{selectedResult.name} · {selectedResult.exchange}</p>
-                )}
-              </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={!ticker.trim() || loading}
-                className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:brightness-90 active:scale-[0.98]"
-                style={{ background: '#00ff88', color: '#0a0a0f' }}
-              >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-                {loading ? 'Generando…' : 'Generar Informe'}
-              </button>
-            </form>
-
+              )}
+              {selectedResult && (
+                <p className="mt-1 text-xs text-[#64748b]">{selectedResult.name} · {selectedResult.exchange}</p>
+              )}
+            </div>
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={!ticker.trim() || loading}
+              className="flex shrink-0 items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:brightness-90 active:scale-[0.98]"
+              style={{ background: '#00ff88', color: '#0a0a0f' }}
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+              {loading ? 'Generando…' : 'Generar Informe'}
+            </button>
+            {/* Inline loading indicator */}
             {loading && (
-              <div className="mt-4 flex items-start gap-3 rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-3">
-                <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin text-[#00ff88]" />
-                <p className="text-xs text-[#94a3b8]">Generando informe con IA… puede tardar 30–60 segundos.</p>
-              </div>
+              <span className="self-center text-xs text-[#94a3b8]">Generando con IA… 30–60s</span>
             )}
-
-            <p className="mt-4 text-xs text-[#475569]">
-              Incluye resumen ejecutivo, modelo de negocio, análisis financiero, factores de inversión y recomendación. Generado con DeepSeek via OpenRouter.
-            </p>
-          </div>
+          </form>
         </div>
 
-        {/* ── RIGHT: Historial ─────────────────────────────────── */}
+        {/* ── BOTTOM: Historial (full width) ───────────────────── */}
         <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
             <div className="flex items-center gap-2">
