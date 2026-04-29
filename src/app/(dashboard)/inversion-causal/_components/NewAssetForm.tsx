@@ -41,7 +41,15 @@ interface IRInfo {
   rationale?: string
 }
 
+interface TreatmentRec {
+  variable: string
+  label: string
+  score: number
+  rationale: string
+}
+
 type IRStatus = 'idle' | 'discovering' | 'extracting' | 'done' | 'error'
+type DocStatus = 'idle' | 'analyzing' | 'done' | 'error'
 
 export default function NewAssetForm({ onCreated, onCancel }: Props) {
   const [query, setQuery] = useState('')
@@ -59,6 +67,14 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
   const [newConfounder, setNewConfounder] = useState('')
   const [newColliderVar, setNewColliderVar] = useState('')
   const [savedSuggestions, setSavedSuggestions] = useState<string[]>([])
+
+  // Document upload state
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [docStatus, setDocStatus] = useState<DocStatus>('idle')
+  const [treatmentRecs, setTreatmentRecs] = useState<TreatmentRec[]>([])
+  const [selectedRecIdx, setSelectedRecIdx] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load cross-ticker suggestions for confounders
@@ -81,6 +97,9 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
     setError(null)
     setConfounders([])
     setColliders([])
+    setUploadedFiles([])
+    setTreatmentRecs([])
+    setSelectedRecIdx(null)
 
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (value.trim().length < 2) { setSuggestions([]); setShowDropdown(false); return }
@@ -172,19 +191,71 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
     setColliders((prev) => prev.filter((c) => c.variable !== variable))
   }
 
+  function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    setUploadedFiles((prev) => {
+      const existing = new Set(prev.map((f) => f.name))
+      return [...prev, ...files.filter((f) => !existing.has(f.name))]
+    })
+    e.target.value = ''
+  }
+
+  function removeFile(name: string) {
+    setUploadedFiles((prev) => prev.filter((f) => f.name !== name))
+  }
+
+  async function analyzeDocuments() {
+    if (!uploadedFiles.length || !selectedTicker) return
+    setDocStatus('analyzing')
+    setTreatmentRecs([])
+    setSelectedRecIdx(null)
+
+    try {
+      const fd = new FormData()
+      fd.append('ticker', selectedTicker)
+      fd.append('sector', irInfo?.sector ?? 'default')
+      for (const file of uploadedFiles) {
+        fd.append('files', file)
+      }
+
+      const res = await fetch('/api/causal/analyze-docs', { method: 'POST', body: fd })
+      if (!res.ok) { setDocStatus('error'); return }
+      const data = await res.json() as { recommendations: TreatmentRec[]; extractedData: Record<string, unknown> }
+      setTreatmentRecs(data.recommendations ?? [])
+      setSelectedRecIdx(0)
+      setDocStatus('done')
+
+      // Auto-select top recommendation as treatment
+      if (data.recommendations[0] && irInfo) {
+        setIrInfo((prev) => prev ? ({
+          ...prev,
+          treatment: data.recommendations[0].variable,
+          treatmentLabel: data.recommendations[0].label,
+          rationale: data.recommendations[0].rationale,
+        }) : prev)
+      }
+    } catch {
+      setDocStatus('error')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedTicker || !selectedName) return
     setLoading(true)
     setError(null)
 
-    const treatment = irInfo?.treatment ?? 'Revenue_Growth'
+    // If a doc rec was selected, override the IR treatment
+    const effectiveTreatment = selectedRecIdx != null && treatmentRecs[selectedRecIdx]
+      ? treatmentRecs[selectedRecIdx].variable
+      : (irInfo?.treatment ?? 'Revenue_Growth')
+
     const sector = irInfo?.sector ?? 'Unknown'
     const collidersRecord: Record<string, string> = Object.fromEntries(
       colliders.map((c) => [c.variable, c.rationale])
     )
     const config: CausalConfig = buildCausalConfig(
-      selectedTicker, selectedName, sector, treatment,
+      selectedTicker, selectedName, sector, effectiveTreatment,
       confounders.map((c) => c.variable),
       collidersRecord,
     )
@@ -211,7 +282,7 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
       const res = await fetch('/api/causal/assets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: selectedTicker, name: selectedName, config, ir_url: irInfo?.irUrl, treatment, sector }),
+        body: JSON.stringify({ ticker: selectedTicker, name: selectedName, config, ir_url: irInfo?.irUrl, treatment: effectiveTreatment, sector }),
       })
       if (!res.ok) {
         const data = await res.json() as { error?: string }
@@ -229,6 +300,9 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
   const suggestionsForConfounder = savedSuggestions.filter(
     (s) => s.toLowerCase().includes(newConfounder.toLowerCase()) && !confounders.some((c) => c.variable === s)
   ).slice(0, 4)
+
+  const scoreColor = (score: number) =>
+    score >= 80 ? '#00ff88' : score >= 60 ? '#f59e0b' : '#64748b'
 
   return (
     <form onSubmit={handleSubmit} className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-5 max-w-xl space-y-4">
@@ -276,7 +350,7 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
         </div>
       )}
 
-      {/* Treatment summary — only when IR succeeded */}
+      {/* Treatment summary */}
       {irStatus === 'done' && irInfo && (
         <div className="bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg px-3 py-3 space-y-1.5">
           <div className="flex items-center gap-2">
@@ -297,7 +371,103 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
         </div>
       )}
 
-      {/* Confounders + Colliders — shown on success OR error (always editable) */}
+      {/* ── Document upload ────────────────────────────────────── */}
+      {selectedTicker && (irStatus === 'done' || irStatus === 'error') && (
+        <div className="space-y-3">
+          {/* Drop zone */}
+          <div
+            className="border border-dashed border-[#1e1e2e] rounded-lg p-4 text-center space-y-2 hover:border-[#3b82f6]/40 transition-colors cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className="text-base">📎</div>
+            <p className="text-xs font-medium text-[#94a3b8]">Subir documentos financieros <span className="text-[#475569] font-normal">(opcional)</span></p>
+            <p className="text-[0.65rem] text-[#475569]">Excel, Word, PDF — earnings, presentaciones IR, reportes anuales</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".xlsx,.xls,.docx,.doc,.pdf"
+              className="hidden"
+              onChange={handleFilesSelected}
+            />
+          </div>
+
+          {/* File list */}
+          {uploadedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {uploadedFiles.map((f) => (
+                <span key={f.name}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[#1e1e2e] text-[#94a3b8] border border-[#2a2a3a]">
+                  <span className="truncate max-w-[120px]" title={f.name}>{f.name}</span>
+                  <button type="button" onClick={() => removeFile(f.name)}
+                    className="opacity-50 hover:opacity-100 cursor-pointer ml-0.5">✕</button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {uploadedFiles.length > 0 && docStatus !== 'analyzing' && (
+            <button
+              type="button"
+              onClick={analyzeDocuments}
+              className="w-full px-3 py-2 rounded-lg bg-[#3b82f6]/20 text-[#3b82f6] text-xs font-semibold hover:bg-[#3b82f6]/30 cursor-pointer transition-colors"
+            >
+              Analizar con IA — recomendar variables de tratamiento
+            </button>
+          )}
+
+          {docStatus === 'analyzing' && (
+            <div className="flex items-center gap-2 text-xs text-[#64748b] bg-[#0a0a0f] px-3 py-2 rounded-lg border border-[#1e1e2e]">
+              <span className="animate-spin inline-block">⟳</span>
+              Analizando documentos con IA...
+            </div>
+          )}
+
+          {docStatus === 'error' && (
+            <p className="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">
+              Error al analizar los documentos. Se usará la detección IR.
+            </p>
+          )}
+
+          {/* Treatment recommendations */}
+          {treatmentRecs.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-[#e2e8f0]">⚡ Variables de tratamiento recomendadas por IA</p>
+              {treatmentRecs.map((rec, i) => (
+                <button
+                  key={rec.variable}
+                  type="button"
+                  onClick={() => {
+                    setSelectedRecIdx(i)
+                    setIrInfo((prev) => prev ? ({
+                      ...prev,
+                      treatment: rec.variable,
+                      treatmentLabel: rec.label,
+                      rationale: rec.rationale,
+                    }) : { irUrl: '', companyName: selectedName, sector: 'Unknown', website: '', treatment: rec.variable, treatmentLabel: rec.label, rationale: rec.rationale })
+                  }}
+                  className={`w-full text-left rounded-lg border px-3 py-2.5 transition-colors cursor-pointer ${
+                    selectedRecIdx === i
+                      ? 'border-[#3b82f6] bg-[#3b82f6]/10'
+                      : 'border-[#1e1e2e] bg-[#0a0a0f] hover:border-[#3b82f6]/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-sm text-[#3b82f6] font-semibold">{rec.variable}</span>
+                    <span className="text-xs font-bold tabular-nums" style={{ color: scoreColor(rec.score) }}>
+                      {rec.score}/100
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#94a3b8]">{rec.label}</p>
+                  <p className="text-[0.65rem] text-[#475569] italic mt-0.5">{rec.rationale}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Confounders + Colliders */}
       {(irStatus === 'done' || irStatus === 'error') && (
         <div className="space-y-4">
           {/* Confounders */}
@@ -319,7 +489,6 @@ export default function NewAssetForm({ onCreated, onCancel }: Props) {
                 </span>
               ))}
             </div>
-            {/* Add confounder input */}
             <div style={{ position: 'relative' }}>
               <div className="flex gap-1">
                 <input

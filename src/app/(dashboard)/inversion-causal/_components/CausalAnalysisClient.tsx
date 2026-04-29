@@ -30,6 +30,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [configOverride, setConfigOverride] = useState<Partial<CausalConfig> | null>(null)
+  const [activePillar, setActivePillar] = useState<string | null>(null)
   const effectiveConfig: CausalConfig = configOverride ? { ...config, ...configOverride } : config
 
   async function handleRunAnalysis() {
@@ -91,8 +92,14 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
 
   return (
     <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
-      {/* 4 pillars — always visible */}
-      <CausalPillars config={effectiveConfig} />
+      {/* 4 pillars — always visible, clickeable para editar */}
+      <CausalPillars
+        config={effectiveConfig}
+        onCardClick={(id) => {
+          setActivePillar(id)
+          setActiveTab('data')
+        }}
+      />
 
       {/* Tab bar — horizontally scrollable on mobile */}
       <div className="flex overflow-x-auto border-b border-[#1e1e2e] scrollbar-none">
@@ -125,7 +132,9 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
                 currentColliders={effectiveConfig.excluded}
                 currentManualValues={effectiveConfig.manualValues}
                 assetId={assetId}
-                onApply={(confounders, colliders, manualValues, newTreatment) =>
+                initialFocusPillar={activePillar}
+                onApply={(confounders, colliders, manualValues, newTreatment) => {
+                  setActivePillar(null)
                   setConfigOverride((prev) => ({
                     ...prev,
                     confounders,
@@ -133,7 +142,7 @@ export default function CausalAnalysisClient({ config, assetId }: Props) {
                     manualValues: { ...prev?.manualValues, ...manualValues },
                     ...(newTreatment ? { treatment: newTreatment } : {}),
                   }))
-                }
+                }}
               />
             )}
 

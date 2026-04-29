@@ -422,7 +422,7 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
                 )
               })}
 
-              {/* Outcome row */}
+              {/* Outcome row — always shows "?" because this is the target to be determined by the causal analysis */}
               <tr className="hover:bg-[#00ff88]/5 transition-colors">
                 <td className="px-4 py-2.5 font-mono text-[#00ff88]">{config.outcome}</td>
                 <td className="px-4 py-2.5">
@@ -430,13 +430,13 @@ export default function DataPanel({ config, onDataReady, assetId }: Props) {
                     Resultado
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-right font-mono text-[#00ff88]">
-                  {yahooLoading
-                    ? <span className="text-[#334155] animate-pulse">···</span>
-                    : bestFutureReturn != null
-                      ? `${(bestFutureReturn * 100).toFixed(2)}%`
-                      : '—'
-                  }
+                <td className="px-4 py-2.5 text-right font-mono">
+                  <span
+                    className="text-[#475569] italic text-sm tracking-widest"
+                    title="Variable objetivo — su valor se determina al ejecutar el análisis causal"
+                  >
+                    ?
+                  </span>
                 </td>
               </tr>
 

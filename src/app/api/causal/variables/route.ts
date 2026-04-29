@@ -4,7 +4,7 @@ interface VariableRow {
   id: string
   ticker: string
   variable: string
-  type: 'confounder' | 'collider'
+  type: 'confounder' | 'collider' | 'treatment'
   source: 'auto' | 'manual'
   label: string | null
   rationale: string | null
@@ -47,7 +47,7 @@ export async function POST(request: Request): Promise<Response> {
   const body = await request.json() as {
     ticker: string
     variable: string
-    type: 'confounder' | 'collider'
+    type: 'confounder' | 'collider' | 'treatment'
     source?: 'auto' | 'manual'
     label?: string
     rationale?: string
