@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import type { ScreenerResult } from '@/lib/peter-lynch/screener'
@@ -22,6 +22,13 @@ const CATEGORIES = [
   { name: 'Turnarounds',   growth: 'Recuperación',    icon: '↩️', desc: 'Empresas en crisis con un catalizador de recuperación claro. Alto potencial asimétrico.' },
   { name: 'Asset Plays',   growth: 'Oculto',          icon: '💎', desc: 'Activos subvalorados no reflejados en el precio de mercado. Paciencia requerida.' },
 ]
+
+const CAP_RANGES: Record<string, [number, number]> = {
+  MEGA:  [200e9, Infinity],
+  LARGE: [10e9,  200e9],
+  MID:   [2e9,   10e9],
+  SMALL: [0,     2e9],
+}
 
 function fmt(v: number | null, suffix = '', decimals = 1): string {
   if (v == null) return '—'
@@ -64,10 +71,18 @@ function Check({ ok }: { ok: boolean }) {
     : <span className="text-[#ef4444]">✗</span>
 }
 
+const SELECT_CLS = 'rounded border border-[#1e2035] bg-[#0f0f17] px-3 py-1.5 text-xs font-mono text-[#F0EFE8] outline-none focus:border-[#F59E0B] transition-colors cursor-pointer'
+
 export function PeterLynchClient() {
   const [results, setResults] = useState<ScreenerResult[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [search, setSearch]     = useState('')
+  const [showSugg, setShowSugg] = useState(false)
+  const [sector, setSector]     = useState('ALL')
+  const [capSize, setCapSize]   = useState('ALL')
+  const wrapperRef              = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/peter-lynch/screen')
@@ -76,6 +91,45 @@ export function PeterLynchClient() {
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Error'))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowSugg(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const sectors = useMemo(() =>
+    ['ALL', ...Array.from(new Set(results.map((r) => r.sector).filter((s) => s !== '—'))).sort()],
+    [results]
+  )
+
+  const suggestions = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return []
+    return results
+      .filter((r) => r.ticker.toLowerCase().startsWith(q) || r.name.toLowerCase().includes(q))
+      .slice(0, 8)
+  }, [results, search])
+
+  const filtered = useMemo(() => results.filter((r) => {
+    const q = search.trim().toLowerCase()
+    if (q && !r.ticker.toLowerCase().startsWith(q) && !r.name.toLowerCase().includes(q)) return false
+    if (sector !== 'ALL' && r.sector !== sector) return false
+    if (capSize !== 'ALL') {
+      const [lo, hi] = CAP_RANGES[capSize]
+      if (r.market_cap == null || r.market_cap < lo || r.market_cap >= hi) return false
+    }
+    return true
+  }), [results, search, sector, capSize])
+
+  const handleSearchSelect = (r: ScreenerResult) => {
+    setSearch(r.ticker)
+    setShowSugg(false)
+  }
 
   return (
     <div className="min-h-screen bg-[#07070b] px-4 py-6 text-[#F0EFE8] lg:px-8">
@@ -119,9 +173,71 @@ export function PeterLynchClient() {
             Screener — Empresas Ordenadas por Puntaje
           </p>
           {!loading && results.length > 0 && (
-            <span className="text-[9px] font-mono text-[#475569]">{results.length} empresas analizadas</span>
+            <span className="text-[9px] font-mono text-[#475569]">
+              {filtered.length} / {results.length} empresas
+            </span>
           )}
         </div>
+
+        {/* Filter bar */}
+        {!loading && !error && results.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            {/* Search with autocomplete */}
+            <div ref={wrapperRef} className="relative">
+              <input
+                type="text"
+                placeholder="Buscar ticker o empresa..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value.toUpperCase())
+                  setShowSugg(e.target.value.length > 0)
+                }}
+                onFocus={() => search.length > 0 && setShowSugg(true)}
+                onKeyDown={(e) => e.key === 'Escape' && setShowSugg(false)}
+                className="w-56 rounded border border-[#1e2035] bg-[#0f0f17] px-3 py-1.5 text-xs font-mono text-[#F0EFE8] outline-none focus:border-[#F59E0B] transition-colors"
+              />
+              {showSugg && suggestions.length > 0 && (
+                <ul className="absolute top-full left-0 mt-1 w-full z-50 rounded border border-[#1e2035] bg-[#0f0f17] shadow-xl overflow-hidden">
+                  {suggestions.map((s) => (
+                    <li
+                      key={s.ticker}
+                      onMouseDown={() => handleSearchSelect(s)}
+                      className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#161622] transition-colors"
+                    >
+                      <span className="text-[11px] font-bold font-mono text-[#F59E0B] w-16 shrink-0">{s.ticker}</span>
+                      <span className="text-[10px] font-mono text-[#64748b] truncate">{s.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Sector filter */}
+            <select value={sector} onChange={(e) => setSector(e.target.value)} className={SELECT_CLS}>
+              {sectors.map((s) => (
+                <option key={s} value={s}>{s === 'ALL' ? 'Todos los sectores' : s}</option>
+              ))}
+            </select>
+
+            {/* Cap size filter */}
+            <select value={capSize} onChange={(e) => setCapSize(e.target.value)} className={SELECT_CLS}>
+              <option value="ALL">Todos los tamaños</option>
+              <option value="MEGA">Mega Cap (&gt; $200B)</option>
+              <option value="LARGE">Large Cap ($10B–$200B)</option>
+              <option value="MID">Mid Cap ($2B–$10B)</option>
+              <option value="SMALL">Small Cap (&lt; $2B)</option>
+            </select>
+
+            {(search || sector !== 'ALL' || capSize !== 'ALL') && (
+              <button
+                onClick={() => { setSearch(''); setSector('ALL'); setCapSize('ALL') }}
+                className="text-[10px] font-mono text-[#475569] hover:text-[#F59E0B] transition-colors"
+              >
+                Limpiar filtros ✕
+              </button>
+            )}
+          </div>
+        )}
 
         {loading && (
           <div className="rounded-lg border border-[#1e2035] bg-[#0f0f17] overflow-hidden">
@@ -149,6 +265,7 @@ export function PeterLynchClient() {
                   <th className="px-3 py-2.5 text-center text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-8">#</th>
                   <th className="px-3 py-2.5 text-left text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold min-w-[160px]">Empresa</th>
                   <th className="px-3 py-2.5 text-left text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16">Ticker</th>
+                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-20 whitespace-nowrap">Precio</th>
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">P/E</th>
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">Fwd P/E</th>
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">D/E%</th>
@@ -159,7 +276,13 @@ export function PeterLynchClient() {
                 </tr>
               </thead>
               <tbody>
-                {results.map((r, index) => (
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-8 text-center text-[#475569] text-xs font-mono">
+                      Sin resultados para los filtros aplicados
+                    </td>
+                  </tr>
+                ) : filtered.map((r, index) => (
                   <tr
                     key={r.ticker}
                     className={`border-b border-[#1e2035] transition-colors hover:bg-[#161622] ${r.score === 6 ? 'border-l-2 border-l-[#F59E0B] bg-[#161622]/50' : ''}`}
@@ -167,6 +290,9 @@ export function PeterLynchClient() {
                     <td className="px-3 py-2.5 text-center text-[#475569]">{index + 1}</td>
                     <td className="px-3 py-2.5 max-w-[180px] truncate text-[#94a3b8] text-[11px]">{r.name}</td>
                     <td className="px-3 py-2.5 text-[#F59E0B] font-bold">{r.ticker}</td>
+                    <td className="px-3 py-2.5 tabular-nums text-right text-[#F0EFE8]">
+                      {r.price != null ? `$${r.price.toFixed(2)}` : '—'}
+                    </td>
                     <td className="px-3 py-2.5 tabular-nums text-right">
                       <Check ok={r.criteria.pe_historico} />
                       <span className="ml-1 text-[#94a3b8]">{fmt(r.pe_historico)}</span>

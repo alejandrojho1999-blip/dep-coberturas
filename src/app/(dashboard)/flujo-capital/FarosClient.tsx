@@ -7,192 +7,6 @@ import type { FarosResult } from '@/lib/faros/engine'
 
 const AUTO_TICKERS = ['SPY', 'QQQ', 'GLD', 'TLT', 'USO', 'AAPL', 'MSFT', 'NVDA', 'BTC-USD', 'GC=F', 'AMZN', 'TSLA']
 
-const TICKER_SUGGESTIONS = [
-  // ETFs
-  { ticker: 'SPY',   name: 'SPDR S&P 500 ETF' },
-  { ticker: 'QQQ',   name: 'Invesco QQQ Trust (NASDAQ 100)' },
-  { ticker: 'IWM',   name: 'iShares Russell 2000 ETF' },
-  { ticker: 'DIA',   name: 'SPDR Dow Jones Industrial ETF' },
-  { ticker: 'VTI',   name: 'Vanguard Total Stock Market ETF' },
-  { ticker: 'TLT',   name: 'iShares 20+ Year Treasury Bond ETF' },
-  { ticker: 'GLD',   name: 'SPDR Gold Shares ETF' },
-  { ticker: 'USO',   name: 'United States Oil Fund ETF' },
-  { ticker: 'XLF',   name: 'Financial Select Sector SPDR ETF' },
-  { ticker: 'XLE',   name: 'Energy Select Sector SPDR ETF' },
-  { ticker: 'XLK',   name: 'Technology Select Sector SPDR ETF' },
-  { ticker: 'XLV',   name: 'Health Care Select Sector SPDR ETF' },
-  // Mega cap tech
-  { ticker: 'AAPL',  name: 'Apple Inc.' },
-  { ticker: 'MSFT',  name: 'Microsoft Corporation' },
-  { ticker: 'NVDA',  name: 'NVIDIA Corporation' },
-  { ticker: 'GOOGL', name: 'Alphabet Inc. (Class A)' },
-  { ticker: 'GOOG',  name: 'Alphabet Inc. (Class C)' },
-  { ticker: 'AMZN',  name: 'Amazon.com Inc.' },
-  { ticker: 'META',  name: 'Meta Platforms Inc.' },
-  { ticker: 'TSLA',  name: 'Tesla Inc.' },
-  { ticker: 'AVGO',  name: 'Broadcom Inc.' },
-  { ticker: 'ORCL',  name: 'Oracle Corporation' },
-  { ticker: 'CRM',   name: 'Salesforce Inc.' },
-  { ticker: 'ADBE',  name: 'Adobe Inc.' },
-  { ticker: 'AMD',   name: 'Advanced Micro Devices Inc.' },
-  { ticker: 'QCOM',  name: 'Qualcomm Inc.' },
-  { ticker: 'TXN',   name: 'Texas Instruments Inc.' },
-  { ticker: 'INTC',  name: 'Intel Corporation' },
-  { ticker: 'NFLX',  name: 'Netflix Inc.' },
-  { ticker: 'CSCO',  name: 'Cisco Systems Inc.' },
-  { ticker: 'IBM',   name: 'IBM Corporation' },
-  { ticker: 'NOW',   name: 'ServiceNow Inc.' },
-  { ticker: 'PANW',  name: 'Palo Alto Networks Inc.' },
-  { ticker: 'CRWD',  name: 'CrowdStrike Holdings Inc.' },
-  { ticker: 'SNOW',  name: 'Snowflake Inc.' },
-  { ticker: 'PLTR',  name: 'Palantir Technologies Inc.' },
-  { ticker: 'NET',   name: 'Cloudflare Inc.' },
-  { ticker: 'DDOG',  name: 'Datadog Inc.' },
-  { ticker: 'ZS',    name: 'Zscaler Inc.' },
-  { ticker: 'ANET',  name: 'Arista Networks Inc.' },
-  { ticker: 'MU',    name: 'Micron Technology Inc.' },
-  { ticker: 'LRCX',  name: 'Lam Research Corporation' },
-  { ticker: 'KLAC',  name: 'KLA Corporation' },
-  { ticker: 'AMAT',  name: 'Applied Materials Inc.' },
-  { ticker: 'ASML',  name: 'ASML Holding N.V.' },
-  { ticker: 'MRVL',  name: 'Marvell Technology Inc.' },
-  // Financials
-  { ticker: 'BRK-B', name: 'Berkshire Hathaway Inc.' },
-  { ticker: 'JPM',   name: 'JPMorgan Chase & Co.' },
-  { ticker: 'BAC',   name: 'Bank of America Corporation' },
-  { ticker: 'WFC',   name: 'Wells Fargo & Company' },
-  { ticker: 'GS',    name: 'Goldman Sachs Group Inc.' },
-  { ticker: 'MS',    name: 'Morgan Stanley' },
-  { ticker: 'BLK',   name: 'BlackRock Inc.' },
-  { ticker: 'V',     name: 'Visa Inc.' },
-  { ticker: 'MA',    name: 'Mastercard Incorporated' },
-  { ticker: 'AXP',   name: 'American Express Company' },
-  { ticker: 'SCHW',  name: 'Charles Schwab Corporation' },
-  { ticker: 'COF',   name: 'Capital One Financial Corporation' },
-  { ticker: 'PYPL',  name: 'PayPal Holdings Inc.' },
-  { ticker: 'SQ',    name: 'Block Inc.' },
-  { ticker: 'BX',    name: 'Blackstone Inc.' },
-  { ticker: 'KKR',   name: 'KKR & Co. Inc.' },
-  { ticker: 'CME',   name: 'CME Group Inc.' },
-  { ticker: 'ICE',   name: 'Intercontinental Exchange Inc.' },
-  // Healthcare
-  { ticker: 'UNH',   name: 'UnitedHealth Group Inc.' },
-  { ticker: 'LLY',   name: 'Eli Lilly and Company' },
-  { ticker: 'JNJ',   name: 'Johnson & Johnson' },
-  { ticker: 'ABT',   name: 'Abbott Laboratories' },
-  { ticker: 'MRK',   name: 'Merck & Co. Inc.' },
-  { ticker: 'ABBV',  name: 'AbbVie Inc.' },
-  { ticker: 'PFE',   name: 'Pfizer Inc.' },
-  { ticker: 'AMGN',  name: 'Amgen Inc.' },
-  { ticker: 'GILD',  name: 'Gilead Sciences Inc.' },
-  { ticker: 'VRTX',  name: 'Vertex Pharmaceuticals Inc.' },
-  { ticker: 'REGN',  name: 'Regeneron Pharmaceuticals Inc.' },
-  { ticker: 'ISRG',  name: 'Intuitive Surgical Inc.' },
-  { ticker: 'SYK',   name: 'Stryker Corporation' },
-  { ticker: 'MDT',   name: 'Medtronic plc' },
-  { ticker: 'BSX',   name: 'Boston Scientific Corporation' },
-  // Consumer
-  { ticker: 'AMZN',  name: 'Amazon.com Inc.' },
-  { ticker: 'HD',    name: 'Home Depot Inc.' },
-  { ticker: 'MCD',   name: "McDonald's Corporation" },
-  { ticker: 'NKE',   name: 'NIKE Inc.' },
-  { ticker: 'SBUX',  name: 'Starbucks Corporation' },
-  { ticker: 'LOW',   name: "Lowe's Companies Inc." },
-  { ticker: 'TGT',   name: 'Target Corporation' },
-  { ticker: 'WMT',   name: 'Walmart Inc.' },
-  { ticker: 'COST',  name: 'Costco Wholesale Corporation' },
-  { ticker: 'BKNG',  name: 'Booking Holdings Inc.' },
-  { ticker: 'UBER',  name: 'Uber Technologies Inc.' },
-  { ticker: 'ABNB',  name: 'Airbnb Inc.' },
-  { ticker: 'LYFT',  name: 'Lyft Inc.' },
-  { ticker: 'PG',    name: 'Procter & Gamble Company' },
-  { ticker: 'KO',    name: 'Coca-Cola Company' },
-  { ticker: 'PEP',   name: 'PepsiCo Inc.' },
-  { ticker: 'PM',    name: 'Philip Morris International Inc.' },
-  { ticker: 'MO',    name: 'Altria Group Inc.' },
-  // Industrials / Energy
-  { ticker: 'XOM',   name: 'Exxon Mobil Corporation' },
-  { ticker: 'CVX',   name: 'Chevron Corporation' },
-  { ticker: 'COP',   name: 'ConocoPhillips' },
-  { ticker: 'OXY',   name: 'Occidental Petroleum Corporation' },
-  { ticker: 'SLB',   name: 'SLB (Schlumberger)' },
-  { ticker: 'LNG',   name: 'Cheniere Energy Inc.' },
-  { ticker: 'HON',   name: 'Honeywell International Inc.' },
-  { ticker: 'CAT',   name: 'Caterpillar Inc.' },
-  { ticker: 'DE',    name: 'Deere & Company' },
-  { ticker: 'GE',    name: 'GE Aerospace' },
-  { ticker: 'RTX',   name: 'RTX Corporation' },
-  { ticker: 'LMT',   name: 'Lockheed Martin Corporation' },
-  { ticker: 'NOC',   name: 'Northrop Grumman Corporation' },
-  { ticker: 'BA',    name: 'Boeing Company' },
-  { ticker: 'UPS',   name: 'United Parcel Service Inc.' },
-  { ticker: 'FDX',   name: 'FedEx Corporation' },
-  { ticker: 'AXON',  name: 'Axon Enterprise Inc.' },
-  // Telecom / Media
-  { ticker: 'DIS',   name: 'Walt Disney Company' },
-  { ticker: 'CMCSA', name: 'Comcast Corporation' },
-  { ticker: 'T',     name: 'AT&T Inc.' },
-  { ticker: 'VZ',    name: 'Verizon Communications Inc.' },
-  { ticker: 'TMUS',  name: 'T-Mobile US Inc.' },
-  { ticker: 'NWSA',  name: 'News Corp (Class A)' },
-  { ticker: 'TTWO',  name: 'Take-Two Interactive Software Inc.' },
-  { ticker: 'EA',    name: 'Electronic Arts Inc.' },
-  // Real Estate / Utilities
-  { ticker: 'AMT',   name: 'American Tower Corporation' },
-  { ticker: 'PLD',   name: 'Prologis Inc.' },
-  { ticker: 'EQIX',  name: 'Equinix Inc.' },
-  { ticker: 'NEE',   name: 'NextEra Energy Inc.' },
-  { ticker: 'DUK',   name: 'Duke Energy Corporation' },
-  { ticker: 'SO',    name: 'Southern Company' },
-  { ticker: 'ENPH',  name: 'Enphase Energy Inc.' },
-  { ticker: 'FSLR',  name: 'First Solar Inc.' },
-  // International
-  { ticker: 'MELI',  name: 'MercadoLibre Inc.' },
-  { ticker: 'SE',    name: 'Sea Limited' },
-  { ticker: 'PDD',   name: 'PDD Holdings Inc.' },
-  { ticker: 'BABA',  name: 'Alibaba Group Holding Ltd.' },
-  { ticker: 'JD',    name: 'JD.com Inc.' },
-  { ticker: 'NVO',   name: 'Novo Nordisk A/S' },
-  { ticker: 'SAP',   name: 'SAP SE' },
-  { ticker: 'TSM',   name: 'Taiwan Semiconductor Manufacturing' },
-  { ticker: 'SONY',  name: 'Sony Group Corporation' },
-  { ticker: 'TM',    name: 'Toyota Motor Corporation' },
-  { ticker: 'NVS',   name: 'Novartis AG' },
-  { ticker: 'SHOP',  name: 'Shopify Inc.' },
-  // Crypto
-  { ticker: 'BTC-USD',  name: 'Bitcoin USD' },
-  { ticker: 'ETH-USD',  name: 'Ethereum USD' },
-  { ticker: 'BNB-USD',  name: 'BNB USD' },
-  { ticker: 'SOL-USD',  name: 'Solana USD' },
-  { ticker: 'XRP-USD',  name: 'XRP USD' },
-  { ticker: 'DOGE-USD', name: 'Dogecoin USD' },
-  { ticker: 'ADA-USD',  name: 'Cardano USD' },
-  { ticker: 'AVAX-USD', name: 'Avalanche USD' },
-  { ticker: 'MATIC-USD',name: 'Polygon USD' },
-  { ticker: 'LINK-USD', name: 'Chainlink USD' },
-  { ticker: 'COIN',     name: 'Coinbase Global Inc.' },
-  { ticker: 'MSTR',     name: 'MicroStrategy Inc.' },
-  // Commodities / Futures
-  { ticker: 'GC=F',  name: 'Gold Futures' },
-  { ticker: 'SI=F',  name: 'Silver Futures' },
-  { ticker: 'CL=F',  name: 'Crude Oil WTI Futures' },
-  { ticker: 'NG=F',  name: 'Natural Gas Futures' },
-  { ticker: 'ZC=F',  name: 'Corn Futures' },
-  { ticker: 'ZW=F',  name: 'Wheat Futures' },
-  { ticker: 'HG=F',  name: 'Copper Futures' },
-  // FX
-  { ticker: 'EURUSD=X', name: 'EUR/USD' },
-  { ticker: 'GBPUSD=X', name: 'GBP/USD' },
-  { ticker: 'USDJPY=X', name: 'USD/JPY' },
-  { ticker: 'USDCAD=X', name: 'USD/CAD' },
-  { ticker: 'DX-Y.NYB', name: 'US Dollar Index' },
-  // Volatility
-  { ticker: '^VIX', name: 'CBOE Volatility Index' },
-  { ticker: '^GSPC', name: 'S&P 500 Index' },
-  { ticker: '^IXIC', name: 'NASDAQ Composite Index' },
-  { ticker: '^DJI',  name: 'Dow Jones Industrial Average' },
-  { ticker: '^RUT',  name: 'Russell 2000 Index' },
-] as const
 
 const STATE_CONFIG = {
   'SÓLIDO':  { color: '#3b82f6', bg: '#3b82f610', label: 'SÓLIDO',  desc: 'Capital atrapado en rango. Baja energía cinética.', signal: 'Esperar / Acumular' },
@@ -340,6 +154,7 @@ export function FarosClient() {
   const [suggestions, setSuggestions] = useState<TickerSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     Promise.allSettled(
@@ -383,13 +198,14 @@ export function FarosClient() {
 
   const handleInputChange = (val: string) => {
     setSearchTicker(val.toUpperCase())
-    const q = val.toLowerCase()
-    if (!q) { setSuggestions([]); setShowSuggestions(false); return }
-    const filtered = (TICKER_SUGGESTIONS as readonly TickerSuggestion[]).filter(
-      (s) => s.ticker.toLowerCase().startsWith(q) || s.name.toLowerCase().includes(q)
-    ).slice(0, 8)
-    setSuggestions(filtered)
-    setShowSuggestions(filtered.length > 0)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!val.trim()) { setSuggestions([]); setShowSuggestions(false); return }
+    debounceRef.current = setTimeout(() => {
+      void fetch(`/api/faros/search?q=${encodeURIComponent(val)}`)
+        .then((r) => r.json() as Promise<TickerSuggestion[]>)
+        .then((data) => { setSuggestions(data); setShowSuggestions(data.length > 0) })
+        .catch(() => { setSuggestions([]); setShowSuggestions(false) })
+    }, 300)
   }
 
   const handleSelect = (item: TickerSuggestion) => {

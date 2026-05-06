@@ -4,6 +4,7 @@ export interface ScreenerResult {
   ticker: string
   name: string
   sector: string
+  price: number | null
   pe_historico: number | null
   pe_proyectado: number | null
   deuda_capital: number | null
@@ -110,8 +111,9 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
       const pegRatio   = (ks?.pegRatio   as number | null | undefined) ?? null
       const debtToEquity = (fd?.debtToEquity as number | null | undefined) ?? null
       const earningsGrowth = (fd?.earningsGrowth as number | null | undefined) ?? null
-      const marketCap  = (pr?.marketCap  as number | null | undefined) ?? null
-      const name       = (pr?.longName   as string | undefined) ?? (pr?.shortName as string | undefined) ?? ticker
+      const marketCap    = (pr?.marketCap           as number | null | undefined) ?? null
+      const currentPrice = (pr?.regularMarketPrice as number | null | undefined) ?? null
+      const name         = (pr?.longName   as string | undefined) ?? (pr?.shortName as string | undefined) ?? ticker
       const sector     = (sp?.sector     as string | undefined) ?? '—'
 
       const criteria = {
@@ -129,6 +131,7 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
         ticker,
         name,
         sector,
+        price: currentPrice,
         pe_historico: trailingPE,
         pe_proyectado: forwardPE,
         deuda_capital: debtToEquity,
