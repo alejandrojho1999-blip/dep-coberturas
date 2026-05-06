@@ -5,6 +5,13 @@ export interface HistorialIngreso {
   net_income: number | null
 }
 
+export interface HistorialFCF {
+  año: number
+  cfo: number | null
+  capex: number | null
+  fcf: number | null
+}
+
 export interface HistorialPrecio {
   fecha: string
   cierre: number
@@ -42,6 +49,10 @@ export interface MarketData {
   strong_sell: number
   historial_ingresos: HistorialIngreso[]
   historial_precios: HistorialPrecio[]
+  free_cashflow: number | null
+  fcf_history: HistorialFCF[]
+  dcf_value: number | null
+  revenue_growth_rate: number | null
 }
 
 export interface FuenteIngreso {
@@ -53,6 +64,11 @@ export interface FuenteIngreso {
 export interface FactorInversion {
   titulo: string
   desc: string
+}
+
+export interface ClienteProveedor {
+  nombre: string
+  relevancia: string
 }
 
 export interface ReportContent {
@@ -67,6 +83,9 @@ export interface ReportContent {
   fuentes_ingresos: FuenteIngreso[]
   financieros: string
   valoracion: string
+  dcf_analysis: string
+  principales_clientes: ClienteProveedor[]
+  principales_proveedores: ClienteProveedor[]
   factores_positivos: FactorInversion[]
   factores_riesgo: FactorInversion[]
   conclusion: string

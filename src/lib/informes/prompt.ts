@@ -35,6 +35,13 @@ FORMATO DE RESPUESTA — objeto JSON con estos campos exactos:
   ],
   "financieros": "string — análisis de los resultados financieros TTM: márgenes, EPS, crecimiento. 2-3 párrafos",
   "valoracion": "string — análisis de múltiplos (P/E, P/S, EV/EBITDA) vs sector/histórico. 1-2 párrafos",
+  "dcf_analysis": "string — análisis del Flujo de Caja Libre (FCF) y valoración DCF. Usa los datos de FCF del contexto. Compara el DCF estimado por acción con el precio actual. 1-2 párrafos.",
+  "principales_clientes": [
+    { "nombre": "string — nombre del cliente o categoría", "relevancia": "string — por qué es importante para los ingresos" }
+  ],
+  "principales_proveedores": [
+    { "nombre": "string — nombre del proveedor o categoría", "relevancia": "string — qué provee y su importancia estratégica" }
+  ],
   "factores_positivos": [
     { "titulo": "string — título conciso", "desc": "string — explicación en 2-3 oraciones" }
   ],
@@ -49,6 +56,8 @@ REQUISITOS:
 - fuentes_ingresos: entre 3 y 6 segmentos basados en la descripción del negocio.
 - factores_positivos: exactamente 5 ítems.
 - factores_riesgo: exactamente 5 ítems.
+- principales_clientes: 3-5 ítems. Si no hay datos específicos, describe las categorías de clientes más relevantes.
+- principales_proveedores: 3-5 ítems. Si no hay datos específicos, describe los proveedores estratégicos conocidos.
 - Usa cifras del contexto para todo análisis cuantitativo.
 - El informe debe ser profesional, directo y apropiado para un comité de inversión institucional.`
 }
@@ -90,7 +99,7 @@ Responde SOLO con el JSON.`
         { role: 'user', content: userMessage },
       ],
       temperature: 0.15,
-      max_tokens: 2048,
+      max_tokens: 3500,
     }),
   })
 

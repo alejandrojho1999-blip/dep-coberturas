@@ -12,13 +12,32 @@ export async function POST(request: Request): Promise<Response> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json() as { ticker?: string }
+  const body = await request.json() as { ticker?: string; force?: boolean }
   const ticker = body.ticker?.trim().toUpperCase()
+  const force = body.force ?? false
   if (!ticker) return Response.json({ detail: 'ticker requerido' }, { status: 400 })
 
   const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
     return Response.json({ detail: 'OPENROUTER_API_KEY no configurada' }, { status: 500 })
+  }
+
+  // Duplicate check: same ticker + same user in last 24h
+  if (!force) {
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { count: dupCount } = await supabase
+      .from('informes_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('ticker', ticker)
+      .gte('created_at', since24h)
+
+    if ((dupCount ?? 0) > 0) {
+      return Response.json(
+        { detail: `Ya generaste un informe de ${ticker} en las últimas 24 horas.`, code: 'DUPLICATE' },
+        { status: 409 }
+      )
+    }
   }
 
   // Auto-fill solicitante from the user's registered full_name

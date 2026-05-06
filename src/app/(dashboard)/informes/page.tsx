@@ -218,6 +218,7 @@ export default function InformesPage() {
   const [rowEdits,      setRowEdits]          = useState<Record<string, Record<string, string>>>({})
   const [toasts, setToasts]                   = useState<Toast[]>([])
   const toastId                               = useRef(0)
+  const [pendingDuplicate, setPendingDuplicate] = useState<string | null>(null)
 
   // Autocomplete
   const [suggestions, setSuggestions]         = useState<SearchResult[]>([])
@@ -344,11 +345,11 @@ export default function InformesPage() {
         const { data } = await supabase.storage.from('informes-docx').download(entry.custom_docx_path)
         if (data) { triggerDownload(data, entry.filename); return }
       }
-      // Fallback: regenerate via LLM
-      const res = await fetch('/api/informes/generate', {
+      // Regenerate DOCX from existing content_json (no new DB record created)
+      const res = await fetch('/api/informes/redownload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: entry.ticker }),
+        body: JSON.stringify({ id: entry.id }),
       })
       if (!res.ok) { addToast('Error al regenerar el informe', 'error'); return }
       triggerDownload(await res.blob(), entry.filename)
@@ -429,9 +430,12 @@ export default function InformesPage() {
   }
 
   const saveField = async (id: string, updates: Record<string, unknown>) => {
-    const supabase = createClient()
-    const { error } = await supabase.from('informes_history').update(updates).eq('id', id)
-    if (!error) {
+    const res = await fetch('/api/informes/history', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates }),
+    })
+    if (res.ok) {
       setHistory((prev) => prev.map((h) => h.id === id ? { ...h, ...updates } as HistoryEntry : h))
     } else {
       addToast('Error al guardar', 'error')
@@ -467,32 +471,45 @@ export default function InformesPage() {
 
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!ticker.trim() || loading) return
+  const generateReport = async (tickerVal: string, force = false) => {
     setLoading(true)
     try {
       const res = await fetch('/api/informes/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: ticker.trim() }),
+        body: JSON.stringify({ ticker: tickerVal, force }),
       })
+      if (res.status === 409) {
+        const body = await res.json().catch(() => ({})) as { detail?: string; code?: string }
+        if (body.code === 'DUPLICATE') {
+          setPendingDuplicate(tickerVal)
+          return
+        }
+        throw new Error(body.detail ?? `Error ${res.status}`)
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { detail?: string }
         throw new Error(err.detail ?? `Error ${res.status}`)
       }
       const metaHeader = res.headers.get('X-Informe-Meta')
       const blob = await res.blob()
-      let filename = `${ticker.trim()}_Informe.docx`
+      let filename = `${tickerVal}_Informe.docx`
       if (metaHeader) {
         try { const m = JSON.parse(atob(metaHeader)) as { filename?: string }; if (m.filename) filename = m.filename } catch { /**/ }
       }
       triggerDownload(blob, filename)
-      addToast(`Informe de ${ticker.trim()} generado correctamente.`, 'success')
+      addToast(`Informe de ${tickerVal} generado correctamente.`, 'success')
+      setPendingDuplicate(null)
       await fetchHistory()
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Error desconocido', 'error')
     } finally { setLoading(false) }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!ticker.trim() || loading) return
+    await generateReport(ticker.trim())
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -507,6 +524,33 @@ export default function InformesPage() {
         className="hidden"
         onChange={handleFileSelected}
       />
+      {/* Duplicate confirmation dialog */}
+      {pendingDuplicate && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-xl border border-[#1e1e2e] bg-[#12121a] p-6 space-y-4 shadow-2xl">
+            <p className="text-sm font-semibold text-[#e2e8f0]">Ya existe un informe reciente</p>
+            <p className="text-xs text-[#64748b]">
+              Generaste un informe de <span className="font-mono text-[#00ff88]">{pendingDuplicate}</span> en las últimas 24 horas. ¿Deseas regenerarlo de todas formas?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setPendingDuplicate(null)}
+                className="px-3 py-1.5 rounded-lg text-xs text-[#64748b] border border-[#1e1e2e] hover:bg-[#1e1e2e] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => void generateReport(pendingDuplicate, true)}
+                disabled={loading}
+                className="px-3 py-1.5 rounded-lg text-xs bg-[#00ff88] text-[#0a0a0f] font-semibold hover:bg-[#00ff88]/90 disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Generando...' : 'Regenerar de todas formas'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Preview modal */}
       {previewEntry && (
         <PreviewModal

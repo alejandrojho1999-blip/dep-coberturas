@@ -280,6 +280,74 @@ export async function createDocxBuffer(
 
   const svgBuffer = buildChartSvg(marketData.historial_precios)
 
+  // FCF history table
+  const fcfRows: TableRow[] = [
+    new TableRow({
+      children: ['Año', 'Flujo Operativo (CFO)', 'CapEx', 'FCF Libre'].map((h) =>
+        cellBg(COLOR_MID, h, true, half(9))
+      ),
+    }),
+    ...(marketData.fcf_history.length > 0
+      ? marketData.fcf_history.map((row, i) =>
+          stripedRow(
+            [
+              String(row.año),
+              formatLarge(row.cfo),
+              formatLarge(row.capex),
+              formatLarge(row.fcf),
+            ],
+            i % 2 === 0
+          )
+        )
+      : [stripedRow(['N/D', 'N/D', 'N/D', 'N/D'], true)]),
+  ]
+
+  const fcfTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: TableBorders.NONE,
+    rows: fcfRows,
+  })
+
+  // Clientes table
+  const clientesRows: TableRow[] = [
+    new TableRow({
+      children: ['Cliente / Segmento', 'Relevancia'].map((h) =>
+        cellBg(COLOR_MID, h, true, half(9))
+      ),
+    }),
+    ...(content.principales_clientes?.length > 0
+      ? content.principales_clientes.map((c, i) =>
+          stripedRow([c.nombre, c.relevancia], i % 2 === 0)
+        )
+      : [stripedRow(['No disponible', ''], true)]),
+  ]
+
+  const clientesTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: TableBorders.NONE,
+    rows: clientesRows,
+  })
+
+  // Proveedores table
+  const proveedoresRows: TableRow[] = [
+    new TableRow({
+      children: ['Proveedor / Categoría', 'Relevancia'].map((h) =>
+        cellBg(COLOR_MID, h, true, half(9))
+      ),
+    }),
+    ...(content.principales_proveedores?.length > 0
+      ? content.principales_proveedores.map((p, i) =>
+          stripedRow([p.nombre, p.relevancia], i % 2 === 0)
+        )
+      : [stripedRow(['No disponible', ''], true)]),
+  ]
+
+  const proveedoresTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: TableBorders.NONE,
+    rows: proveedoresRows,
+  })
+
   // Fuentes de ingresos table
   const fuentesRows: TableRow[] = [
     new TableRow({
@@ -398,7 +466,19 @@ export async function createDocxBuffer(
           ttmTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.5 Evolución del Precio — Últimas 52 Semanas'),
+          subheading('2.5 Flujo de Caja Libre (FCF)'),
+          fcfTable,
+          new Paragraph({ spacing: { after: 100 }, children: [] }),
+
+          subheading('2.6 Principales Clientes'),
+          clientesTable,
+          new Paragraph({ spacing: { after: 100 }, children: [] }),
+
+          subheading('2.7 Principales Proveedores'),
+          proveedoresTable,
+          new Paragraph({ spacing: { after: 100 }, children: [] }),
+
+          subheading('2.8 Evolución del Precio — Últimas 52 Semanas'),
           ...(svgBuffer
             ? [new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -422,6 +502,9 @@ export async function createDocxBuffer(
 
           subheading('3.2 Valoración de Mercado y Múltiplos'),
           body(content.valoracion),
+
+          subheading('3.3 Flujo de Caja Libre y Valoración DCF'),
+          body(content.dcf_analysis ?? 'Análisis DCF no disponible.'),
 
           separator(),
 
