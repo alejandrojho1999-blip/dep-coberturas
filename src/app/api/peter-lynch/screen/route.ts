@@ -1,6 +1,6 @@
 import { runScreener } from '@/lib/peter-lynch/screener'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function GET(): Promise<Response> {
   try {

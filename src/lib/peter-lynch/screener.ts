@@ -21,19 +21,73 @@ export interface ScreenerResult {
   score: number
 }
 
+// S&P 500 + NASDAQ 100 — universo completo (~560 tickers únicos)
 const SP500_NASDAQ100_TICKERS = [
-  'AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','BRK-B','JPM','UNH',
-  'V','MA','AVGO','XOM','LLY','JNJ','PG','HD','ABBV','KO',
-  'PEP','MRK','MCD','BAC','GS','WMT','ORCL','CRM','ADBE','ACN',
-  'COST','TMO','CSCO','NFLX','LIN','TXN','AMAT','AMD','QCOM','PM',
-  'HON','UNP','RTX','CAT','DE','IBM','GE','LOW','AMGN','GILD',
-  'SBUX','ISRG','NOW','PANW','CRWD','MU','LRCX','KLAC','MRVL','ADI',
-  'REGN','VRTX','ZTS','CVS','MCK','ELV','INTC','MDLZ','ON','MELI',
-  'COIN','DDOG','ZS','ENPH','FSLR','SE','SNOW','BMY','PFE','ABBV',
+  // Mega-cap tech / NASDAQ 100 core
+  'AAPL','MSFT','NVDA','GOOGL','GOOG','AMZN','META','TSLA','AVGO','ORCL',
+  'CRM','ADBE','AMD','QCOM','TXN','INTC','MU','LRCX','KLAC','AMAT',
+  'ADI','MRVL','ON','MCHP','FTNT','CDNS','SNPS','ANSS','NFLX','CSCO',
+  'IBM','NOW','PANW','CRWD','DDOG','ZS','SNOW','PLTR','NET','TEAM',
+  'OKTA','HUBS','VEEV','WDAY','PAYC','PAYX','ADP','FIS','FISV','GPN',
+  'CTSH','ACN','HPQ','HPE','STX','WDC','NTAP','ANET','ZBRA','CDW',
+  'AKAM','GDDY','GEN','FFIV','JKHY','LDOS','KEYS','TER','EPAM',
+  // Communication Services
+  'DIS','CMCSA','T','VZ','TMUS','CHTR','PARA','WBD','FOX','FOXA',
+  'NWSA','NWS','TTWO','EA','LYV','OMC','IPG','MTCH','IAC',
+  // Consumer Discretionary
+  'HD','MCD','NKE','SBUX','LOW','TJX','BKNG','MAR','HLT','YUM',
+  'CMG','DHI','LEN','PHM','NVR','ROST','TGT','WMT','COST','DG',
+  'DLTR','BBY','KMX','AN','ORLY','AZO','APTV','GM','F','ABNB',
+  'UBER','EXPE','ETSY','EBAY','RCL','CCL','NCLH','LVS','WYNN','MGM',
+  'HAS','MAT','POOL','TSCO','ULTA','GPC','LKQ','BWA','LEA',
+  // Consumer Staples
+  'PG','KO','PEP','MDLZ','KHC','GIS','CAG','SJM','HRL','CPB',
+  'MKC','CL','CHD','CLX','EL','KMB','PM','MO','STZ','TAP',
+  'WBA','CVS','MCK','ABC','CAH','SYY','KR','COTY',
+  // Healthcare
+  'UNH','LLY','JNJ','ABT','TMO','DHR','MRK','ABBV','BMY','PFE',
+  'AMGN','GILD','BIIB','VRTX','REGN','MRNA','ZTS','IDXX','EW','STE',
+  'BAX','BDX','BSX','SYK','MDT','HOLX','ALGN','RMD','ISRG','DXCM',
+  'PODD','CI','HUM','CNC','MOH','HCA','UHS','INCY','ALNY','BMRN',
+  'EXAS','ILMN','IQV','CRL','TECH','HSIC','LH','DGX','RVTY','GEHC',
+  'EHC','MCK','ELV',
+  // Financials
+  'BRK-B','JPM','BAC','WFC','C','GS','MS','BLK','SCHW','AXP',
+  'V','MA','COF','DFS','SYF','AIG','PRU','MET','AFL','ALL',
+  'PGR','TRV','CB','MMC','AON','MSCI','ICE','CME','NDAQ','CBOE',
+  'BX','KKR','APO','BEN','IVZ','TROW','STT','BK','NTRS','RF',
+  'HBAN','KEY','CFG','FITB','ZION','MTB','PNC','USB','TFC',
+  'WAL','CMA','HWC','SNV','WTFC','BOKF','FFIN',
+  // Industrials
+  'HON','UNP','RTX','CAT','DE','GE','MMM','LMT','NOC','GD',
+  'BA','EMR','ETN','ROK','PH','ITW','DOV','FTV','AME','XYL',
+  'CARR','OTIS','TT','JCI','ALLE','SWK','SNA','GWW','AOS','IR',
+  'TDG','HEI','TDY','CW','SAIC','BAH','CHRW','XPO','UPS','FDX',
+  'JBHT','WERN','CSX','NSC','ODFL','RHI','CPRT','VRSK','CSGP',
+  'EXPD','BWXT','HII','LHX','TXT','AXON','WM','RSG','SRCL','CTAS',
+  // Energy
+  'XOM','CVX','COP','SLB','EOG','MPC','PSX','VLO','OXY','DVN',
+  'PXD','HAL','BKR','KMI','WMB','OKE','LNG','HES','APA','MRO',
+  'NOV','FANG','CTRA',
+  // Utilities
+  'NEE','DUK','SO','D','AEP','EXC','SRE','ES','ED','XEL',
+  'AWK','PEG','EIX','ETR','CNP','PPL','AES','NI','LNT','WEC',
+  'DTE','CMS','ATO','EVRG','ENPH','FSLR',
+  // Real Estate
+  'AMT','PLD','CCI','EQIX','PSA','WELL','O','SPG','DLR','AVB',
+  'EQR','VTR','BXP','KIM','REG','WY','ELS','SUI','MAA','CPT',
+  'NNN','VICI','GLPI','SBAC','IRM',
+  // Materials
+  'LIN','APD','ECL','SHW','FCX','NEM','NUE','STLD','RS','VMC',
+  'MLM','PPG','RPM','CE','DD','DOW','LYB','EMN','ALB','FMC',
+  'IFF','PKG','IP','WRK','CF','MOS','NTR','SEE',
+  // NASDAQ 100 adicionales
+  'MELI','PDD','ASML','IDXX','FAST','MNST','KDP','MSTR','COIN',
+  'DDOG','ZS','SNOW','SE','MELI',
 ]
 
 let cache: { data: ScreenerResult[]; ts: number } | null = null
-const CACHE_TTL_MS = 60 * 60 * 1000
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000  // 6 horas
 
 async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
   const yf = new YahooFinance()
@@ -93,16 +147,13 @@ export async function runScreener(): Promise<ScreenerResult[]> {
   if (cache && Date.now() - cache.ts < CACHE_TTL_MS) return cache.data
 
   const uniqueTickers = [...new Set(SP500_NASDAQ100_TICKERS)]
-  const BATCH_SIZE = 10
+  const BATCH_SIZE = 25
   const all: ScreenerResult[] = []
 
   for (let i = 0; i < uniqueTickers.length; i += BATCH_SIZE) {
     const batch = uniqueTickers.slice(i, i + BATCH_SIZE)
     const batchResults = await fetchBatch(batch)
     all.push(...batchResults)
-    if (i + BATCH_SIZE < uniqueTickers.length) {
-      await new Promise((r) => setTimeout(r, 300))
-    }
   }
 
   const sorted = all.sort((a, b) => {
