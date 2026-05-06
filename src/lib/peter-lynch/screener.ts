@@ -94,16 +94,19 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
   const results = await Promise.allSettled(
     tickers.map(async (ticker) => {
       const summary = await yf.quoteSummary(ticker, {
-        modules: ['defaultKeyStatistics', 'financialData', 'price', 'summaryProfile'],
+        modules: ['defaultKeyStatistics', 'financialData', 'price', 'summaryProfile', 'summaryDetail'],
       })
 
       const ks = summary.defaultKeyStatistics
       const fd = summary.financialData
       const pr = summary.price
       const sp = summary.summaryProfile
+      const sd = summary.summaryDetail
 
-      const trailingPE = (ks?.trailingPE as number | null | undefined) ?? null
-      const forwardPE  = (ks?.forwardPE  as number | null | undefined) ?? null
+      const trailingPE = (sd?.trailingPE as number | null | undefined)
+        ?? (ks?.trailingPE as number | null | undefined) ?? null
+      const forwardPE  = (sd?.forwardPE  as number | null | undefined)
+        ?? (ks?.forwardPE  as number | null | undefined) ?? null
       const pegRatio   = (ks?.pegRatio   as number | null | undefined) ?? null
       const debtToEquity = (fd?.debtToEquity as number | null | undefined) ?? null
       const earningsGrowth = (fd?.earningsGrowth as number | null | undefined) ?? null

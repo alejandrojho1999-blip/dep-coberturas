@@ -69,12 +69,6 @@ export function PeterLynchClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [pe, setPe] = useState('')
-  const [growth, setGrowth] = useState('')
-  const pegCalc = pe && growth && parseFloat(growth) !== 0
-    ? parseFloat(pe) / parseFloat(growth)
-    : null
-
   useEffect(() => {
     fetch('/api/peter-lynch/screen')
       .then((r) => r.json())
@@ -82,9 +76,6 @@ export function PeterLynchClient() {
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Error'))
       .finally(() => setLoading(false))
   }, [])
-
-  const pegColor = pegCalc == null ? '' : pegCalc < 1 ? '#22c55e' : pegCalc < 2 ? '#F59E0B' : '#ef4444'
-  const pegLabel = pegCalc == null ? '' : pegCalc < 1 ? 'SUBVALORADA' : pegCalc < 2 ? 'JUSTA' : 'CARA'
 
   return (
     <div className="min-h-screen bg-[#07070b] px-4 py-6 text-[#F0EFE8] lg:px-8">
@@ -118,55 +109,6 @@ export function PeterLynchClient() {
               <p className="text-[10px] text-[#475569] leading-tight">{f.desc}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* PEG Calculator */}
-      <section className="mb-8">
-        <p className="text-[9px] font-mono font-bold tracking-[0.15em] uppercase text-[#374151] mb-3">
-          Calculadora PEG
-        </p>
-        <div className="rounded-lg border border-[#1e2035] bg-[#0f0f17] p-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-[#374151] block mb-1">P/E Ratio</label>
-              <input
-                type="number" min="0" step="0.1" placeholder="Ej: 20"
-                value={pe}
-                onChange={(e) => setPe(e.target.value)}
-                className="w-28 rounded border border-[#1e2035] bg-[#07070b] px-3 py-1.5 text-sm font-mono text-[#F0EFE8] outline-none focus:border-[#F59E0B] transition-colors"
-              />
-            </div>
-            <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-[#374151] block mb-1">Crecimiento EPS (%)</label>
-              <input
-                type="number" min="0" step="0.1" placeholder="Ej: 15"
-                value={growth}
-                onChange={(e) => setGrowth(e.target.value)}
-                className="w-32 rounded border border-[#1e2035] bg-[#07070b] px-3 py-1.5 text-sm font-mono text-[#F0EFE8] outline-none focus:border-[#F59E0B] transition-colors"
-              />
-            </div>
-            <div className="flex items-center gap-3 py-1">
-              <span className="text-[#374151] font-mono text-sm">→ PEG:</span>
-              {pegCalc != null ? (
-                <>
-                  <span className="text-2xl font-bold font-mono tabular-nums" style={{ color: pegColor }}>
-                    {pegCalc.toFixed(2)}
-                  </span>
-                  <span className="text-xs font-bold font-mono rounded px-2 py-0.5 border" style={{ color: pegColor, borderColor: pegColor + '40', backgroundColor: pegColor + '15' }}>
-                    {pegLabel}
-                  </span>
-                </>
-              ) : (
-                <span className="text-[#374151] font-mono">—</span>
-              )}
-            </div>
-          </div>
-          <div className="mt-3 flex gap-6 text-[10px] font-mono text-[#475569]">
-            <span><span className="text-[#22c55e]">●</span> PEG &lt; 1.0 — Subvalorada</span>
-            <span><span className="text-[#F59E0B]">●</span> PEG 1.0–2.0 — Justa</span>
-            <span><span className="text-[#ef4444]">●</span> PEG &gt; 2.0 — Cara</span>
-          </div>
         </div>
       </section>
 
@@ -204,19 +146,25 @@ export function PeterLynchClient() {
             <table className="w-full text-xs font-mono">
               <thead>
                 <tr className="border-b border-[#1e2035]">
-                  {['Empresa', 'Ticker', 'P/E', 'Fwd P/E', 'D/E%', 'Crec.EPS', 'PEG', 'Mkt Cap', 'Puntaje'].map((h) => (
-                    <th key={h} className="px-3 py-2.5 text-left text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
+                  <th className="px-3 py-2.5 text-center text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-8">#</th>
+                  <th className="px-3 py-2.5 text-left text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold min-w-[160px]">Empresa</th>
+                  <th className="px-3 py-2.5 text-left text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16">Ticker</th>
+                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">P/E</th>
+                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">Fwd P/E</th>
+                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">D/E%</th>
+                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-20 whitespace-nowrap">Crec.EPS</th>
+                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">PEG</th>
+                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-20 whitespace-nowrap">Mkt Cap</th>
+                  <th className="px-3 py-2.5 text-center text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-24 whitespace-nowrap">Puntaje</th>
                 </tr>
               </thead>
               <tbody>
-                {results.map((r) => (
+                {results.map((r, index) => (
                   <tr
                     key={r.ticker}
                     className={`border-b border-[#1e2035] transition-colors hover:bg-[#161622] ${r.score === 6 ? 'border-l-2 border-l-[#F59E0B] bg-[#161622]/50' : ''}`}
                   >
+                    <td className="px-3 py-2.5 text-center text-[#475569]">{index + 1}</td>
                     <td className="px-3 py-2.5 max-w-[180px] truncate text-[#94a3b8] text-[11px]">{r.name}</td>
                     <td className="px-3 py-2.5 text-[#F59E0B] font-bold">{r.ticker}</td>
                     <td className="px-3 py-2.5 tabular-nums text-right">
