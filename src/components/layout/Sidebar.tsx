@@ -16,11 +16,15 @@ import {
   X,
   Settings2,
   Terminal,
+  BookOpen,
+  Waves,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard',            href: '/dashboard' },
   { icon: TrendingUp,      label: 'Inversión Causal',     href: '/inversion-causal' },
+  { icon: BookOpen,        label: 'Ratios Peter Lynch',   href: '/peter-lynch' },
+  { icon: Waves,           label: 'Flujo del Capital',    href: '/flujo-capital' },
   { icon: BarChart2,       label: 'Portafolios Híbridos', href: '/portafolios' },
   { icon: Bot,             label: 'Agente PPO',           href: '/agente-ppo' },
   { icon: Shield,          label: 'Coberturas',           href: '/coberturas' },
