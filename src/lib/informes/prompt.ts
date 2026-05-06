@@ -20,7 +20,7 @@ REGLAS ESTRICTAS (violarlas invalida el informe):
 4. Los campos numéricos deben ser números (no strings).
 5. Los campos de precio deben coincidir EXACTAMENTE con los datos del contexto.
 
-FORMATO DE RESPUESTA — objeto JSON con estos campos exactos:
+FORMATO DE RESPUESTA — objeto JSON con estos campos exactos (respeta ESTE ORDEN):
 {
   "ticker": "string — símbolo del activo",
   "empresa": "string — nombre completo de la empresa",
@@ -33,15 +33,18 @@ FORMATO DE RESPUESTA — objeto JSON con estos campos exactos:
   "fuentes_ingresos": [
     { "segmento": "string", "porcentaje": "string (ej: ~35%)", "descripcion": "string breve" }
   ],
-  "financieros": "string — análisis de los resultados financieros TTM: márgenes, EPS, crecimiento. 2-3 párrafos",
-  "valoracion": "string — análisis de múltiplos (P/E, P/S, EV/EBITDA) vs sector/histórico. 1-2 párrafos",
-  "dcf_analysis": "string — análisis del Flujo de Caja Libre (FCF) y valoración DCF. Usa los datos de FCF del contexto. Compara el DCF estimado por acción con el precio actual. 1-2 párrafos.",
+  "dcf_analysis": "string — análisis del Flujo de Caja Libre (FCF) y valoración DCF. Si hay datos de FCF en el contexto, úsalos y compara el DCF por acción con el precio actual. Si FCF no está disponible, realiza un análisis cualitativo del modelo de generación de caja del negocio y explica por qué los datos no están disponibles. SIEMPRE genera este campo con al menos 2 oraciones sustanciales. 1-2 párrafos.",
   "principales_clientes": [
-    { "nombre": "string — nombre del cliente o categoría", "relevancia": "string — por qué es importante para los ingresos" }
+    { "nombre": "string — nombre del cliente o categoría de cliente", "relevancia": "string — por qué es importante para los ingresos" }
   ],
   "principales_proveedores": [
     { "nombre": "string — nombre del proveedor o categoría", "relevancia": "string — qué provee y su importancia estratégica" }
   ],
+  "principales_competidores": [
+    { "nombre": "string — nombre del competidor o grupo competitivo", "relevancia": "string — en qué segmentos compite y qué los diferencia" }
+  ],
+  "financieros": "string — análisis de los resultados financieros TTM: márgenes, EPS, crecimiento. 2-3 párrafos",
+  "valoracion": "string — análisis de múltiplos (P/E, P/S, EV/EBITDA) vs sector/histórico. 1-2 párrafos",
   "factores_positivos": [
     { "titulo": "string — título conciso", "desc": "string — explicación en 2-3 oraciones" }
   ],
@@ -52,12 +55,14 @@ FORMATO DE RESPUESTA — objeto JSON con estos campos exactos:
   "mes_año": "string — mes y año en español (ej: Abril 2025)"
 }
 
-REQUISITOS:
+REQUISITOS (CRÍTICO — incumplir invalida el informe):
 - fuentes_ingresos: entre 3 y 6 segmentos basados en la descripción del negocio.
-- factores_positivos: exactamente 5 ítems.
-- factores_riesgo: exactamente 5 ítems.
+- dcf_analysis: OBLIGATORIO — siempre genera este campo. Mínimo 2 oraciones. Si no hay FCF disponible, analiza cualitativamente la generación de caja del negocio.
 - principales_clientes: OBLIGATORIO — siempre genera entre 3 y 5 ítems. Si no hay datos específicos en el contexto, infiere las categorías de clientes más relevantes según la descripción del negocio, sector e industria. NUNCA dejes este array vacío.
 - principales_proveedores: OBLIGATORIO — siempre genera entre 3 y 5 ítems. Si no hay datos específicos, infiere los tipos de proveedores estratégicos según el modelo de negocio. NUNCA dejes este array vacío.
+- principales_competidores: OBLIGATORIO — siempre genera entre 3 y 5 ítems. Basado en sector, industria y descripción del negocio. NUNCA dejes este array vacío.
+- factores_positivos: exactamente 5 ítems.
+- factores_riesgo: exactamente 5 ítems.
 - Usa cifras del contexto para todo análisis cuantitativo.
 - El informe debe ser profesional, directo y apropiado para un comité de inversión institucional.`
 }
@@ -99,7 +104,7 @@ Responde SOLO con el JSON.`
         { role: 'user', content: userMessage },
       ],
       temperature: 0.15,
-      max_tokens: 3500,
+      max_tokens: 4500,
     }),
   })
 

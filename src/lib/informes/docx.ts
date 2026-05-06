@@ -348,6 +348,26 @@ export async function createDocxBuffer(
     rows: proveedoresRows,
   })
 
+  // Competidores table
+  const competidoresRows: TableRow[] = [
+    new TableRow({
+      children: ['Competidor / Grupo', 'Relevancia Competitiva'].map((h) =>
+        cellBg(COLOR_MID, h, true, half(9))
+      ),
+    }),
+    ...(content.principales_competidores?.length > 0
+      ? content.principales_competidores.map((c, i) =>
+          stripedRow([c.nombre, c.relevancia], i % 2 === 0)
+        )
+      : [stripedRow(['No disponible', ''], true)]),
+  ]
+
+  const competidoresTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: TableBorders.NONE,
+    rows: competidoresRows,
+  })
+
   // Fuentes de ingresos table
   const fuentesRows: TableRow[] = [
     new TableRow({
@@ -478,7 +498,11 @@ export async function createDocxBuffer(
           proveedoresTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.8 Evolución del Precio — Últimas 52 Semanas'),
+          subheading('2.8 Principales Competidores'),
+          competidoresTable,
+          new Paragraph({ spacing: { after: 100 }, children: [] }),
+
+          subheading('2.9 Evolución del Precio — Últimas 52 Semanas'),
           ...(svgBuffer
             ? [new Paragraph({
                 alignment: AlignmentType.CENTER,

@@ -81,11 +81,12 @@ export interface ReportContent {
   resumen: string
   negocio: string
   fuentes_ingresos: FuenteIngreso[]
-  financieros: string
-  valoracion: string
   dcf_analysis: string
   principales_clientes: ClienteProveedor[]
   principales_proveedores: ClienteProveedor[]
+  principales_competidores: ClienteProveedor[]
+  financieros: string
+  valoracion: string
   factores_positivos: FactorInversion[]
   factores_riesgo: FactorInversion[]
   conclusion: string
