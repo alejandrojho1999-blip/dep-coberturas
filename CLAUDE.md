@@ -75,3 +75,11 @@ Key routing rules:
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
 
+## Estilo de respuesta (token efficiency)
+
+- Respuestas cortas y directas. No expliques lo que ya está en el código.
+- Dame el código o el comando, sin justificación a menos que la pida.
+- No repitas contexto que ya está en la conversación.
+- No hagas preguntas de confirmación innecesarias — actúa.
+- Si hay duda entre explicar y hacer, haz.
+
