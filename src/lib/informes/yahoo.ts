@@ -47,7 +47,6 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
             'financialData',
             'defaultKeyStatistics',
             'incomeStatementHistory',
-            'cashflowStatementHistory',
             'price',
             'recommendationTrend',
             'assetProfile',
@@ -72,7 +71,6 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
   const keyStats   = (summary?.defaultKeyStatistics ?? {}) as AnyRecord
   const incomeList = (summary?.incomeStatementHistory?.incomeStatementHistory ?? []) as AnyRecord[]
   const recTrend   = (summary?.recommendationTrend?.trend ?? []) as AnyRecord[]
-  const cashflows  = (summary?.cashflowStatementHistory?.cashflowStatements ?? []) as AnyRecord[]
   const latestRec  = recTrend[0] ?? {}
 
   const historial: HistorialIngreso[] = incomeList.slice(0, 3).map((s) => {
@@ -98,22 +96,16 @@ export async function fetchMarketData(ticker: string): Promise<MarketData> {
     }
   }
 
-  // FCF history from cash flow statements
-  const fcfHistory: HistorialFCF[] = cashflows.slice(0, 3).map((c) => {
-    const cfo   = (c.totalCashFromOperatingActivities as number | null) ?? null
-    const capex = (c.capitalExpenditures as number | null) ?? null
-    // Yahoo stores capex as negative; FCF = CFO + capex (which subtracts it)
-    const fcf   = (cfo != null && capex != null) ? cfo + capex : cfo
-    return {
-      año:   new Date(c.endDate as string | number).getFullYear(),
-      cfo,
-      capex,
-      fcf,
-    }
-  })
+  // FCF from financialData (TTM) — cashflowStatements type only has maxAge/endDate/netIncome
+  const latestCfo  = (financial.operatingCashflow as number | null) ?? null
+  const latestFcf  = (financial.freeCashflow as number | null) ?? null
+  // CapEx is derived: CapEx = CFO - FCF (when both are available)
+  const latestCapex = (latestCfo != null && latestFcf != null) ? latestFcf - latestCfo : null
 
-  // Latest FCF: prefer cashflow statement, then Yahoo's financialData.freeCashflow
-  const latestFcf = fcfHistory[0]?.fcf ?? (financial.freeCashflow as number | null) ?? null
+  const currentYear = new Date().getFullYear()
+  const fcfHistory: HistorialFCF[] = (latestCfo != null || latestFcf != null)
+    ? [{ año: currentYear, cfo: latestCfo, capex: latestCapex, fcf: latestFcf }]
+    : []
 
   // DCF valuation
   const dcfValue = calcDcf(latestFcf, revenueGrowthRate)
@@ -174,7 +166,7 @@ export function buildDataContext(md: MarketData): string {
 
   const fcfLines = md.fcf_history.length > 0
     ? md.fcf_history.map(
-        (f) => `  ${f.año}: CFO=${fmt(f.cfo)} | CapEx=${fmt(f.capex)} | FCF Libre=${fmt(f.fcf)}`
+        (f) => `  TTM (${f.año}): Flujo Operativo=${fmt(f.cfo)} | CapEx≈${fmt(f.capex)} | FCF Libre=${fmt(f.fcf)}`
       )
     : ['  No disponible']
 

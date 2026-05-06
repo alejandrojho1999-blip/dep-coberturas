@@ -56,8 +56,8 @@ REQUISITOS:
 - fuentes_ingresos: entre 3 y 6 segmentos basados en la descripción del negocio.
 - factores_positivos: exactamente 5 ítems.
 - factores_riesgo: exactamente 5 ítems.
-- principales_clientes: 3-5 ítems. Si no hay datos específicos, describe las categorías de clientes más relevantes.
-- principales_proveedores: 3-5 ítems. Si no hay datos específicos, describe los proveedores estratégicos conocidos.
+- principales_clientes: OBLIGATORIO — siempre genera entre 3 y 5 ítems. Si no hay datos específicos en el contexto, infiere las categorías de clientes más relevantes según la descripción del negocio, sector e industria. NUNCA dejes este array vacío.
+- principales_proveedores: OBLIGATORIO — siempre genera entre 3 y 5 ítems. Si no hay datos específicos, infiere los tipos de proveedores estratégicos según el modelo de negocio. NUNCA dejes este array vacío.
 - Usa cifras del contexto para todo análisis cuantitativo.
 - El informe debe ser profesional, directo y apropiado para un comité de inversión institucional.`
 }
