@@ -95,7 +95,7 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
   const results = await Promise.allSettled(
     tickers.map(async (ticker) => {
       const summary = await yf.quoteSummary(ticker, {
-        modules: ['defaultKeyStatistics', 'financialData', 'price', 'summaryProfile', 'summaryDetail'],
+        modules: ['defaultKeyStatistics', 'financialData', 'price', 'summaryProfile', 'summaryDetail', 'incomeStatementHistory'],
       })
 
       const ks = summary.defaultKeyStatistics
@@ -103,23 +103,35 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
       const pr = summary.price
       const sp = summary.summaryProfile
       const sd = summary.summaryDetail
+      const incStmts = summary.incomeStatementHistory?.incomeStatementHistory as Array<{ netIncome?: number }> | undefined
 
       const trailingPE = (sd?.trailingPE as number | null | undefined)
         ?? (ks?.trailingPE as number | null | undefined) ?? null
       const forwardPE  = (sd?.forwardPE  as number | null | undefined)
         ?? (ks?.forwardPE  as number | null | undefined) ?? null
       const pegRatio   = (ks?.pegRatio   as number | null | undefined) ?? null
-      const earningsGrowth = (fd?.earningsGrowth as number | null | undefined) ?? null
+
+      // EPS growth: YoY anual de net income (igual que Liberty) — más estable que quarterly
+      let earningsGrowth: number | null = null
+      if (incStmts && incStmts.length >= 2) {
+        const latestNi = incStmts[0]?.netIncome ?? null
+        const prevNi   = incStmts[1]?.netIncome ?? null
+        if (latestNi != null && prevNi != null && prevNi !== 0) {
+          earningsGrowth = (latestNi - prevNi) / Math.abs(prevNi)
+        }
+      }
+      earningsGrowth ??= (fd?.earningsGrowth as number | null | undefined) ?? null
+
       const marketCap    = (pr?.marketCap           as number | null | undefined) ?? null
       const debtToEquityDirect = (fd?.debtToEquity as number | null | undefined) ?? null
       const totalDebt          = (fd?.totalDebt    as number | null | undefined) ?? null
-      // Normalizar escala: algunos tickers (p.ej. bancos) retornan el valor ×100 (porcentaje)
-      const debtToEquityNorm = debtToEquityDirect != null
-        ? debtToEquityDirect > 50 ? debtToEquityDirect / 100 : debtToEquityDirect
-        : null
-      // Fallback: totalDebt / marketCap cuando el campo directo es null
-      const debtToEquity = debtToEquityNorm
-        ?? (totalDebt != null && marketCap != null && marketCap > 0 ? totalDebt / marketCap : null)
+      const totalCash          = (fd?.totalCash    as number | null | undefined) ?? null
+      // fd.debtToEquity siempre retorna porcentaje (ej: 30 = 30% D/E = ratio 0.30)
+      const debtToEquityFromField = debtToEquityDirect != null ? debtToEquityDirect / 100 : null
+      // Fallback: netDebt / marketCap (deduciendo caja, igual que Liberty)
+      const netDebt = totalDebt != null ? totalDebt - (totalCash ?? 0) : null
+      const debtToEquity = debtToEquityFromField
+        ?? (netDebt != null && marketCap != null && marketCap > 0 ? Math.max(0, netDebt) / marketCap : null)
       const currentPrice = (pr?.regularMarketPrice as number | null | undefined) ?? null
       const name         = (pr?.longName   as string | undefined) ?? (pr?.shortName as string | undefined) ?? ticker
       const sector     = (sp?.sector     as string | undefined) ?? '—'
