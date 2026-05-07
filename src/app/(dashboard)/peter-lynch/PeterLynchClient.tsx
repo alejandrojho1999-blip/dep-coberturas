@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import type { ScreenerResult } from '@/lib/peter-lynch/screener'
@@ -84,13 +84,17 @@ export function PeterLynchClient() {
   const [capSize, setCapSize]   = useState('ALL')
   const wrapperRef              = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    fetch('/api/peter-lynch/screen')
+  const loadData = useCallback((refresh = false) => {
+    setLoading(true)
+    setError(null)
+    fetch(`/api/peter-lynch/screen${refresh ? '?refresh=1' : ''}`)
       .then((r) => r.json())
       .then((d: ScreenerResult[]) => setResults(d))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Error'))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { loadData() }, [loadData])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -177,6 +181,13 @@ export function PeterLynchClient() {
               {filtered.length} / {results.length} empresas
             </span>
           )}
+          <button
+            onClick={() => loadData(true)}
+            disabled={loading}
+            className="ml-auto rounded border border-[#1e2035] bg-[#0f0f17] px-3 py-1 text-[10px] font-mono text-[#F59E0B] hover:bg-[#161622] disabled:opacity-40 transition-colors"
+          >
+            {loading ? '↻ Cargando...' : '↻ Actualizar datos'}
+          </button>
         </div>
 
         {/* Filter bar */}

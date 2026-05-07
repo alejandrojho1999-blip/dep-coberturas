@@ -109,7 +109,7 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
       const forwardPE  = (sd?.forwardPE  as number | null | undefined)
         ?? (ks?.forwardPE  as number | null | undefined) ?? null
       const pegRatio   = (ks?.pegRatio   as number | null | undefined) ?? null
-      const debtToEquity = (ks?.debtToEquity as number | null | undefined) ?? null
+      const debtToEquity = (fd?.debtToEquity as number | null | undefined) ?? null
       const earningsGrowth = (fd?.earningsGrowth as number | null | undefined) ?? null
       const marketCap    = (pr?.marketCap           as number | null | undefined) ?? null
       const currentPrice = (pr?.regularMarketPrice as number | null | undefined) ?? null
@@ -149,8 +149,8 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
     .map((r) => r.value)
 }
 
-export async function runScreener(): Promise<ScreenerResult[]> {
-  if (cache && Date.now() - cache.ts < CACHE_TTL_MS) return cache.data
+export async function runScreener(forceRefresh = false): Promise<ScreenerResult[]> {
+  if (!forceRefresh && cache && Date.now() - cache.ts < CACHE_TTL_MS) return cache.data
 
   const uniqueTickers = [...new Set(SP500_NASDAQ100_TICKERS)]
   const BATCH_SIZE = 25
