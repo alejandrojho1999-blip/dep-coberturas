@@ -119,7 +119,7 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
       const criteria = {
         pe_historico:    trailingPE   != null && trailingPE   < 25,
         pe_proyectado:   forwardPE    != null && forwardPE    < 15,
-        deuda_capital:   debtToEquity != null && debtToEquity < 35,
+        deuda_capital:   debtToEquity != null && debtToEquity < 0.35,
         crecimiento_eps: earningsGrowth != null && earningsGrowth > 0.15,
         peg:             pegRatio     != null && pegRatio     < 2,
         market_cap:      marketCap    != null && marketCap    > 5_000_000_000,

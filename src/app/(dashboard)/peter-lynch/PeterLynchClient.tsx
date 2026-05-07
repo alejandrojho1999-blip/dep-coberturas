@@ -268,7 +268,7 @@ export function PeterLynchClient() {
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-20 whitespace-nowrap">Precio</th>
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">P/E</th>
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">Fwd P/E</th>
-                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">D/E%</th>
+                  <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">D/E</th>
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-20 whitespace-nowrap">Crec.EPS</th>
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-16 whitespace-nowrap">PEG</th>
                   <th className="px-3 py-2.5 text-right text-[9px] tracking-[0.12em] uppercase text-[#374151] font-bold w-20 whitespace-nowrap">Mkt Cap</th>
@@ -303,7 +303,7 @@ export function PeterLynchClient() {
                     </td>
                     <td className="px-3 py-2.5 tabular-nums text-right">
                       <Check ok={r.criteria.deuda_capital} />
-                      <span className="ml-1 text-[#94a3b8]">{fmt(r.deuda_capital, '%', 0)}</span>
+                      <span className="ml-1 text-[#94a3b8]">{r.deuda_capital != null ? `${r.deuda_capital.toFixed(2)}x` : '—'}</span>
                     </td>
                     <td className="px-3 py-2.5 tabular-nums text-right">
                       <Check ok={r.criteria.crecimiento_eps} />
