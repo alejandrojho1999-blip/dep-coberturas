@@ -109,9 +109,17 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
       const forwardPE  = (sd?.forwardPE  as number | null | undefined)
         ?? (ks?.forwardPE  as number | null | undefined) ?? null
       const pegRatio   = (ks?.pegRatio   as number | null | undefined) ?? null
-      const debtToEquity = (fd?.debtToEquity as number | null | undefined) ?? null
       const earningsGrowth = (fd?.earningsGrowth as number | null | undefined) ?? null
       const marketCap    = (pr?.marketCap           as number | null | undefined) ?? null
+      const debtToEquityDirect = (fd?.debtToEquity as number | null | undefined) ?? null
+      const totalDebt          = (fd?.totalDebt    as number | null | undefined) ?? null
+      // Normalizar escala: algunos tickers (p.ej. bancos) retornan el valor ×100 (porcentaje)
+      const debtToEquityNorm = debtToEquityDirect != null
+        ? debtToEquityDirect > 50 ? debtToEquityDirect / 100 : debtToEquityDirect
+        : null
+      // Fallback: totalDebt / marketCap cuando el campo directo es null
+      const debtToEquity = debtToEquityNorm
+        ?? (totalDebt != null && marketCap != null && marketCap > 0 ? totalDebt / marketCap : null)
       const currentPrice = (pr?.regularMarketPrice as number | null | undefined) ?? null
       const name         = (pr?.longName   as string | undefined) ?? (pr?.shortName as string | undefined) ?? ticker
       const sector     = (sp?.sector     as string | undefined) ?? '—'
