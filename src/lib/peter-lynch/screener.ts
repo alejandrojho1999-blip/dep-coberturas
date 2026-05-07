@@ -122,16 +122,15 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
       }
       earningsGrowth ??= (fd?.earningsGrowth as number | null | undefined) ?? null
 
-      const marketCap    = (pr?.marketCap           as number | null | undefined) ?? null
-      const debtToEquityDirect = (fd?.debtToEquity as number | null | undefined) ?? null
-      const totalDebt          = (fd?.totalDebt    as number | null | undefined) ?? null
-      const totalCash          = (fd?.totalCash    as number | null | undefined) ?? null
-      // fd.debtToEquity siempre retorna porcentaje (ej: 30 = 30% D/E = ratio 0.30)
-      const debtToEquityFromField = debtToEquityDirect != null ? debtToEquityDirect / 100 : null
-      // Fallback: netDebt / marketCap (deduciendo caja, igual que Liberty)
+      const marketCap = (pr?.marketCap as number | null | undefined) ?? null
+      const totalDebt = (fd?.totalDebt as number | null | undefined) ?? null
+      const totalCash = (fd?.totalCash as number | null | undefined) ?? null
+      // D/E = netDebt / marketCap (igual que Liberty): consistente entre empresas,
+      // evita distorsión del equity contable negativo (buybacks, bancos)
       const netDebt = totalDebt != null ? totalDebt - (totalCash ?? 0) : null
-      const debtToEquity = debtToEquityFromField
-        ?? (netDebt != null && marketCap != null && marketCap > 0 ? Math.max(0, netDebt) / marketCap : null)
+      const debtToEquity = netDebt != null && marketCap != null && marketCap > 0
+        ? Math.max(0, netDebt) / marketCap
+        : null
       const currentPrice = (pr?.regularMarketPrice as number | null | undefined) ?? null
       const name         = (pr?.longName   as string | undefined) ?? (pr?.shortName as string | undefined) ?? ticker
       const sector     = (sp?.sector     as string | undefined) ?? '—'
