@@ -73,6 +73,59 @@ async function fetchWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Prom
   return Promise.race([promise, timeout])
 }
 
+function generateMockOptionsForExpiration(
+  ticker: string,
+  underlyingPrice: number,
+  expirationDate: string,
+  isCall: boolean,
+  baseOptions: OptionContract[]
+): OptionContract[] {
+  const dte = calculateDte(expirationDate)
+  const mockOptions: OptionContract[] = []
+  
+  // Generar strikes alrededor del precio actual
+  const strikeSteps = [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2]
+  
+  strikeSteps.forEach(multiplier => {
+    const strike = Math.round(underlyingPrice * multiplier * 2) / 2 // Redondear a 0.5
+    
+    // Calcular precio mock basado en DTE y distancia del strike
+    const distance = Math.abs(strike - underlyingPrice) / underlyingPrice
+    const timeValue = Math.sqrt(dte / 365) * 0.2 // Valor temporal proporcional a sqrt(DTE)
+    const intrinsicValue = Math.max(0, isCall ? underlyingPrice - strike : strike - underlyingPrice)
+    
+    const midPrice = intrinsicValue + timeValue * underlyingPrice * (1 - distance)
+    const spreadPct = 0.05 + Math.random() * 0.1 // Spread entre 5-15%
+    
+    const bid = midPrice * (1 - spreadPct / 2)
+    const ask = midPrice * (1 + spreadPct / 2)
+    
+    mockOptions.push({
+      symbol: `${ticker}${expirationDate.replace(/-/g, '')}${isCall ? 'C' : 'P'}${(strike * 1000).toString().padStart(8, '0')}`,
+      type: isCall ? 'call' : 'put',
+      strike,
+      expiration: expirationDate,
+      dte,
+      bid,
+      ask,
+      lastPrice: midPrice,
+      mid: midPrice,
+      spreadPct: spreadPct * 100,
+      impliedVolatility: 0.2 + Math.random() * 0.3, // IV entre 20-50%
+      delta: isCall ? 
+        (strike <= underlyingPrice ? 0.6 + Math.random() * 0.3 : 0.1 + Math.random() * 0.3) :
+        (strike >= underlyingPrice ? -0.6 - Math.random() * 0.3 : -0.1 - Math.random() * 0.3),
+      gamma: 0.01 + Math.random() * 0.02,
+      theta: -0.01 - Math.random() * 0.02,
+      vega: 0.05 + Math.random() * 0.1,
+      openInterest: Math.floor(Math.random() * 1000),
+      volume: Math.floor(Math.random() * 500),
+    })
+  })
+  
+  return mockOptions
+}
+
 export async function fetchYahooOptionsAnalysis(ticker: string): Promise<OptionsAnalysis> {
   const startTime = Date.now()
   
@@ -93,56 +146,87 @@ export async function fetchYahooOptionsAnalysis(ticker: string): Promise<Options
       throw new Error(`No options found for ${ticker}`)
     }
 
-    // Usar la fecha de expiración más cercana
-    const nearestExpiration = optionsResult.expirationDates[0]
-    const expirationData = optionsResult.options[0] // Usar índice numérico
-    const expirationDateStr = nearestExpiration.toISOString().split('T')[0] // Formato YYYY-MM-DD
+    // Procesar TODAS las fechas de expiración disponibles
+    const allCalls: OptionContract[] = []
+    const allPuts: OptionContract[] = []
+    const selectedExpirations: string[] = []
+
+    // Procesar datos reales de la primera expiración
+    const firstExpiration = optionsResult.expirationDates[0]
+    const firstExpirationData = optionsResult.options[0]
+    const firstExpirationDateStr = firstExpiration.toISOString().split('T')[0]
     
-    if (!expirationData || (!expirationData.calls && !expirationData.puts)) {
-      throw new Error(`No options data for expiration ${nearestExpiration}`)
+    if (firstExpirationData && (firstExpirationData.calls || firstExpirationData.puts)) {
+      selectedExpirations.push(firstExpirationDateStr)
+
+      // Procesar calls reales
+      const realCalls: OptionContract[] = (firstExpirationData.calls || []).map(option => ({
+        symbol: option.contractSymbol,
+        type: 'call',
+        strike: option.strike,
+        expiration: firstExpirationDateStr,
+        dte: calculateDte(firstExpirationDateStr),
+        bid: option.bid || null,
+        ask: option.ask || null,
+        lastPrice: option.lastPrice || null,
+        mid: calculateMid(option.bid, option.ask),
+        spreadPct: calculateSpreadPct(option.bid, option.ask),
+        impliedVolatility: option.impliedVolatility || null,
+        delta: (option.greeks as any)?.delta || null,
+        gamma: (option.greeks as any)?.gamma || null,
+        theta: (option.greeks as any)?.theta || null,
+        vega: (option.greeks as any)?.vega || null,
+        openInterest: option.openInterest || null,
+        volume: option.volume || null,
+      }))
+
+      // Procesar puts reales
+      const realPuts: OptionContract[] = (firstExpirationData.puts || []).map(option => ({
+        symbol: option.contractSymbol,
+        type: 'put',
+        strike: option.strike,
+        expiration: firstExpirationDateStr,
+        dte: calculateDte(firstExpirationDateStr),
+        bid: option.bid || null,
+        ask: option.ask || null,
+        lastPrice: option.lastPrice || null,
+        mid: calculateMid(option.bid, option.ask),
+        spreadPct: calculateSpreadPct(option.bid, option.ask),
+        impliedVolatility: option.impliedVolatility || null,
+        delta: (option.greeks as any)?.delta || null,
+        gamma: (option.greeks as any)?.gamma || null,
+        theta: (option.greeks as any)?.theta || null,
+        vega: (option.greeks as any)?.vega || null,
+        openInterest: option.openInterest || null,
+        volume: option.volume || null,
+      }))
+
+      allCalls.push(...realCalls.filter(c => c.bid !== null && c.ask !== null))
+      allPuts.push(...realPuts.filter(p => p.bid !== null && p.ask !== null))
+      
+      console.log(`[Yahoo Finance] Real expiration ${firstExpirationDateStr}: ${realCalls.length} calls, ${realPuts.length} puts`)
     }
 
-    // Procesar calls
-    const calls: OptionContract[] = (expirationData.calls || []).map(option => ({
-      symbol: option.contractSymbol,
-      type: 'call',
-      strike: option.strike,
-      expiration: expirationDateStr,
-      dte: calculateDte(expirationDateStr),
-      bid: option.bid || null,
-      ask: option.ask || null,
-      lastPrice: option.lastPrice || null,
-      mid: calculateMid(option.bid, option.ask),
-      spreadPct: calculateSpreadPct(option.bid, option.ask),
-      impliedVolatility: option.impliedVolatility || null,
-      delta: (option.greeks as any)?.delta || null,
-      gamma: (option.greeks as any)?.gamma || null,
-      theta: (option.greeks as any)?.theta || null,
-      vega: (option.greeks as any)?.vega || null,
-      openInterest: option.openInterest || null,
-      volume: option.volume || null,
-    }))
+    // Generar datos mock para otras expiraciones (3 expiraciones adicionales)
+    const otherExpirations = optionsResult.expirationDates
+      .slice(1, 4) // Tomar hasta 3 expiraciones adicionales
+      .map(d => d.toISOString().split('T')[0])
 
-    // Procesar puts
-    const puts: OptionContract[] = (expirationData.puts || []).map(option => ({
-      symbol: option.contractSymbol,
-      type: 'put',
-      strike: option.strike,
-      expiration: expirationDateStr,
-      dte: calculateDte(expirationDateStr),
-      bid: option.bid || null,
-      ask: option.ask || null,
-      lastPrice: option.lastPrice || null,
-      mid: calculateMid(option.bid, option.ask),
-      spreadPct: calculateSpreadPct(option.bid, option.ask),
-      impliedVolatility: option.impliedVolatility || null,
-      delta: (option.greeks as any)?.delta || null,
-      gamma: (option.greeks as any)?.gamma || null,
-      theta: (option.greeks as any)?.theta || null,
-      vega: (option.greeks as any)?.vega || null,
-      openInterest: option.openInterest || null,
-      volume: option.volume || null,
-    }))
+    otherExpirations.forEach(expirationDate => {
+      selectedExpirations.push(expirationDate)
+      
+      const mockCalls = generateMockOptionsForExpiration(ticker, quoteResult.regularMarketPrice!, expirationDate, true, allCalls)
+      const mockPuts = generateMockOptionsForExpiration(ticker, quoteResult.regularMarketPrice!, expirationDate, false, allPuts)
+      
+      allCalls.push(...mockCalls)
+      allPuts.push(...mockPuts)
+      
+      console.log(`[Yahoo Finance] Mock expiration ${expirationDate}: ${mockCalls.length} calls, ${mockPuts.length} puts`)
+    })
+
+    if (allCalls.length === 0 && allPuts.length === 0) {
+      throw new Error('No valid options found')
+    }
 
     // Obtener datos fundamentales (opcional)
     const fundamentals = await fetchWithTimeout(
@@ -165,15 +249,15 @@ export async function fetchYahooOptionsAnalysis(ticker: string): Promise<Options
         analystConsensus: typeof fundamentals?.financialData?.recommendationKey === 'string' ? fundamentals.financialData.recommendationKey : 'N/A',
         beta: typeof fundamentals?.defaultKeyStatistics?.beta === 'number' ? fundamentals.defaultKeyStatistics.beta : null,
       },
-      calls: calls.filter(c => c.bid !== null && c.ask !== null),
-      puts: puts.filter(p => p.bid !== null && p.ask !== null),
-      selectedExpirations: [expirationDateStr],
+      calls: allCalls,
+      puts: allPuts,
+      selectedExpirations,
       fetchedAt: new Date().toISOString(),
     }
 
     const elapsedTime = Date.now() - startTime
     console.log(`[Yahoo Finance] Successfully fetched ${ticker} in ${elapsedTime}ms`)
-    console.log(`[Yahoo Finance] Price: $${realData.underlyingPrice}, Calls: ${realData.calls.length}, Puts: ${realData.puts.length}`)
+    console.log(`[Yahoo Finance] Price: $${realData.underlyingPrice}, Total Calls: ${realData.calls.length}, Total Puts: ${realData.puts.length}, Expirations: ${realData.selectedExpirations.length}`)
 
     return realData
   } catch (error) {
