@@ -10,6 +10,7 @@ import HedgeAnalyzer from './HedgeAnalyzer'
 import PositionBuilder from './PositionBuilder'
 import CfdsTrading from './CfdsTrading'
 import FuturosPlaceholder from './FuturosPlaceholder'
+import OpcionesAnalisisClient from './OpcionesAnalisisClient'
 
 interface PricingState {
   result: PricingResult
@@ -17,6 +18,7 @@ interface PricingState {
 }
 
 function OpcionesTab() {
+  const [activeSubTab, setActiveSubTab] = useState<'analisis' | 'pricing'>('analisis')
   const [pricing, setPricing] = useState<PricingState | null>(null)
 
   function handleResult(result: PricingResult, input: OptionInput) {
@@ -44,39 +46,71 @@ function OpcionesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-[#1e2035] bg-[#0f0f17] p-6">
-          <h2 className="text-[9px] font-mono font-bold tracking-[0.15em] text-[#374151] uppercase mb-4">
-            Parámetros Black-Scholes
-          </h2>
-          <OptionsPricer onResult={handleResult} />
-        </div>
-
-        <div>
-          {pricing ? (
-            <GreeksPanel result={pricing.result} />
-          ) : (
-            <div className="rounded-xl border border-[#1e2035] bg-[#0f0f17] p-6 flex items-center justify-center h-full min-h-[200px]">
-              <p className="text-[#64748b] text-sm text-center">
-                Ingresa los parámetros y presiona{' '}
-                <span className="text-[#F0EFE8]">Calcular</span>{' '}
-                para ver el precio y las Greeks.
-              </p>
-            </div>
-          )}
+      {/* Subtabs para análisis vs pricing */}
+      <div className="bg-[#0f0f17] border border-[#1e2035] rounded-lg p-1">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setActiveSubTab('analisis')}
+            className={`flex-1 py-2 px-4 text-xs font-mono font-bold rounded-md transition-colors ${
+              activeSubTab === 'analisis'
+                ? 'bg-[#F59E0B] text-black'
+                : 'text-[#64748b] hover:text-[#F0EFE8]'
+            }`}
+          >
+            ANÁLISIS AUTOMÁTICO
+          </button>
+          <button
+            onClick={() => setActiveSubTab('pricing')}
+            className={`flex-1 py-2 px-4 text-xs font-mono font-bold rounded-md transition-colors ${
+              activeSubTab === 'pricing'
+                ? 'bg-[#F59E0B] text-black'
+                : 'text-[#64748b] hover:text-[#F0EFE8]'
+            }`}
+          >
+            CALCULADORA BS
+          </button>
         </div>
       </div>
 
-      {hedgeData && (
-        <HedgeAnalyzer
-          analysis={hedgeData.analysis}
-          hedgingOption={hedgeData.hedgingOption}
-        />
+      {activeSubTab === 'analisis' ? (
+        <OpcionesAnalisisClient />
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="rounded-xl border border-[#1e2035] bg-[#0f0f17] p-6">
+              <h2 className="text-[9px] font-mono font-bold tracking-[0.15em] text-[#374151] uppercase mb-4">
+                Parámetros Black-Scholes
+              </h2>
+              <OptionsPricer onResult={handleResult} />
+            </div>
+
+            <div>
+              {pricing ? (
+                <GreeksPanel result={pricing.result} />
+              ) : (
+                <div className="rounded-xl border border-[#1e2035] bg-[#0f0f17] p-6 flex items-center justify-center h-full min-h-[200px]">
+                  <p className="text-[#64748b] text-sm text-center">
+                    Ingresa los parámetros y presiona{' '}
+                    <span className="text-[#F0EFE8]">Calcular</span>{' '}
+                    para ver el precio y las Greeks.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {hedgeData && (
+            <HedgeAnalyzer
+              analysis={hedgeData.analysis}
+              hedgingOption={hedgeData.hedgingOption}
+            />
+          )}
+
+          <div className="border-t border-[#1e2035]" />
+
+          <PositionBuilder defaultOption={pricing?.input ?? undefined} />
+        </div>
       )}
-
-      <div className="border-t border-[#1e2035]" />
-
-      <PositionBuilder defaultOption={pricing?.input ?? undefined} />
     </div>
   )
 }
