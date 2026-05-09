@@ -88,7 +88,11 @@ interface TickerSuggestion {
   exchange: string
 }
 
-export default function OpcionesAnalisisClient() {
+interface OpcionesAnalisisClientProps {
+  onAnalysisComplete?: (data: any) => void
+}
+
+export default function OpcionesAnalisisClient({ onAnalysisComplete }: OpcionesAnalisisClientProps) {
   const [ticker, setTicker] = useState('')
   const [activeStrategy, setActiveStrategy] = useState<StrategyKind>('sell-put')
   const [data, setData] = useState<OptionsAnalyzeResult | null>(null)
@@ -154,6 +158,11 @@ export default function OpcionesAnalisisClient() {
       if (!res.ok) throw new Error(json.error || 'No se pudo analizar el ticker')
       setData(json)
       if (json.recommendation?.strategy) setActiveStrategy(json.recommendation.strategy)
+      
+      // Notificar al componente padre sobre el análisis completado
+      if (onAnalysisComplete) {
+        onAnalysisComplete(json)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al analizar opciones')
     } finally {
