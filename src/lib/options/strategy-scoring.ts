@@ -1,200 +1,217 @@
-import type { EnrichedOptionContract } from './yahoo-options'
+import type { OptionType, PremiumStatus } from './pricing'
 
 export type StrategyKind = 'sell-put' | 'covered-call' | 'buy-call' | 'buy-put'
 export type FundamentalBias = 'bullish' | 'neutral' | 'bearish'
+export type StrategyLabel = 'IDEAL' | 'ACEPTABLE' | 'CARO' | 'ILIQUIDO' | 'FUERA DE PLAN' | 'EVITAR'
 
-export interface StrategyScore {
-  strategy: StrategyKind
-  action: string
-  score: number
-  label: string
-  reasons: string[]
-  warnings: string[]
+export interface OptionContractForScoring {
+  symbol: string
+  type: OptionType
+  strike: number
+  expiration: string
+  dte: number
+  bid: number | null
+  ask: number | null
+  lastPrice: number | null
+  impliedVolatility: number | null
+  delta: number | null
+  gamma: number | null
+  theta: number | null
+  vega: number | null
+  openInterest: number | null
+  volume: number | null
+  fairValue: number | null
+  premiumStatus: PremiumStatus
 }
 
-interface ScoreContext {
+export interface StrategyScoreInput {
   strategy: StrategyKind
-  contract: EnrichedOptionContract
+  contract: OptionContractForScoring
   underlyingPrice: number
   nearestSupport: number | null
   nearestResistance: number | null
   fundamentalBias: FundamentalBias
 }
 
-export function scoreOptionContract(context: ScoreContext): StrategyScore {
-  const { strategy, contract, underlyingPrice, nearestSupport, nearestResistance, fundamentalBias } = context
-  
-  let score = 0
+export interface StrategyScore {
+  strategy: StrategyKind
+  action: string
+  score: number
+  label: StrategyLabel
+  reasons: string[]
+  warnings: string[]
+}
+
+export function scoreOptionContract(input: StrategyScoreInput): StrategyScore {
+  const { strategy, contract } = input
   const reasons: string[] = []
   const warnings: string[] = []
+  let score = 50
 
-  // Liquidez (máximo 25 puntos)
-  const liquidityScore = calculateLiquidityScore(contract)
-  score += liquidityScore
-  if (liquidityScore >= 20) reasons.push('Excelente liquidez (OI alto, spread bajo)')
-  else if (liquidityScore >= 15) reasons.push('Buena liquidez')
-  else warnings.push('Liquidez limitada')
+  const spreadPct = getSpreadPct(contract)
+  const liquid = (contract.openInterest ?? 0) >= 100 && (contract.volume ?? 0) >= 10 && spreadPct != null && spreadPct <= 0.25
+  if (liquid) {
+    score += 18
+    reasons.push('Liquidez aceptable')
+  } else {
+    score -= 28
+    warnings.push('Liquidez insuficiente')
+  }
 
-  // DTE (máximo 20 puntos)
-  const dteScore = calculateDteScore(contract.dte)
-  score += dteScore
-  if (dteScore >= 15) reasons.push('DTE ideal (30-60 días)')
-  else if (dteScore >= 10) reasons.push('DTE aceptable')
-  else warnings.push('DTE fuera de rango preferido')
+  if (contract.dte >= 30 && contract.dte <= 60) {
+    score += 10
+    reasons.push('Vencimiento dentro de ventana 30-60 DTE')
+  } else if (contract.dte < 21) {
+    score -= 18
+    warnings.push('DTE corto: mayor gamma risk')
+  } else {
+    score -= 6
+  }
 
-  // Delta (máximo 15 puntos)
-  const deltaScore = calculateDeltaScore(strategy, contract.delta)
-  score += deltaScore
-  if (deltaScore >= 12) reasons.push('Delta en rango objetivo')
-  else warnings.push('Delta fuera de rango preferido')
+  score += scoreDelta(strategy, contract.delta, warnings, reasons)
+  score += scorePremium(strategy, contract.premiumStatus, warnings, reasons)
+  score += scoreTechnicalLocation(input, warnings, reasons)
+  score += scoreFundamentalBias(strategy, input.fundamentalBias, reasons)
 
-  // Prima vs fair value (máximo 15 puntos)
-  const premiumScore = calculatePremiumScore(contract)
-  score += premiumScore
-  if (premiumScore >= 12) reasons.push('Prima favorable vs fair value')
-  else if (premiumScore >= 8) reasons.push('Prima razonable')
-  else warnings.push('Prima cara vs fair value')
+  if (strategy === 'sell-put' && contract.type !== 'put') {
+    score -= 45
+    warnings.push('La estrategia requiere put')
+  }
+  if ((strategy === 'covered-call' || strategy === 'buy-call') && contract.type !== 'call') {
+    score -= 45
+    warnings.push('La estrategia requiere call')
+  }
+  if (strategy === 'buy-put' && contract.type !== 'put') {
+    score -= 45
+    warnings.push('La estrategia requiere put')
+  }
 
-  // Ubicación técnica (máximo 15 puntos)
-  const technicalScore = calculateTechnicalScore(strategy, contract.strike, underlyingPrice, nearestSupport, nearestResistance)
-  score += technicalScore
-  if (technicalScore >= 12) reasons.push('Ubicación técnica favorable')
-  else if (technicalScore >= 8) reasons.push('Ubicación técnica aceptable')
-
-  // Sesgo fundamental (máximo 10 puntos)
-  const fundamentalScore = calculateFundamentalScore(strategy, fundamentalBias)
-  score += fundamentalScore
-  if (fundamentalScore >= 8) reasons.push('Alineado con sesgo fundamental')
-
-  // Determinar label
-  const label = getScoreLabel(score)
-  
-  // Crear acción descriptiva
-  const action = getActionDescription(strategy, contract)
-
+  const liquidityCappedScore = liquid ? score : Math.min(score, 40)
+  const boundedScore = Math.max(0, Math.min(100, Math.round(liquidityCappedScore)))
   return {
     strategy,
-    action,
-    score: Math.round(score),
-    label,
+    action: strategyAction(strategy),
+    score: boundedScore,
+    label: labelForScore(boundedScore, warnings, contract.premiumStatus, liquid),
     reasons,
     warnings,
   }
 }
 
-function calculateLiquidityScore(contract: EnrichedOptionContract): number {
-  let score = 0
-  
-  // Open Interest
-  if (contract.openInterest && contract.openInterest >= 1000) score += 10
-  else if (contract.openInterest && contract.openInterest >= 500) score += 7
-  else if (contract.openInterest && contract.openInterest >= 100) score += 4
-  
-  // Volume
-  if (contract.volume && contract.volume >= 100) score += 10
-  else if (contract.volume && contract.volume >= 50) score += 7
-  else if (contract.volume && contract.volume >= 10) score += 4
-  
-  // Spread
-  if (contract.spreadPct && contract.spreadPct <= 0.05) score += 5
-  else if (contract.spreadPct && contract.spreadPct <= 0.10) score += 3
-  else if (contract.spreadPct && contract.spreadPct <= 0.25) score += 1
-  
-  return Math.min(score, 25)
+export function strategyAction(strategy: StrategyKind): string {
+  if (strategy === 'sell-put') return 'VENDER PUT'
+  if (strategy === 'covered-call') return 'VENDER COVERED CALL'
+  if (strategy === 'buy-call') return 'COMPRAR CALL'
+  return 'COMPRAR PUT'
 }
 
-function calculateDteScore(dte: number): number {
-  if (dte >= 30 && dte <= 60) return 20 // Ideal
-  if (dte >= 15 && dte <= 90) return 15 // Aceptable
-  if (dte >= 7 && dte <= 120) return 10 // Mínimo
-  return 5 // Fuera de rango
-}
-
-function calculateDeltaScore(strategy: StrategyKind, delta: number | null): number {
-  if (!delta) return 5
-  
-  const absDelta = Math.abs(delta)
-  
+function scoreDelta(strategy: StrategyKind, delta: number | null, warnings: string[], reasons: string[]): number {
+  if (delta == null) {
+    warnings.push('Delta no disponible')
+    return -6
+  }
+  const abs = Math.abs(delta)
   if (strategy === 'sell-put' || strategy === 'covered-call') {
-    if (absDelta >= 0.20 && absDelta <= 0.35) return 15 // Ideal para venta
-    if (absDelta >= 0.15 && absDelta <= 0.45) return 12 // Aceptable
-    return 8 // Fuera de rango
-  } else {
-    if (absDelta >= 0.45 && absDelta <= 0.65) return 15 // Ideal para compra
-    if (absDelta >= 0.35 && absDelta <= 0.75) return 12 // Aceptable
-    return 8 // Fuera de rango
+    if (abs >= 0.2 && abs <= 0.35) {
+      reasons.push('Delta ideal para venta de prima')
+      return 14
+    }
+    warnings.push('Delta fuera del rango 0.20-0.35')
+    return -10
   }
+  if (abs >= 0.45 && abs <= 0.65) {
+    reasons.push('Delta direccional razonable')
+    return 14
+  }
+  warnings.push('Delta fuera del rango direccional 0.45-0.65')
+  return -10
 }
 
-function calculatePremiumScore(contract: EnrichedOptionContract): number {
-  if (!contract.fairValue || !contract.mid) return 7
-  
-  const premiumRatio = contract.mid / contract.fairValue
-  
-  if (premiumRatio <= 0.9) return 15 // Barata
-  if (premiumRatio <= 1.1) return 12 // Justa
-  if (premiumRatio <= 1.3) return 8 // Cara
-  return 5 // Muy cara
+function scorePremium(strategy: StrategyKind, status: PremiumStatus, warnings: string[], reasons: string[]): number {
+  if (status === 'sin-datos') {
+    warnings.push('Fair value incompleto')
+    return -5
+  }
+  const isSelling = strategy === 'sell-put' || strategy === 'covered-call'
+  if (isSelling && status === 'cara') {
+    reasons.push('Prima atractiva para vender')
+    return 10
+  }
+  if (isSelling && status === 'barata') {
+    warnings.push('Prima pobre para venta')
+    return -10
+  }
+  if (!isSelling && status === 'barata') {
+    reasons.push('Prima atractiva para compra')
+    return 10
+  }
+  if (!isSelling && status === 'cara') {
+    warnings.push('Prima cara para compra')
+    return -10
+  }
+  reasons.push('Prima cerca de fair value')
+  return 4
 }
 
-function calculateTechnicalScore(
-  strategy: StrategyKind,
-  strike: number,
-  underlyingPrice: number,
-  support: number | null,
-  resistance: number | null
-): number {
-  const distanceToStrike = Math.abs(strike - underlyingPrice) / underlyingPrice
-  
+function scoreTechnicalLocation(input: StrategyScoreInput, warnings: string[], reasons: string[]): number {
+  const { strategy, contract, underlyingPrice, nearestSupport, nearestResistance } = input
   if (strategy === 'sell-put') {
-    if (support && strike <= support * 1.02) return 15 // Cerca del soporte
-    if (distanceToStrike <= 0.05) return 12 // Cerca del precio actual
-    return 8 // Lejos
-  } else if (strategy === 'covered-call') {
-    if (resistance && strike >= resistance * 0.98) return 15 // Cerca de la resistencia
-    if (distanceToStrike <= 0.05) return 12 // Cerca del precio actual
-    return 8 // Lejos
-  } else {
-    // Para estrategias direccionales
-    if (distanceToStrike <= 0.10) return 12 // Strike razonable
-    return 8 // Strike lejano
+    if (nearestSupport != null && Math.abs(contract.strike - nearestSupport) / underlyingPrice <= 0.04) {
+      reasons.push('Strike cerca de soporte estimado')
+      return 14
+    }
+    warnings.push('Strike no esta cerca del soporte estimado')
+    return -6
   }
+  if (strategy === 'covered-call') {
+    if (nearestResistance != null && Math.abs(contract.strike - nearestResistance) / underlyingPrice <= 0.05) {
+      reasons.push('Strike cerca de resistencia estimada')
+      return 14
+    }
+    warnings.push('Strike no esta cerca de resistencia estimada')
+    return -6
+  }
+  if (strategy === 'buy-call') {
+    if (nearestSupport != null && Math.abs(underlyingPrice - nearestSupport) / underlyingPrice <= 0.05) {
+      reasons.push('Precio cerca de soporte estimado')
+      return 12
+    }
+    warnings.push('No esta comprando cerca de soporte')
+    return -5
+  }
+  if (nearestResistance != null && Math.abs(underlyingPrice - nearestResistance) / underlyingPrice <= 0.05) {
+    reasons.push('Precio cerca de resistencia estimada')
+    return 12
+  }
+  warnings.push('No esta comprando put cerca de resistencia')
+  return -5
 }
 
-function calculateFundamentalScore(strategy: StrategyKind, bias: FundamentalBias): number {
-  if (bias === 'neutral') return 5
-  
-  const isBullishStrategy = strategy === 'buy-call' || strategy === 'sell-put'
-  const isBearishStrategy = strategy === 'buy-put' || strategy === 'covered-call'
-  
-  if ((isBullishStrategy && bias === 'bullish') || (isBearishStrategy && bias === 'bearish')) {
-    return 10 // Perfecta alineación
+function scoreFundamentalBias(strategy: StrategyKind, bias: FundamentalBias, reasons: string[]): number {
+  if ((strategy === 'sell-put' || strategy === 'buy-call') && bias === 'bullish') {
+    reasons.push('Fundamentos alineados al sesgo alcista')
+    return 8
   }
-  
-  return 3 // Contrario al sesgo
+  if ((strategy === 'covered-call' || strategy === 'buy-put') && bias === 'bearish') {
+    reasons.push('Fundamentos alineados al sesgo bajista/neutro')
+    return 8
+  }
+  if (bias === 'neutral') return 0
+  return -5
 }
 
-function getScoreLabel(score: number): string {
+function getSpreadPct(contract: OptionContractForScoring): number | null {
+  const bid = contract.bid
+  const ask = contract.ask
+  if (bid == null || ask == null || bid <= 0 || ask <= 0 || ask < bid) return null
+  return (ask - bid) / ((ask + bid) / 2)
+}
+
+function labelForScore(score: number, warnings: string[], premium: PremiumStatus, liquid: boolean): StrategyLabel {
+  if (!liquid) return 'EVITAR'
+  if (score < 45) return 'EVITAR'
+  if (warnings.some((w) => w.includes('Delta fuera') || w.includes('DTE corto'))) return 'FUERA DE PLAN'
+  if (premium === 'cara' && score < 75) return 'CARO'
   if (score >= 75) return 'IDEAL'
-  if (score >= 45) return 'ACEPTABLE'
-  if (score >= 30) return 'CARO'
-  return 'EVITAR'
-}
-
-function getActionDescription(strategy: StrategyKind, contract: EnrichedOptionContract): string {
-  const strike = contract.strike
-  const type = contract.type === 'call' ? 'Call' : 'Put'
-  
-  switch (strategy) {
-    case 'sell-put':
-      return `Vender Put ${strike}`
-    case 'covered-call':
-      return `Vender Covered Call ${strike}`
-    case 'buy-call':
-      return `Comprar Call ${strike}`
-    case 'buy-put':
-      return `Comprar Put ${strike}`
-    default:
-      return `${type} ${strike}`
-  }
+  return 'ACEPTABLE'
 }

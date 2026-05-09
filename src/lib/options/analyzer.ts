@@ -35,28 +35,6 @@ export async function analyzeOptionsTicker(ticker: string): Promise<OptionsAnaly
   if (cached && cached.expiresAt > Date.now()) return cached.data
 
   const underlying = await fetchYahooOptionsAnalysis(symbol)
-  
-  // Enriquecer los contratos con datos adicionales
-  const enrichedCalls = underlying.calls.map(contract => ({
-    ...contract,
-    fairValue: contract.mid ? contract.mid * 0.95 : null,
-    premiumStatus: contract.mid && contract.mid > 2 ? 'cara' : 'justa',
-    probabilityITM: contract.delta ? Math.abs(contract.delta) * 100 : null,
-  }))
-  
-  const enrichedPuts = underlying.puts.map(contract => ({
-    ...contract,
-    fairValue: contract.mid ? contract.mid * 0.95 : null,
-    premiumStatus: contract.mid && contract.mid > 2 ? 'cara' : 'justa',
-    probabilityITM: contract.delta ? Math.abs(contract.delta) * 100 : null,
-  }))
-  
-  const enrichedUnderlying = {
-    ...underlying,
-    calls: enrichedCalls,
-    puts: enrichedPuts,
-  }
-  
   const zones = await fetchTechnicalZones(symbol, underlying.underlyingPrice).catch(() => ({
     candles: [],
     support: null,
@@ -79,7 +57,7 @@ export async function analyzeOptionsTicker(ticker: string): Promise<OptionsAnaly
 
   const strategies = Object.fromEntries(STRATEGIES.map((strategy) => [
     strategy,
-    rankStrategy(strategy, enrichedUnderlying, zones, fundamentalBias),
+    rankStrategy(strategy, underlying, zones, fundamentalBias),
   ])) as Record<StrategyKind, OptionsStrategyPick[]>
 
   const recommendation = STRATEGIES
@@ -89,7 +67,7 @@ export async function analyzeOptionsTicker(ticker: string): Promise<OptionsAnaly
   const data: OptionsAnalyzeResult = {
     dataSource: 'Yahoo Finance no oficial',
     dataWarning: 'Datos educativos. Validar bid/ask, griegas, earnings y liquidez en IBKR antes de operar.',
-    underlying: enrichedUnderlying,
+    underlying,
     technicalZones: {
       support: zones.support,
       resistance: zones.resistance,
@@ -123,17 +101,9 @@ function rankStrategy(
 
   return contracts
     .map((contract) => {
-      // Enriquecer el contrato con datos adicionales
-      const enrichedContract: EnrichedOptionContract = {
-        ...contract,
-        fairValue: contract.mid ? contract.mid * 0.95 : null, // Simular fair value
-        premiumStatus: contract.mid && contract.mid > 2 ? 'cara' : 'justa',
-        probabilityITM: contract.delta ? Math.abs(contract.delta) * 100 : null,
-      }
-      
       const score = scoreOptionContract({
         strategy,
-        contract: enrichedContract,
+        contract,
         underlyingPrice: underlying.underlyingPrice,
         nearestSupport: zones.support,
         nearestResistance: zones.resistance,
@@ -141,10 +111,10 @@ function rankStrategy(
       })
       return {
         ...score,
-        contract: enrichedContract,
-        breakeven: getBreakeven(strategy, enrichedContract),
-        maxLossHint: getMaxLossHint(strategy, enrichedContract),
-        maxProfitHint: getMaxProfitHint(strategy, enrichedContract),
+        contract,
+        breakeven: getBreakeven(strategy, contract),
+        maxLossHint: getMaxLossHint(strategy, contract),
+        maxProfitHint: getMaxProfitHint(strategy, contract),
       }
     })
     .sort((a, b) => b.score - a.score)
