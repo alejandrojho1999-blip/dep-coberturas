@@ -27,9 +27,10 @@ interface OpcionesTabProps {
   activeSubTab: SubTab
   activeToolTab: ToolTab
   tickerData?: any // Datos del ticker analizado
+  onTickerAnalysis?: (data: any) => void // Callback para análisis completado
 }
 
-function OpcionesTab({ activeSubTab, activeToolTab, tickerData }: OpcionesTabProps) {
+function OpcionesTab({ activeSubTab, activeToolTab, tickerData, onTickerAnalysis }: OpcionesTabProps) {
   const [pricing, setPricing] = useState<PricingState | null>(null)
 
   function handleResult(result: PricingResult, input: OptionInput) {
@@ -96,7 +97,7 @@ function OpcionesTab({ activeSubTab, activeToolTab, tickerData }: OpcionesTabPro
   // Modo Automático (análisis de opciones)
   return (
     <div className="space-y-6">
-      <OpcionesAnalisisClient onAnalysisComplete={handleTickerAnalysis} />
+      <OpcionesAnalisisClient onAnalysisComplete={onTickerAnalysis} />
       
       {/* Mostrar herramienta activa también en modo Automático */}
       {activeToolTab !== 'bs' && (
@@ -223,11 +224,12 @@ export default function CoberturasClient() {
       {/* Content based on active tab */}
       <div className="mt-5">
         {activeMainTab === 'opciones' && (
-          <OpcionesTab 
-            activeSubTab={activeSubTab} 
-            activeToolTab={activeToolTab}
-            tickerData={tickerData}
-          />
+        <OpcionesTab 
+          activeSubTab={activeSubTab} 
+          activeToolTab={activeToolTab}
+          tickerData={tickerData}
+          onTickerAnalysis={handleTickerAnalysis}
+        />
         )}
         {activeMainTab === 'cfds' && <CfdsTrading />}
         {activeMainTab === 'futuros' && <FuturosPlaceholder />}

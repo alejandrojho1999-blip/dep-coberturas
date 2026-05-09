@@ -1,3 +1,6 @@
+import YahooFinance from 'yahoo-finance2'
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
+
 export interface OptionContract {
   symbol: string
   type: 'call' | 'put'
@@ -51,13 +54,13 @@ function calculateDte(expirationDate: string): number {
   return Math.max(0, diffDays)
 }
 
-function calculateMid(bid: number | null, ask: number | null): number | null {
-  if (bid === null || ask === null) return null
+function calculateMid(bid: number | null | undefined, ask: number | null | undefined): number | null {
+  if (bid === null || bid === undefined || ask === null || ask === undefined) return null
   return (bid + ask) / 2
 }
 
-function calculateSpreadPct(bid: number | null, ask: number | null): number | null {
-  if (bid === null || ask === null || bid === 0) return null
+function calculateSpreadPct(bid: number | null | undefined, ask: number | null | undefined): number | null {
+  if (bid === null || bid === undefined || ask === null || ask === undefined || bid === 0) return null
   return (ask - bid) / bid
 }
 
@@ -92,7 +95,8 @@ export async function fetchYahooOptionsAnalysis(ticker: string): Promise<Options
 
     // Usar la fecha de expiración más cercana
     const nearestExpiration = optionsResult.expirationDates[0]
-    const expirationData = optionsResult.options[nearestExpiration]
+    const expirationData = optionsResult.options[0] // Usar índice numérico
+    const expirationDateStr = nearestExpiration.toISOString().split('T')[0] // Formato YYYY-MM-DD
     
     if (!expirationData || (!expirationData.calls && !expirationData.puts)) {
       throw new Error(`No options data for expiration ${nearestExpiration}`)
@@ -103,18 +107,18 @@ export async function fetchYahooOptionsAnalysis(ticker: string): Promise<Options
       symbol: option.contractSymbol,
       type: 'call',
       strike: option.strike,
-      expiration: nearestExpiration,
-      dte: calculateDte(nearestExpiration),
+      expiration: expirationDateStr,
+      dte: calculateDte(expirationDateStr),
       bid: option.bid || null,
       ask: option.ask || null,
       lastPrice: option.lastPrice || null,
       mid: calculateMid(option.bid, option.ask),
       spreadPct: calculateSpreadPct(option.bid, option.ask),
       impliedVolatility: option.impliedVolatility || null,
-      delta: option.greeks?.delta || null,
-      gamma: option.greeks?.gamma || null,
-      theta: option.greeks?.theta || null,
-      vega: option.greeks?.vega || null,
+      delta: (option.greeks as any)?.delta || null,
+      gamma: (option.greeks as any)?.gamma || null,
+      theta: (option.greeks as any)?.theta || null,
+      vega: (option.greeks as any)?.vega || null,
       openInterest: option.openInterest || null,
       volume: option.volume || null,
     }))
@@ -124,18 +128,18 @@ export async function fetchYahooOptionsAnalysis(ticker: string): Promise<Options
       symbol: option.contractSymbol,
       type: 'put',
       strike: option.strike,
-      expiration: nearestExpiration,
-      dte: calculateDte(nearestExpiration),
+      expiration: expirationDateStr,
+      dte: calculateDte(expirationDateStr),
       bid: option.bid || null,
       ask: option.ask || null,
       lastPrice: option.lastPrice || null,
       mid: calculateMid(option.bid, option.ask),
       spreadPct: calculateSpreadPct(option.bid, option.ask),
       impliedVolatility: option.impliedVolatility || null,
-      delta: option.greeks?.delta || null,
-      gamma: option.greeks?.gamma || null,
-      theta: option.greeks?.theta || null,
-      vega: option.greeks?.vega || null,
+      delta: (option.greeks as any)?.delta || null,
+      gamma: (option.greeks as any)?.gamma || null,
+      theta: (option.greeks as any)?.theta || null,
+      vega: (option.greeks as any)?.vega || null,
       openInterest: option.openInterest || null,
       volume: option.volume || null,
     }))
@@ -154,16 +158,16 @@ export async function fetchYahooOptionsAnalysis(ticker: string): Promise<Options
       underlyingPrice: quoteResult.regularMarketPrice || 0,
       sector: fundamentals?.summaryProfile?.sector || 'N/A',
       fundamentals: {
-        peForward: fundamentals?.financialData?.forwardPE || null,
-        peTrailing: fundamentals?.financialData?.trailingPE || null,
-        debtToEquity: fundamentals?.financialData?.debtToEquity || null,
-        targetMeanPrice: fundamentals?.financialData?.targetMeanPrice || null,
-        analystConsensus: fundamentals?.financialData?.recommendationKey || 'N/A',
-        beta: fundamentals?.defaultKeyStatistics?.beta || null,
+        peForward: typeof fundamentals?.financialData?.forwardPE === 'number' ? fundamentals.financialData.forwardPE : null,
+        peTrailing: typeof fundamentals?.financialData?.trailingPE === 'number' ? fundamentals.financialData.trailingPE : null,
+        debtToEquity: typeof fundamentals?.financialData?.debtToEquity === 'number' ? fundamentals.financialData.debtToEquity : null,
+        targetMeanPrice: typeof fundamentals?.financialData?.targetMeanPrice === 'number' ? fundamentals.financialData.targetMeanPrice : null,
+        analystConsensus: typeof fundamentals?.financialData?.recommendationKey === 'string' ? fundamentals.financialData.recommendationKey : 'N/A',
+        beta: typeof fundamentals?.defaultKeyStatistics?.beta === 'number' ? fundamentals.defaultKeyStatistics.beta : null,
       },
       calls: calls.filter(c => c.bid !== null && c.ask !== null),
       puts: puts.filter(p => p.bid !== null && p.ask !== null),
-      selectedExpirations: [nearestExpiration],
+      selectedExpirations: [expirationDateStr],
       fetchedAt: new Date().toISOString(),
     }
 
