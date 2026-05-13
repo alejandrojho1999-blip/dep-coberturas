@@ -673,8 +673,8 @@ export default function InformesPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {/* Commission % input */}
-              <div className="flex items-center gap-1.5">
+              {/* Commission % input + summary stats */}
+              <div className="flex items-center gap-2">
                 <label className="text-xs text-[#64748b]">Comisión operador:</label>
                 <input
                   type="number" min="0" max="100" step="0.1"
@@ -683,6 +683,46 @@ export default function InformesPage() {
                   className="w-14 rounded border border-[#1e1e2e] bg-[#0a0a0f] px-2 py-1 text-xs text-[#e2e8f0] text-right focus:border-[#00ff88] focus:outline-none"
                 />
                 <span className="text-xs text-[#64748b]">%</span>
+                {/* Summary: total commission and net company gain from closed positions */}
+                {(() => {
+                  let totalGanancia = 0
+                  let totalComision = 0
+                  displayed.forEach((entry) => {
+                    if (entry.precio_venta == null) return
+                    const g = calcGananciaUSD(entry)
+                    if (g == null) return
+                    totalGanancia += g
+                    if (g > 0) totalComision += g * (comisionPct / 100)
+                  })
+                  const netoEmpresa = totalGanancia - totalComision
+                  return (
+                    <>
+                      <div
+                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+                        style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}
+                        title="Suma de comisiones cobradas (operaciones cerradas con precio de venta)"
+                      >
+                        <span className="text-[10px] text-[#64748b]">Comisión total</span>
+                        <span className="text-xs font-semibold font-mono" style={{ color: '#fbbf24' }}>
+                          ${fmtNum(totalComision)}
+                        </span>
+                      </div>
+                      <div
+                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+                        style={{
+                          background: netoEmpresa >= 0 ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)',
+                          border: netoEmpresa >= 0 ? '1px solid rgba(74,222,128,0.2)' : '1px solid rgba(248,113,113,0.2)',
+                        }}
+                        title="Ganancia neta de la empresa = suma total de operaciones cerradas − comisión del operador"
+                      >
+                        <span className="text-[10px] text-[#64748b]">Neto empresa</span>
+                        <span className="text-xs font-semibold font-mono" style={{ color: netoEmpresa >= 0 ? '#4ade80' : '#f87171' }}>
+                          {netoEmpresa >= 0 ? '+' : ''}${fmtNum(netoEmpresa)}
+                        </span>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
 
               {/* Filter by operator/user */}
