@@ -28,7 +28,7 @@ const NAV_ITEMS = [
   { icon: BarChart2,       label: 'Portafolios Híbridos', href: '/portafolios' },
   { icon: Bot,             label: 'Agente PPO',           href: '/agente-ppo' },
   { icon: Shield,          label: 'Coberturas',           href: '/coberturas' },
-  { icon: FileText,        label: 'Informes',             href: '/informes' },
+  { icon: FileText,        label: 'Recomendaciones',      href: '/informes' },
 ] as const
 
 const STORAGE_KEY = 'sidebar-collapsed'

@@ -219,6 +219,8 @@ export default function InformesPage() {
   const [toasts, setToasts]                   = useState<Toast[]>([])
   const toastId                               = useRef(0)
   const [pendingDuplicate, setPendingDuplicate] = useState<string | null>(null)
+  const [comisionPct, setComisionPct]           = useState(20)
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
 
   // Autocomplete
   const [suggestions, setSuggestions]         = useState<SearchResult[]>([])
@@ -271,6 +273,7 @@ export default function InformesPage() {
       if (data.user) {
         setCurrentUserId(data.user.id)
         setFilterUserId(data.user.id)
+        setCurrentUserEmail(data.user.email ?? null)
       }
     })
   }, [])
@@ -422,7 +425,7 @@ export default function InformesPage() {
       return copy
     })
 
-  const getEditVal = (entry: HistoryEntry, field: 'precio_compra' | 'cantidad_acciones' | 'precio_objetivo_personal'): string => {
+  const getEditVal = (entry: HistoryEntry, field: 'precio_compra' | 'cantidad_acciones' | 'precio_objetivo_personal' | 'precio_venta'): string => {
     const inFlight = rowEdits[entry.id]?.[field]
     if (inFlight !== undefined) return inFlight
     const v = entry[field]
@@ -453,11 +456,22 @@ export default function InformesPage() {
   function calcRendimiento(entry: HistoryEntry): number | null {
     const compra = entry.precio_compra
     if (compra == null || compra === 0) return null
-    const ref = entry.estado === 'Vender' && entry.precio_venta != null
+    const ref = entry.precio_venta != null
       ? entry.precio_venta
       : (livePrices[entry.ticker] ?? null)
     if (ref == null) return null
     return ((ref - compra) / compra) * 100
+  }
+
+  function calcGananciaUSD(entry: HistoryEntry): number | null {
+    const compra = entry.precio_compra
+    const cantidad = entry.cantidad_acciones
+    if (compra == null || compra === 0 || cantidad == null) return null
+    const ref = entry.precio_venta != null
+      ? entry.precio_venta
+      : (livePrices[entry.ticker] ?? null)
+    if (ref == null) return null
+    return (ref - compra) * cantidad
   }
 
   function estadoBadge(estado: string | null) {
@@ -570,8 +584,8 @@ export default function InformesPage() {
           <BarChart2 size={20} style={{ color: '#00ff88' }} />
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-[#e2e8f0]">Informes de Inversión</h1>
-          <p className="text-sm text-[#64748b]">Emporium Quality Funds — Generador de Informes</p>
+          <h1 className="text-lg font-semibold text-[#e2e8f0]">Recomendaciones</h1>
+          <p className="text-sm text-[#64748b]">Emporium Quality Funds — Panel de Recomendaciones</p>
         </div>
       </div>
 
@@ -641,7 +655,15 @@ export default function InformesPage() {
         <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-[#e2e8f0]">Historial de Informes</h2>
+              <h2 className="text-sm font-semibold text-[#e2e8f0]">
+                {(() => {
+                  const activeUser = filterUserId
+                    ? uniqueUsers.find((u) => u.user_id === filterUserId)
+                    : null
+                  const name = activeUser?.user_email ?? currentUserEmail ?? '—'
+                  return `RECOMENDACIONES DE ${name.toUpperCase()}`
+                })()}
+              </h2>
               {history.length > 0 && (
                 <span className="rounded-full px-2 py-0.5 text-xs font-medium"
                       style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
@@ -650,22 +672,36 @@ export default function InformesPage() {
               )}
             </div>
 
-            {/* Filter by operator/user */}
-            {uniqueUsers.length > 1 && (
-              <select
-                value={filterUserId}
-                onChange={(e) => setFilterUserId(e.target.value)}
-                className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] px-2.5 py-1.5 text-xs text-[#e2e8f0] transition-colors focus:border-[#00ff88] focus:outline-none"
-              >
-                <option value="">Todos los operadores</option>
-                {uniqueUsers.map((u) => (
-                  <option key={u.user_id} value={u.user_id}>
-                    {u.user_email ?? u.user_id}
-                    {u.user_id === currentUserId ? ' (yo)' : ''}
-                  </option>
-                ))}
-              </select>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Commission % input */}
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs text-[#64748b]">Comisión operador:</label>
+                <input
+                  type="number" min="0" max="100" step="0.1"
+                  value={comisionPct}
+                  onChange={(e) => setComisionPct(parseFloat(e.target.value) || 0)}
+                  className="w-14 rounded border border-[#1e1e2e] bg-[#0a0a0f] px-2 py-1 text-xs text-[#e2e8f0] text-right focus:border-[#00ff88] focus:outline-none"
+                />
+                <span className="text-xs text-[#64748b]">%</span>
+              </div>
+
+              {/* Filter by operator/user */}
+              {uniqueUsers.length > 1 && (
+                <select
+                  value={filterUserId}
+                  onChange={(e) => setFilterUserId(e.target.value)}
+                  className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] px-2.5 py-1.5 text-xs text-[#e2e8f0] transition-colors focus:border-[#00ff88] focus:outline-none"
+                >
+                  <option value="">Todos los operadores</option>
+                  {uniqueUsers.map((u) => (
+                    <option key={u.user_id} value={u.user_id}>
+                      {u.user_email ?? u.user_id}
+                      {u.user_id === currentUserId ? ' (yo)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           {historyLoading ? (
@@ -695,6 +731,7 @@ export default function InformesPage() {
                     <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
                     <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                     <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Compra</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
                     <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
                     <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">
                       P.Actual
@@ -702,6 +739,8 @@ export default function InformesPage() {
                     </th>
                     <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Obj.</th>
                     <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
                     <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
                     <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
                   </tr>
@@ -738,6 +777,21 @@ export default function InformesPage() {
                             const val = parseFloat(e.target.value)
                             clearRowEdit(entry.id, 'precio_compra')
                             if (!isNaN(val) && val >= 0) void saveField(entry.id, { precio_compra: val })
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                          className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                        />
+                      </td>
+                      {/* P. Venta — inline editable */}
+                      <td className="hidden px-3 py-2.5 text-right xl:table-cell">
+                        <input
+                          type="number" min="0" step="0.01" placeholder="—"
+                          value={getEditVal(entry, 'precio_venta')}
+                          onChange={(e) => setRowEdit(entry.id, 'precio_venta', e.target.value)}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value)
+                            clearRowEdit(entry.id, 'precio_venta')
+                            if (!isNaN(val) && val >= 0) void saveField(entry.id, { precio_venta: val })
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
@@ -792,6 +846,24 @@ export default function InformesPage() {
                               {pos ? '+' : ''}{r.toFixed(2)}%
                             </span>
                           )
+                        })()}
+                      </td>
+                      {/* G/P ($) */}
+                      <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
+                        {(() => {
+                          const g = calcGananciaUSD(entry)
+                          if (g == null) return <span className="text-[#475569]">—</span>
+                          const pos = g >= 0
+                          return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}${fmtNum(g)}</span>
+                        })()}
+                      </td>
+                      {/* Comisión */}
+                      <td className="hidden px-3 py-2.5 text-right font-mono text-xs xl:table-cell">
+                        {(() => {
+                          const g = calcGananciaUSD(entry)
+                          if (g == null || g <= 0) return <span className="text-[#475569]">—</span>
+                          const com = g * (comisionPct / 100)
+                          return <span style={{ color: '#fbbf24' }}>${fmtNum(com)}</span>
                         })()}
                       </td>
                       {/* Estado */}
