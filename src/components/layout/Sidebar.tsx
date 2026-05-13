@@ -18,6 +18,7 @@ import {
   Terminal,
   BookOpen,
   Waves,
+  Cpu,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { icon: Bot,             label: 'Agente PPO',           href: '/agente-ppo' },
   { icon: Shield,          label: 'Coberturas',           href: '/coberturas' },
   { icon: FileText,        label: 'Recomendaciones',      href: '/informes' },
+  { icon: Cpu,             label: 'Agentes',              href: '/agentes' },
 ] as const
 
 const STORAGE_KEY = 'sidebar-collapsed'

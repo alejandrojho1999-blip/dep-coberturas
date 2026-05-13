@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { BarChart2, Download, Eye, FileText, Loader2, Search, Trash2, Upload, X } from 'lucide-react'
+import { BarChart2, Cpu, Download, Eye, FileText, Loader2, Search, Trash2, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
 
@@ -18,6 +18,27 @@ interface Toast {
   id: number
   message: string
   variant: 'success' | 'error'
+}
+
+interface AgentRec {
+  id: string
+  user_id: string
+  ticker: string
+  empresa: string | null
+  category: string
+  precio_entrada: number | null
+  precio_objetivo: number | null
+  stop_loss: number | null
+  precio_venta: number | null
+  cantidad_acciones: number | null
+  direction: string | null
+  riesgo: string | null
+  timeframe: string | null
+  resumen: string | null
+  score: number | null
+  market_cap_m: number | null
+  estado: string | null
+  created_at: string
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -221,6 +242,10 @@ export default function InformesPage() {
   const [pendingDuplicate, setPendingDuplicate] = useState<string | null>(null)
   const [comisionPct, setComisionPct]           = useState(20)
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
+  const [agentRecs, setAgentRecs]               = useState<AgentRec[]>([])
+  const [agentRecsLoading, setAgentRecsLoading] = useState(true)
+  const [agentRowEdits, setAgentRowEdits]       = useState<Record<string, Record<string, string>>>({})
+  const [confirmDeleteAgentId, setConfirmDeleteAgentId] = useState<string | null>(null)
 
   // Autocomplete
   const [suggestions, setSuggestions]         = useState<SearchResult[]>([])
@@ -266,6 +291,15 @@ export default function InformesPage() {
   }, [])
 
   useEffect(() => { fetchHistory() }, [fetchHistory])
+
+  const fetchAgentRecs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/agentes/picks')
+      if (res.ok) setAgentRecs(await res.json() as AgentRec[])
+    } finally { setAgentRecsLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchAgentRecs() }, [fetchAgentRecs])
 
   useEffect(() => {
     const supabase = createClient()
@@ -472,6 +506,42 @@ export default function InformesPage() {
       : (livePrices[entry.ticker] ?? null)
     if (ref == null) return null
     return (ref - compra) * cantidad
+  }
+
+  function calcAgentGanancia(rec: AgentRec): number | null {
+    const entrada = rec.precio_entrada
+    const cantidad = rec.cantidad_acciones
+    if (entrada == null || entrada === 0 || cantidad == null) return null
+    const ref = rec.precio_venta != null ? rec.precio_venta : (livePrices[rec.ticker] ?? null)
+    if (ref == null) return null
+    return (ref - entrada) * cantidad
+  }
+
+  const saveAgentField = async (id: string, updates: Record<string, unknown>) => {
+    const res = await fetch('/api/agentes/picks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates }),
+    })
+    if (res.ok) {
+      setAgentRecs(prev => prev.map(r => r.id === id ? { ...r, ...updates } as AgentRec : r))
+    } else { addToast('Error al guardar', 'error') }
+  }
+
+  const deleteAgentRec = async (id: string) => {
+    await fetch('/api/agentes/picks', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setAgentRecs(prev => prev.filter(r => r.id !== id))
+  }
+
+  const getAgentEditVal = (rec: AgentRec, field: 'precio_venta' | 'cantidad_acciones'): string => {
+    const inFlight = agentRowEdits[rec.id]?.[field]
+    if (inFlight !== undefined) return inFlight
+    const v = rec[field]
+    return v != null ? String(v) : ''
   }
 
   function estadoBadge(estado: string | null) {
@@ -991,6 +1061,264 @@ export default function InformesPage() {
             </div>
           )}
         </div>
+
+        {/* ── AGENTE PETER recommendations ──────────────────────── */}
+        {(() => {
+          const peterRecs = agentRecs.filter(r => r.category === 'PETER_LYNCH')
+          return (
+            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                  <Cpu size={14} style={{ color: '#00ff88' }} />
+                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE PETER</h2>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
+                    {peterRecs.length}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-[#475569]">Lynch score 6/6 · Tendencia alcista · IA confirmada</span>
+              </div>
+              {agentRecsLoading ? (
+                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
+              ) : peterRecs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                  <Cpu size={20} className="text-[#475569]" />
+                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE PETER aún.</p>
+                  <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
+                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
+                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Score</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Entrada</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
+                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
+                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Riesgo</th>
+                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Plazo</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {peterRecs.map((rec, i) => (
+                        <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
+                          <td className="px-3 py-2.5"><span className="font-semibold text-[#00ff88]">{rec.ticker}</span></td>
+                          <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
+                          <td className="hidden px-3 py-2.5 text-center lg:table-cell">
+                            <span className="font-mono text-xs font-bold" style={{ color: '#F59E0B' }}>{rec.score ?? '—'}/6</span>
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
+                          {/* P.Venta editable */}
+                          <td className="hidden px-3 py-2.5 text-right xl:table-cell">
+                            <input type="number" min="0" step="0.01" placeholder="—"
+                              value={getAgentEditVal(rec, 'precio_venta')}
+                              onChange={e => setAgentRowEdits(prev => ({ ...prev, [rec.id]: { ...prev[rec.id], precio_venta: e.target.value } }))}
+                              onBlur={e => {
+                                const val = parseFloat(e.target.value)
+                                setAgentRowEdits(prev => { const c = { ...prev }; if (c[rec.id]) { const f = { ...c[rec.id] }; delete f.precio_venta; c[rec.id] = f }; return c })
+                                if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { precio_venta: val })
+                              }}
+                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                              className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                            />
+                          </td>
+                          {/* Cant. editable */}
+                          <td className="hidden px-3 py-2.5 text-right xl:table-cell">
+                            <input type="number" min="0" step="1" placeholder="—"
+                              value={getAgentEditVal(rec, 'cantidad_acciones')}
+                              onChange={e => setAgentRowEdits(prev => ({ ...prev, [rec.id]: { ...prev[rec.id], cantidad_acciones: e.target.value } }))}
+                              onBlur={e => {
+                                const val = parseFloat(e.target.value)
+                                setAgentRowEdits(prev => { const c = { ...prev }; if (c[rec.id]) { const f = { ...c[rec.id] }; delete f.cantidad_acciones; c[rec.id] = f }; return c })
+                                if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { cantidad_acciones: val })
+                              }}
+                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                              className="w-16 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                            />
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-xs">
+                            {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
+                            {(() => { const g = calcAgentGanancia(rec); if (g == null) return <span className="text-[#475569]">—</span>; const pos = g >= 0; return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}${fmtNum(g)}</span> })()}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-xs xl:table-cell">
+                            {(() => { const g = calcAgentGanancia(rec); if (g == null || g <= 0) return <span className="text-[#475569]">—</span>; return <span style={{ color: '#fbbf24' }}>${fmtNum(g * (comisionPct / 100))}</span> })()}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            {(() => { const badge = estadoBadge(rec.estado); return (
+                              <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
+                                className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
+                                style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}>
+                                <option value="Comprar">Comprar</option>
+                                <option value="Mantener">Mantener</option>
+                                <option value="Vender">Vender</option>
+                                <option value="Observacion">Observar</option>
+                              </select>
+                            )})()}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-center lg:table-cell">
+                            <span className="text-[10px] font-mono" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24' }}>{rec.riesgo ?? '—'}</span>
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-center text-[10px] font-mono text-[#64748b] lg:table-cell">{rec.timeframe ?? '—'}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            {confirmDeleteAgentId === rec.id ? (
+                              <div className="flex items-center justify-end gap-1 text-xs">
+                                <span className="text-[#94a3b8]">¿Eliminar?</span>
+                                <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
+                                <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-[#64748b] hover:bg-[#1e1e2e]">No</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-[#475569] hover:bg-[#1e1e2e] hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* ── AGENTE SMALL CAP recommendations ─────────────────────── */}
+        {(() => {
+          const smallRecs = agentRecs.filter(r => r.category === 'SMALL_CAPS')
+          return (
+            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                  <Cpu size={14} style={{ color: '#00ff88' }} />
+                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE SMALL CAP</h2>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
+                    {smallRecs.length}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-[#475569]">Lynch score ≥5/6 · Market cap &lt; $2B · Tendencia alcista</span>
+              </div>
+              {agentRecsLoading ? (
+                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
+              ) : smallRecs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                  <Cpu size={20} className="text-[#475569]" />
+                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE SMALL CAP aún.</p>
+                  <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
+                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
+                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Score</th>
+                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Cap</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Entrada</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
+                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
+                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Riesgo</th>
+                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Plazo</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {smallRecs.map((rec, i) => (
+                        <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
+                          <td className="px-3 py-2.5"><span className="font-semibold text-[#00ff88]">{rec.ticker}</span></td>
+                          <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
+                          <td className="hidden px-3 py-2.5 text-center lg:table-cell">
+                            <span className="font-mono text-xs font-bold" style={{ color: '#F59E0B' }}>{rec.score ?? '—'}/6</span>
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-center text-[10px] font-mono text-[#64748b] lg:table-cell">
+                            {rec.market_cap_m != null ? `$${(rec.market_cap_m / 1000).toFixed(1)}B` : '—'}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
+                          <td className="hidden px-3 py-2.5 text-right xl:table-cell">
+                            <input type="number" min="0" step="0.01" placeholder="—"
+                              value={getAgentEditVal(rec, 'precio_venta')}
+                              onChange={e => setAgentRowEdits(prev => ({ ...prev, [rec.id]: { ...prev[rec.id], precio_venta: e.target.value } }))}
+                              onBlur={e => {
+                                const val = parseFloat(e.target.value)
+                                setAgentRowEdits(prev => { const c = { ...prev }; if (c[rec.id]) { const f = { ...c[rec.id] }; delete f.precio_venta; c[rec.id] = f }; return c })
+                                if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { precio_venta: val })
+                              }}
+                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                              className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                            />
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-right xl:table-cell">
+                            <input type="number" min="0" step="1" placeholder="—"
+                              value={getAgentEditVal(rec, 'cantidad_acciones')}
+                              onChange={e => setAgentRowEdits(prev => ({ ...prev, [rec.id]: { ...prev[rec.id], cantidad_acciones: e.target.value } }))}
+                              onBlur={e => {
+                                const val = parseFloat(e.target.value)
+                                setAgentRowEdits(prev => { const c = { ...prev }; if (c[rec.id]) { const f = { ...c[rec.id] }; delete f.cantidad_acciones; c[rec.id] = f }; return c })
+                                if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { cantidad_acciones: val })
+                              }}
+                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                              className="w-16 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                            />
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-xs">
+                            {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
+                            {(() => { const g = calcAgentGanancia(rec); if (g == null) return <span className="text-[#475569]">—</span>; const pos = g >= 0; return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}${fmtNum(g)}</span> })()}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-xs xl:table-cell">
+                            {(() => { const g = calcAgentGanancia(rec); if (g == null || g <= 0) return <span className="text-[#475569]">—</span>; return <span style={{ color: '#fbbf24' }}>${fmtNum(g * (comisionPct / 100))}</span> })()}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            {(() => { const badge = estadoBadge(rec.estado); return (
+                              <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
+                                className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
+                                style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}>
+                                <option value="Comprar">Comprar</option>
+                                <option value="Mantener">Mantener</option>
+                                <option value="Vender">Vender</option>
+                                <option value="Observacion">Observar</option>
+                              </select>
+                            )})()}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-center lg:table-cell">
+                            <span className="text-[10px] font-mono" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24' }}>{rec.riesgo ?? '—'}</span>
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-center text-[10px] font-mono text-[#64748b] lg:table-cell">{rec.timeframe ?? '—'}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            {confirmDeleteAgentId === rec.id ? (
+                              <div className="flex items-center justify-end gap-1 text-xs">
+                                <span className="text-[#94a3b8]">¿Eliminar?</span>
+                                <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
+                                <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-[#64748b] hover:bg-[#1e1e2e]">No</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-[#475569] hover:bg-[#1e1e2e] hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Toasts */}
