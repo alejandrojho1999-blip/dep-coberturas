@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useRef, useState } from 'react'
-import { Loader2, Play, Square, RotateCcw } from 'lucide-react'
+import { Loader2, Play, Square, RotateCcw, TrendingUp, BarChart2, Brain, BookOpen, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react'
 import type { ScreenerResult } from '@/lib/peter-lynch/screener'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
@@ -11,14 +12,26 @@ interface TickerStage {
   name?: string
   score: number
   marketCapM?: number
-  lastPrice?: number
-  sma20?: number
-  direction?: string
-  empresa?: string
   step1: 'pass'
+  // Paso 2 — TimesFM
+  lastPrice?: number
+  forecastPrice?: number
+  forecastReturn?: number
   step2: 'pending' | 'pass' | 'fail'
-  step3: 'pending' | 'pass' | 'fail' | 'running'
-  step4: 'pending' | 'done' | 'fail'
+  // Paso 3 — Momentum
+  rsi?: number
+  macd?: number
+  macdSignal?: number
+  momentumScore?: number
+  step3: 'pending' | 'pass' | 'fail'
+  // Paso 4 — AI TradingAgents
+  empresa?: string
+  conviction?: number
+  consensus?: string
+  aiResult?: Record<string, unknown>
+  step4: 'pending' | 'pass' | 'fail' | 'running'
+  // Paso 5 — Save
+  step5: 'pending' | 'done' | 'fail'
 }
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)) }
@@ -30,49 +43,107 @@ function StepBadge({ phase }: { phase: Phase }) {
   return                          <span style={{ color: '#f87171', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(248,113,113,0.1)' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">✗ ERROR</span>
 }
 
-function TickerBadge({ t }: { t: TickerStage }) {
-  const step2Style = t.step2 === 'pass'
-    ? { color: '#4ade80', border: '1px solid rgba(74,222,128,0.4)', background: 'rgba(74,222,128,0.1)' }
-    : t.step2 === 'fail'
-    ? { color: '#f87171', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(248,113,113,0.1)' }
-    : { color: '#64748b', border: '1px solid #1e1e2e' }
-  const step3Style = t.step3 === 'pass'
-    ? { color: '#4ade80', border: '1px solid rgba(74,222,128,0.4)', background: 'rgba(74,222,128,0.1)' }
-    : t.step3 === 'fail'
-    ? { color: '#f87171', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(248,113,113,0.1)' }
-    : t.step3 === 'running'
-    ? { color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', background: 'rgba(251,191,36,0.1)' }
-    : { color: '#64748b', border: '1px solid #1e1e2e' }
+function TickerCard({ t }: { t: TickerStage }) {
+  const stepColors = {
+    pass:    { color: '#4ade80', border: 'rgba(74,222,128,0.4)',  bg: 'rgba(74,222,128,0.08)' },
+    fail:    { color: '#f87171', border: 'rgba(248,113,113,0.4)', bg: 'rgba(248,113,113,0.08)' },
+    running: { color: '#fbbf24', border: 'rgba(251,191,36,0.4)',  bg: 'rgba(251,191,36,0.08)' },
+    pending: { color: '#475569', border: '#1e1e2e',               bg: 'transparent' },
+  }
+
+  const convictionColor = (t.conviction ?? 0) >= 8 ? '#4ade80' : (t.conviction ?? 0) >= 6 ? '#fbbf24' : '#f87171'
+
   return (
-    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ border: '1px solid #1e1e2e', background: '#12121a' }}>
-      <span className="font-mono font-bold text-xs" style={{ color: '#00ff88' }}>{t.ticker}</span>
-      <span className="text-[9px] font-mono opacity-60 text-[#64748b]">{t.score}/6</span>
-      {t.marketCapM != null && (
-        <span className="text-[9px] font-mono text-[#475569]">${(t.marketCapM / 1000).toFixed(1)}B</span>
-      )}
-      {t.step2 !== 'pending' && (
-        <span className="text-[9px] font-mono px-1 py-0.5 rounded" style={step2Style}>
-          {t.step2 === 'pass' ? `↑${t.direction}` : '✗TREND'}
-        </span>
-      )}
-      {t.step3 !== 'pending' && (
-        <span className="text-[9px] font-mono px-1 py-0.5 rounded" style={step3Style}>
-          {t.step3 === 'pass' ? 'IA✓' : t.step3 === 'fail' ? 'IA✗' : 'IA⟳'}
-        </span>
-      )}
-      {t.step4 === 'done' && (
-        <span className="text-[9px] font-mono px-1 py-0.5 rounded" style={{ color: '#60a5fa', border: '1px solid rgba(96,165,250,0.4)', background: 'rgba(96,165,250,0.1)' }}>📝</span>
-      )}
+    <div className="rounded-xl p-3 space-y-2" style={{ border: '1px solid #1e1e2e', background: '#12121a' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="font-mono font-bold text-sm" style={{ color: '#00ff88' }}>{t.ticker}</span>
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', background: 'rgba(251,191,36,0.08)' }}>
+            LYNCH {t.score}/6
+          </span>
+          {t.marketCapM != null && (
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)' }}>
+              ${(t.marketCapM / 1000).toFixed(1)}B
+            </span>
+          )}
+        </div>
+        {t.step5 === 'done' && (
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.08)' }}>
+            📝 PICK
+          </span>
+        )}
+      </div>
+
+      {/* Filter badges row */}
+      <div className="flex flex-wrap gap-1">
+        {/* TimesFM */}
+        {t.step2 !== 'pending' && (() => {
+          const s = stepColors[t.step2 === 'pass' ? 'pass' : 'fail']
+          return (
+            <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ color: s.color, border: `1px solid ${s.border}`, background: s.bg }}>
+              {t.step2 === 'pass' ? `▲${t.forecastReturn != null ? (t.forecastReturn >= 0 ? '+' : '') + t.forecastReturn.toFixed(1) + '%' : ''}` : '▼FORECAST'}
+            </span>
+          )
+        })()}
+
+        {/* Momentum */}
+        {t.step3 !== 'pending' && (() => {
+          const s = stepColors[t.step3 === 'pass' ? 'pass' : 'fail']
+          return (
+            <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ color: s.color, border: `1px solid ${s.border}`, background: s.bg }}>
+              {t.step3 === 'pass'
+                ? `MOM ${t.momentumScore ?? 0}/3 · RSI ${t.rsi?.toFixed(0) ?? '?'}`
+                : `MOM ${t.momentumScore ?? 0}/3`}
+            </span>
+          )
+        })()}
+
+        {/* AI */}
+        {t.step4 !== 'pending' && (() => {
+          const key = t.step4 === 'running' ? 'running' : t.step4 === 'pass' ? 'pass' : 'fail'
+          const s = stepColors[key]
+          return (
+            <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ color: t.step4 === 'pass' ? convictionColor : s.color, border: `1px solid ${s.border}`, background: s.bg }}>
+              {t.step4 === 'running' ? 'IA⟳' : t.step4 === 'pass' ? `IA ${t.conviction ?? '?'}/10` : 'IA✗'}
+            </span>
+          )
+        })()}
+      </div>
+    </div>
+  )
+}
+
+function FunnelBar({ stages }: { stages: { label: string; count: number; color: string }[] }) {
+  const max = stages[0]?.count ?? 1
+  return (
+    <div className="flex items-end gap-1 h-12 px-1">
+      {stages.map((s, i) => (
+        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+          <span className="text-[9px] font-mono font-bold" style={{ color: s.color }}>{s.count}</span>
+          <div
+            className="w-full rounded-sm transition-all duration-500"
+            style={{
+              height: `${Math.max(4, (s.count / max) * 32)}px`,
+              background: s.color,
+              opacity: 0.7,
+            }}
+          />
+          <span className="text-[8px] font-mono text-[#475569] text-center leading-tight">{s.label}</span>
+        </div>
+      ))}
     </div>
   )
 }
 
 export default function AgenteSmall() {
   const [phase, setPhase]           = useState<Phase>('idle')
+  const [step0Phase, setStep0Phase] = useState<Phase>('idle')
   const [step1Phase, setStep1Phase] = useState<Phase>('idle')
   const [step2Phase, setStep2Phase] = useState<Phase>('idle')
   const [step3Phase, setStep3Phase] = useState<Phase>('idle')
   const [step4Phase, setStep4Phase] = useState<Phase>('idle')
+  const [step5Phase, setStep5Phase] = useState<Phase>('idle')
   const [tickers, setTickers]       = useState<TickerStage[]>([])
   const [log, setLog]               = useState<string[]>([])
   const [summary, setSummary]       = useState<{ created: number; total: number } | null>(null)
@@ -86,7 +157,8 @@ export default function AgenteSmall() {
 
   function reset() {
     setPhase('idle')
-    setStep1Phase('idle'); setStep2Phase('idle'); setStep3Phase('idle'); setStep4Phase('idle')
+    setStep0Phase('idle'); setStep1Phase('idle'); setStep2Phase('idle'); setStep3Phase('idle')
+    setStep4Phase('idle'); setStep5Phase('idle')
     setTickers([]); setLog([]); setSummary(null)
   }
 
@@ -94,7 +166,8 @@ export default function AgenteSmall() {
     abortRef.current?.abort()
     addLog('⛔ Agente detenido por el usuario')
     setPhase('idle')
-    setStep1Phase('idle'); setStep2Phase('idle'); setStep3Phase('idle'); setStep4Phase('idle')
+    setStep0Phase('idle'); setStep1Phase('idle'); setStep2Phase('idle'); setStep3Phase('idle')
+    setStep4Phase('idle'); setStep5Phase('idle')
   }
 
   async function run() {
@@ -103,47 +176,122 @@ export default function AgenteSmall() {
     setPhase('running'); setLog([]); setTickers([]); setSummary(null)
 
     try {
-      // ── PASO 1: Lynch Small-Cap (score ≥ 5, market_cap < $2B) ────
+      // ── PASO 0: Re-evaluación de posiciones activas ────────────────
+      setStep0Phase('running')
+      addLog('🔄 Re-evaluando posiciones activas del Agente Small...')
+
+      type ActivePickReview = {
+        id: string; ticker: string; precio_entrada: number;
+        forecastPass: boolean; momentumPass: boolean; forecastLastPrice: number;
+      }
+      let activePicksReview: ActivePickReview[] = []
+
+      const picksRes = await fetch('/api/agentes/picks?category=SMALL_CAPS', { signal })
+      const allPicks = picksRes.ok
+        ? await picksRes.json() as Array<{ id: string; ticker: string; precio_entrada: number; estado: string }>
+        : []
+      const activePicks = allPicks.filter(p => p.estado !== 'Vender')
+
+      if (!activePicks.length) {
+        addLog('✓ Sin posiciones activas para re-evaluar')
+      } else {
+        addLog(`📋 ${activePicks.length} posición(es) activa(s): ${activePicks.map(p => p.ticker).join(', ')}`)
+        const activeTickers = activePicks.map(p => p.ticker).join(',')
+        const [fRes0, mRes0] = await Promise.all([
+          fetch(`/api/agentes/forecast?tickers=${activeTickers}`, { signal }),
+          fetch(`/api/agentes/momentum?tickers=${activeTickers}`, { signal }),
+        ])
+        const fData0 = fRes0.ok
+          ? await fRes0.json() as Record<string, { lastPrice: number; pass: boolean }>
+          : {}
+        const mData0 = mRes0.ok
+          ? await mRes0.json() as Record<string, { pass: boolean }>
+          : {}
+        activePicksReview = activePicks.map(p => ({
+          id: p.id, ticker: p.ticker, precio_entrada: p.precio_entrada,
+          forecastPass:  fData0[p.ticker]?.pass  ?? true,
+          momentumPass:  mData0[p.ticker]?.pass  ?? true,
+          forecastLastPrice: fData0[p.ticker]?.lastPrice ?? p.precio_entrada,
+        }))
+        addLog(`✓ Datos preliminares de re-evaluación listos para ${activePicksReview.length} posición(es)`)
+      }
+      setStep0Phase('done')
+      if (signal.aborted) { setPhase('idle'); return }
+
+      // ── PASO 1: Lynch Small-Cap (score ≥5, market cap < $2B) ──────
       setStep1Phase('running')
-      addLog('🔍 Ejecutando screener Lynch (Small-Cap: score ≥5/6, market cap < $2B)...')
+      addLog('🔍 Ejecutando screener Lynch Small-Cap (score ≥5/6, market cap < $2B)...')
       const lynchRes = await fetch('/api/peter-lynch/screen', { signal })
       if (!lynchRes.ok) throw new Error(`Screener HTTP ${lynchRes.status}`)
       const all = await lynchRes.json() as ScreenerResult[]
       const small = all.filter(r => r.score >= 5 && r.market_cap != null && r.market_cap < 2_000_000_000)
 
       if (!small.length) {
-        addLog('⚠ Sin Small-Cap con score ≥5/6. Intenta refrescar el screener en Ratios Peter Lynch.')
+        addLog('⚠ Sin Small-Cap con score ≥5/6 y market cap <$2B. Intenta refrescar el screener en Ratios Peter Lynch.')
         setStep1Phase('done'); setPhase('done'); return
       }
-      addLog(`✓ ${small.length} Small-Cap (score ≥5, <$2B): ${small.map(r => r.ticker).join(', ')}`)
+      addLog(`✓ ${small.length} acción(es) Small-Cap (score ≥5, <$2B): ${small.map(r => r.ticker).join(', ')}`)
       const initial: TickerStage[] = small.map(r => ({
         ticker: r.ticker, name: r.name, score: r.score,
         marketCapM: r.market_cap != null ? Math.round(r.market_cap / 1_000_000) : undefined,
-        step1: 'pass', step2: 'pending', step3: 'pending', step4: 'pending',
+        step1: 'pass', step2: 'pending', step3: 'pending', step4: 'pending', step5: 'pending',
       }))
       setTickers([...initial])
       setStep1Phase('done')
+
+      // ── RE-EVALUACIÓN: señales de venta ───────────────────────────
+      if (activePicksReview.length) {
+        const smallSet = new Set(small.map(r => r.ticker))
+        for (const review of activePicksReview) {
+          if (signal.aborted) break
+          const lynchPass = smallSet.has(review.ticker)
+          const failCount = (!lynchPass ? 1 : 0) + (!review.forecastPass ? 1 : 0) + (!review.momentumPass ? 1 : 0)
+          if (failCount >= 2) {
+            const cp = review.forecastLastPrice
+            const rent = review.precio_entrada > 0
+              ? ((cp - review.precio_entrada) / review.precio_entrada * 100)
+              : 0
+            const rentStr = (rent >= 0 ? '+' : '') + rent.toFixed(1) + '%'
+            addLog(`⬇ ${review.ticker}: SEÑAL VENDER — falla ${failCount}/3 filtros | entrada $${review.precio_entrada.toFixed(2)} → salida $${cp.toFixed(2)} | rentabilidad ${rentStr}`)
+            try {
+              await fetch('/api/agentes/picks', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: review.id,
+                  estado: 'Vender',
+                  precio_venta: parseFloat(cp.toFixed(2)),
+                  rentabilidad: parseFloat(rent.toFixed(2)),
+                }),
+                signal,
+              })
+            } catch { addLog(`⚠ ${review.ticker}: error al registrar señal de venta`) }
+          } else {
+            addLog(`✓ ${review.ticker}: posición OK — falla ${failCount}/3 filtros (umbral: 2)`)
+          }
+        }
+      }
       if (signal.aborted) { setPhase('idle'); return }
 
-      // ── PASO 2: Tendencia YF (SMA-20) ─────────────────────────────
+      // ── PASO 2: TimesFM Forecast 30d ──────────────────────────────
       setStep2Phase('running')
-      addLog(`📈 Verificando tendencia (SMA-20) para ${small.length} ticker(s)...`)
-      const trendRes = await fetch(
-        `/api/agentes/trend?tickers=${small.map(r => r.ticker).join(',')}`, { signal }
+      addLog(`📊 TimesFM: proyectando precio 30 días para ${small.length} ticker(s)...`)
+      const forecastRes = await fetch(
+        `/api/agentes/forecast?tickers=${small.map(r => r.ticker).join(',')}`, { signal }
       )
-      const trendData = trendRes.ok
-        ? await trendRes.json() as Record<string, { direction: string; lastPrice: number; sma20: number }>
+      const forecastData = forecastRes.ok
+        ? await forecastRes.json() as Record<string, { lastPrice: number; forecastPrice: number; forecastReturn: number; pass: boolean }>
         : {}
 
       const paso2: TickerStage[] = initial.map(t => {
-        const td = trendData[t.ticker]
-        if (!td) {
-          addLog(`⚠ ${t.ticker}: sin datos de tendencia`)
+        const fd = forecastData[t.ticker]
+        if (!fd) {
+          addLog(`⚠ ${t.ticker}: sin datos de forecast`)
           return { ...t, step2: 'fail' }
         }
-        const pass = td.direction !== 'BAJISTA'
-        addLog(`${pass ? '✓' : '✗'} ${t.ticker}: SMA-20 ${td.direction} ($${td.lastPrice.toFixed(2)} vs SMA20 $${td.sma20.toFixed(2)})${!pass ? ' → descartado (bajista)' : ''}`)
-        return { ...t, step2: pass ? 'pass' : 'fail', lastPrice: td.lastPrice, sma20: td.sma20, direction: td.direction }
+        const sign = fd.forecastReturn >= 0 ? '+' : ''
+        addLog(`${fd.pass ? '✓' : '✗'} ${t.ticker}: forecast 30d ${sign}${fd.forecastReturn.toFixed(1)}% → $${fd.forecastPrice.toFixed(2)}${!fd.pass ? ' → descartado (<2% upside)' : ''}`)
+        return { ...t, step2: fd.pass ? 'pass' : 'fail', lastPrice: fd.lastPrice, forecastPrice: fd.forecastPrice, forecastReturn: fd.forecastReturn }
       })
       setTickers([...paso2])
       setStep2Phase('done')
@@ -151,23 +299,55 @@ export default function AgenteSmall() {
 
       const paso2Pass = paso2.filter(t => t.step2 === 'pass')
       if (!paso2Pass.length) {
-        addLog('⚠ Ningún Small-Cap con tendencia alcista confirmada.')
-        setStep3Phase('done'); setStep4Phase('done')
+        addLog('⚠ Ningún ticker con upside proyectado ≥2% a 30 días.')
+        setStep3Phase('done'); setStep4Phase('done'); setStep5Phase('done')
         setPhase('done'); setSummary({ created: 0, total: small.length }); return
       }
 
-      // ── PASO 3: Análisis IA (OpenRouter) ──────────────────────────
+      // ── PASO 3: Momentum Daily Scanner ────────────────────────────
       setStep3Phase('running')
-      addLog(`🤖 Analizando ${paso2Pass.length} Small-Cap(s) con IA...`)
-      const paso3: TickerStage[] = [...paso2]
-      const analyzed: (TickerStage & { aiResult: Record<string, unknown> })[] = []
+      addLog(`⚡ Momentum Scanner: RSI/MACD/Volumen para ${paso2Pass.length} ticker(s)...`)
+      const momRes = await fetch(
+        `/api/agentes/momentum?tickers=${paso2Pass.map(t => t.ticker).join(',')}`, { signal }
+      )
+      const momData = momRes.ok
+        ? await momRes.json() as Record<string, { rsi: number; macd: number; signal: number; volumeTrend: number; score: number; pass: boolean }>
+        : {}
 
-      for (const t of paso2Pass) {
+      const paso3: TickerStage[] = paso2.map(t => {
+        if (t.step2 !== 'pass') return t
+        const md = momData[t.ticker]
+        if (!md) {
+          addLog(`⚠ ${t.ticker}: sin datos de momentum`)
+          return { ...t, step3: 'fail' }
+        }
+        const macdDir = md.macd > md.signal ? '↑' : '↓'
+        addLog(`${md.pass ? '✓' : '✗'} ${t.ticker}: score ${md.score}/3 · RSI ${md.rsi.toFixed(0)} · MACD ${macdDir} · Vol×${md.volumeTrend.toFixed(2)}${!md.pass ? ' → descartado' : ''}`)
+        return { ...t, step3: md.pass ? 'pass' : 'fail', rsi: md.rsi, macd: md.macd, macdSignal: md.signal, momentumScore: md.score }
+      })
+      setTickers([...paso3])
+      setStep3Phase('done')
+      if (signal.aborted) { setPhase('idle'); return }
+
+      const paso3Pass = paso3.filter(t => t.step3 === 'pass')
+      if (!paso3Pass.length) {
+        addLog('⚠ Ningún ticker superó el filtro de momentum (score ≥2/3).')
+        setStep4Phase('done'); setStep5Phase('done')
+        setPhase('done'); setSummary({ created: 0, total: small.length }); return
+      }
+
+      // ── PASO 4: AI Confirmation (TradingAgents) ───────────────────
+      setStep4Phase('running')
+      addLog(`🤖 TradingAgents: analizando ${paso3Pass.length} ticker(s) Small-Cap con 3 agentes IA...`)
+      const paso4: TickerStage[] = [...paso3]
+      const analyzed: TickerStage[] = []
+
+      for (const t of paso3Pass) {
         if (signal.aborted) break
-        addLog(`⟳ Analizando ${t.ticker} con IA...`)
-        const idx = paso3.findIndex(x => x.ticker === t.ticker)
-        if (idx !== -1) paso3[idx] = { ...paso3[idx], step3: 'running' }
-        setTickers([...paso3])
+        addLog(`⟳ ${t.ticker}: debate técnico + fundamental + síntesis...`)
+        const idx = paso4.findIndex(x => x.ticker === t.ticker)
+        if (idx !== -1) paso4[idx] = { ...paso4[idx], step4: 'running' }
+        setTickers([...paso4])
 
         try {
           const aRes = await fetch('/api/agentes/analyze', {
@@ -175,39 +355,55 @@ export default function AgenteSmall() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ticker: t.ticker,
-              lastPrice: t.lastPrice,
-              category: 'SMALL_CAPS',
+              lastPrice: t.lastPrice ?? t.forecastPrice ?? 0,
+              category: 'SMALL_CAP',
               score: t.score,
-              marketCapM: t.marketCapM,
-              sma20: t.sma20,
+              forecastReturn: t.forecastReturn,
+              momentumScore: t.momentumScore,
+              rsi: t.rsi,
+              macd: t.macd,
+              macdSignal: t.macdSignal,
             }),
             signal,
           })
           if (!aRes.ok) throw new Error(`IA HTTP ${aRes.status}`)
           const result = await aRes.json() as Record<string, unknown>
-          addLog(`✓ ${t.ticker}: ${result.empresa ?? t.ticker} — ${result.riesgo ?? '?'} riesgo, obj: $${(result.precio_objetivo as number)?.toFixed(2) ?? '?'}`)
-          if (idx !== -1) paso3[idx] = { ...paso3[idx], step3: 'pass', empresa: result.empresa as string }
-          analyzed.push({ ...t, empresa: result.empresa as string, aiResult: result })
+          const conviction = (result.conviction as number) ?? 5
+          const pass = conviction >= 7
+
+          addLog(`${pass ? '✓' : '✗'} ${t.ticker}: conviction ${conviction}/10 · ${result.consensus ?? 'N/D'} · riesgo ${result.riesgo ?? '?'}${!pass ? ' → conviction insuficiente (<7)' : ''}`)
+
+          if (idx !== -1) paso4[idx] = {
+            ...paso4[idx],
+            step4: pass ? 'pass' : 'fail',
+            empresa: result.empresa as string,
+            conviction,
+            consensus: result.consensus as string,
+            aiResult: result,
+          }
+          if (pass) analyzed.push({ ...paso4[idx] })
         } catch (e) {
           if (signal.aborted) break
           addLog(`⚠ ${t.ticker}: error IA — ${(e as Error).message}`)
-          if (idx !== -1) paso3[idx] = { ...paso3[idx], step3: 'fail' }
+          if (idx !== -1) paso4[idx] = { ...paso4[idx], step4: 'fail' }
         }
-        setTickers([...paso3])
-        await sleep(500)
+        setTickers([...paso4])
+        await sleep(600)
       }
-      setStep3Phase('done')
+      setStep4Phase('done')
       if (signal.aborted) { setPhase('idle'); return }
 
-      // ── PASO 4: Guardar recomendaciones ───────────────────────────
-      setStep4Phase('running')
-      addLog(`📝 Guardando ${analyzed.length} recomendación(es) en RECOMENDACIONES AGENTE SMALL...`)
-      const paso4: TickerStage[] = [...paso3]
+      // ── PASO 5: Guardar picks ─────────────────────────────────────
+      setStep5Phase('running')
+      addLog(`📝 Guardando ${analyzed.length} recomendación(es) validadas...`)
+      const paso5: TickerStage[] = [...paso4]
       let created = 0
 
       for (const t of analyzed) {
         if (signal.aborted) break
-        const ai = t.aiResult
+        const ai = t.aiResult ?? {}
+        const entryPrice = t.lastPrice ?? t.forecastPrice ?? 0
+
         try {
           const sRes = await fetch('/api/agentes/picks', {
             method: 'POST',
@@ -216,7 +412,7 @@ export default function AgenteSmall() {
               ticker: t.ticker,
               empresa: ai.empresa ?? t.name,
               category: 'SMALL_CAPS',
-              precio_entrada: t.lastPrice,
+              precio_entrada: parseFloat(entryPrice.toFixed(2)),
               precio_objetivo: ai.precio_objetivo,
               stop_loss: ai.stop_loss,
               direction: ai.direction ?? 'COMPRA',
@@ -225,27 +421,32 @@ export default function AgenteSmall() {
               resumen: ai.resumen,
               score: t.score,
               market_cap_m: t.marketCapM,
-              ai_report: ai,
+              ai_report: { ...ai, conviction: t.conviction, consensus: t.consensus, forecastReturn: t.forecastReturn, momentumScore: t.momentumScore },
             }),
             signal,
           })
           if (!sRes.ok) throw new Error(`Picks HTTP ${sRes.status}`)
-          addLog(`✓ ${t.ticker}: guardado en RECOMENDACIONES`)
-          const idx = paso4.findIndex(x => x.ticker === t.ticker)
-          if (idx !== -1) paso4[idx] = { ...paso4[idx], step4: 'done' }
-          created++
+          const sData = await sRes.json() as { skipped?: boolean }
+          if (sData.skipped) {
+            addLog(`↩ ${t.ticker}: ya tiene posición activa — omitido`)
+          } else {
+            addLog(`✓ ${t.ticker}: guardado — ${t.empresa ?? t.ticker} (conviction ${t.conviction}/10)`)
+            const idx = paso5.findIndex(x => x.ticker === t.ticker)
+            if (idx !== -1) paso5[idx] = { ...paso5[idx], step5: 'done' }
+            created++
+          }
         } catch (e) {
           if (signal.aborted) break
           addLog(`⚠ ${t.ticker}: error guardando — ${(e as Error).message}`)
-          const idx = paso4.findIndex(x => x.ticker === t.ticker)
-          if (idx !== -1) paso4[idx] = { ...paso4[idx], step4: 'fail' }
+          const idx = paso5.findIndex(x => x.ticker === t.ticker)
+          if (idx !== -1) paso5[idx] = { ...paso5[idx], step5: 'fail' }
         }
-        setTickers([...paso4])
+        setTickers([...paso5])
       }
 
-      setStep4Phase('done')
+      setStep5Phase('done')
       setSummary({ created, total: small.length })
-      addLog(`✅ AGENTE SMALL finalizado. ${created} recomendación(es) guardada(s) de ${small.length} candidato(s).`)
+      addLog(`✅ AGENTE SMALL finalizado. ${created} recomendación(es) de ${small.length} candidatos iniciales.`)
       setPhase('done')
     } catch (e) {
       if ((e as Error).name === 'AbortError') { setPhase('idle'); return }
@@ -255,27 +456,58 @@ export default function AgenteSmall() {
   }
 
   const steps = [
-    { label: 'SMALL-CAP LYNCH ≥5/6', desc: 'Screener: score ≥5, market cap < $2B', phase: step1Phase },
-    { label: 'FILTRO TENDENCIA (SMA-20)', desc: 'Excluir tickers con tendencia claramente bajista', phase: step2Phase },
-    { label: 'CONFIRMACIÓN IA', desc: 'Análisis fundamental por OpenRouter', phase: step3Phase },
-    { label: 'GENERAR RECOMENDACIONES', desc: 'Guardar picks en sección RECOMENDACIONES', phase: step4Phase },
+    { label: 'RE-EVALUACIÓN', desc: 'Auto-sell si ≥2/3 filtros fallan', phase: step0Phase, icon: RefreshCw },
+    { label: 'SMALL-CAP LYNCH', desc: 'Score ≥5/6 · Market Cap < $2B', phase: step1Phase, icon: BookOpen },
+    { label: 'TIMESFM FORECAST', desc: 'Proyección 30 días ≥2%', phase: step2Phase, icon: TrendingUp },
+    { label: 'MOMENTUM SCANNER', desc: 'RSI · MACD · Volumen ≥2/3', phase: step3Phase, icon: BarChart2 },
+    { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7', phase: step4Phase, icon: Brain },
+    { label: 'PICKS & INFORME', desc: 'Sin duplicados, solo aprobados', phase: step5Phase, icon: CheckCircle2 },
+  ]
+
+  const funnelStages = [
+    { label: 'Lynch',    count: tickers.length,                                  color: '#fbbf24' },
+    { label: 'Forecast', count: tickers.filter(t => t.step2 === 'pass').length,  color: '#a78bfa' },
+    { label: 'Momentum', count: tickers.filter(t => t.step3 === 'pass').length,  color: '#38bdf8' },
+    { label: 'IA',       count: tickers.filter(t => t.step4 === 'pass').length,  color: '#fb923c' },
+    { label: 'Picks',    count: tickers.filter(t => t.step5 === 'done').length,  color: '#4ade80' },
   ]
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {steps.map((s, i) => (
-          <div key={i} className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold font-mono text-[#64748b]">PASO {i + 1}</span>
-              <StepBadge phase={s.phase} />
+      {/* Step cards */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {steps.map((s, i) => {
+          const Icon = s.icon
+          return (
+            <div key={i} className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-3 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-0.5 h-full" style={{
+                background: s.phase === 'done' ? '#4ade80' : s.phase === 'running' ? '#fbbf24' : s.phase === 'error' ? '#f87171' : '#1e1e2e'
+              }} />
+              <div className="mb-2 flex items-center justify-between gap-1 pl-2">
+                <span className="text-[9px] font-bold font-mono text-[#475569]">{String(i + 1).padStart(2, '0')}</span>
+                <StepBadge phase={s.phase} />
+              </div>
+              <div className="pl-2 flex items-start gap-1.5">
+                <Icon size={12} style={{ color: s.phase === 'done' ? '#4ade80' : s.phase === 'running' ? '#fbbf24' : '#475569' }} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10px] font-bold font-mono text-[#e2e8f0] leading-tight">{s.label}</p>
+                  <p className="mt-0.5 text-[9px] text-[#475569] leading-tight">{s.desc}</p>
+                </div>
+              </div>
             </div>
-            <p className="text-xs font-semibold text-[#e2e8f0]">{s.label}</p>
-            <p className="mt-0.5 text-[10px] text-[#475569]">{s.desc}</p>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
+      {/* Funnel visualization */}
+      {tickers.length > 0 && (
+        <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-4">
+          <p className="text-[9px] font-mono text-[#475569] mb-3">EMBUDO DE SELECCIÓN</p>
+          <FunnelBar stages={funnelStages} />
+        </div>
+      )}
+
+      {/* Controls */}
       <div className="flex flex-wrap items-center gap-2">
         {phase === 'idle' || phase === 'done' || phase === 'error' ? (
           <button
@@ -313,35 +545,75 @@ export default function AgenteSmall() {
         )}
       </div>
 
-      {summary && (
-        <div
-          className="rounded-xl border p-4 text-sm font-medium"
-          style={
-            summary.created > 0
-              ? { background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)', color: '#4ade80' }
-              : { background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }
-          }
-        >
-          {summary.created > 0
-            ? `✅ ${summary.created} recomendación(es) guardada(s) — ve a RECOMENDACIONES → AGENTE SMALL para verlas`
-            : `⚠ Ninguna recomendación generada de ${summary.total} candidato(s) evaluado(s)`}
+      {/* Summary */}
+      {summary && summary.created > 0 && (() => {
+        const approved = tickers.filter(t => t.step5 === 'done')
+        return (
+          <div className="rounded-xl border p-4 space-y-3" style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.25)' }}>
+            <p className="text-xs font-bold font-mono" style={{ color: '#4ade80' }}>
+              ✅ {summary.created} acción(es) Small-Cap aprobaron los 4 filtros
+            </p>
+            <div className="space-y-1.5">
+              {approved.map(t => {
+                const conv = t.conviction ?? 0
+                const convColor = conv >= 8 ? '#4ade80' : conv >= 7 ? '#fbbf24' : '#f87171'
+                const fret = t.forecastReturn ?? 0
+                return (
+                  <div key={t.ticker} className="flex items-center gap-3 py-1.5 px-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <span className="font-mono font-bold text-sm w-14 shrink-0" style={{ color: '#00ff88' }}>{t.ticker}</span>
+                    {t.marketCapM != null && (
+                      <span className="text-[9px] font-mono shrink-0" style={{ color: '#38bdf8' }}>${(t.marketCapM / 1000).toFixed(1)}B</span>
+                    )}
+                    <span className="text-xs text-[#94a3b8] truncate flex-1">{t.empresa ?? t.name ?? t.ticker}</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ color: convColor, border: `1px solid ${convColor}40`, background: `${convColor}10` }}>
+                      {conv}/10
+                    </span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ color: fret >= 0 ? '#4ade80' : '#f87171', border: `1px solid ${fret >= 0 ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`, background: fret >= 0 ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)' }}>
+                      {fret >= 0 ? '+' : ''}{fret.toFixed(1)}%
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <Link
+              href="/informes"
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
+              style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}
+            >
+              <ArrowRight size={13} />
+              Ver en RECOMENDACIONES
+            </Link>
+          </div>
+        )
+      })()}
+      {summary && summary.created === 0 && (
+        <div className="rounded-xl border p-4 text-sm font-medium" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
+          ⚠ Ninguna recomendación aprobó los 4 filtros de {summary.total} candidatos Small-Cap
         </div>
       )}
 
+      {/* Ticker cards grid */}
       {tickers.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {tickers.map(t => <TickerBadge key={t.ticker} t={t} />)}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {tickers.map(t => <TickerCard key={t.ticker} t={t} />)}
         </div>
       )}
 
+      {/* Log console */}
       {log.length > 0 && (
         <div
           ref={logRef}
           className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-4 font-mono text-[11px] overflow-y-auto"
-          style={{ maxHeight: '280px' }}
+          style={{ maxHeight: '300px' }}
         >
           {log.map((line, i) => (
-            <div key={i} className="py-0.5 leading-relaxed" style={{ color: line.startsWith('✓') ? '#4ade80' : line.startsWith('✗') || line.startsWith('⛔') ? '#f87171' : line.startsWith('⚠') ? '#fbbf24' : '#64748b' }}>
+            <div key={i} className="py-0.5 leading-relaxed" style={{
+              color: line.startsWith('✓') ? '#4ade80'
+                : line.startsWith('✗') || line.startsWith('⛔') ? '#f87171'
+                : line.startsWith('⚠') ? '#fbbf24'
+                : line.startsWith('⟳') ? '#a78bfa'
+                : '#64748b'
+            }}>
               {line}
             </div>
           ))}
