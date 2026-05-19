@@ -6,8 +6,6 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   TrendingUp,
-  BarChart2,
-  Bot,
   Shield,
   FileText,
   UserCircle,
@@ -16,21 +14,15 @@ import {
   X,
   Settings2,
   Terminal,
-  BookOpen,
-  Waves,
   Cpu,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: 'Dashboard',            href: '/dashboard' },
-  { icon: TrendingUp,      label: 'Inversión Causal',     href: '/inversion-causal' },
-  { icon: BookOpen,        label: 'Ratios Peter Lynch',   href: '/peter-lynch' },
-  { icon: Waves,           label: 'Flujo del Capital',    href: '/flujo-capital' },
-  { icon: BarChart2,       label: 'Portafolios Híbridos', href: '/portafolios' },
-  { icon: Bot,             label: 'Agente PPO',           href: '/agente-ppo' },
-  { icon: Shield,          label: 'Coberturas',           href: '/coberturas' },
-  { icon: FileText,        label: 'Recomendaciones',      href: '/informes' },
-  { icon: Cpu,             label: 'Agentes',              href: '/agentes' },
+  { icon: LayoutDashboard, label: 'Dashboard',        href: '/dashboard' },
+  { icon: TrendingUp,      label: 'ERGOS QUANT',      href: '/ergos-quant' },
+  { icon: Shield,          label: 'Coberturas',        href: '/coberturas' },
+  { icon: FileText,        label: 'Recomendaciones',   href: '/informes' },
+  { icon: Cpu,             label: 'Agentes',           href: '/agentes' },
 ] as const
 
 const STORAGE_KEY = 'sidebar-collapsed'
