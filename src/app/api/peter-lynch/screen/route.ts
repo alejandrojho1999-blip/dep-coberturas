@@ -6,7 +6,8 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const { searchParams } = new URL(request.url)
     const forceRefresh = searchParams.get('refresh') === '1'
-    const data = await runScreener(forceRefresh)
+    const universe = searchParams.get('universe') === 'small_cap' ? 'small_cap' as const : 'large_cap' as const
+    const data = await runScreener(forceRefresh, universe)
     return Response.json(data)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error interno'

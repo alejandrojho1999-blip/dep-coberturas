@@ -221,16 +221,16 @@ export default function AgenteSmall() {
       // ── PASO 1: Lynch Small-Cap (score ≥5, market cap < $2B) ──────
       setStep1Phase('running')
       addLog('🔍 Ejecutando screener Lynch Small-Cap (score ≥5/6, market cap < $2B)...')
-      const lynchRes = await fetch('/api/peter-lynch/screen', { signal })
+      const lynchRes = await fetch('/api/peter-lynch/screen?universe=small_cap', { signal })
       if (!lynchRes.ok) throw new Error(`Screener HTTP ${lynchRes.status}`)
       const all = await lynchRes.json() as ScreenerResult[]
-      const small = all.filter(r => r.score >= 5 && r.market_cap != null && r.market_cap < 2_000_000_000)
+      const small = all.filter(r => r.score >= 4)
 
       if (!small.length) {
-        addLog('⚠ Sin Small-Cap con score ≥5/6 y market cap <$2B. Intenta refrescar el screener en Ratios Peter Lynch.')
+        addLog('⚠ Sin Small-Cap con score ≥4/6 (criterios adaptados S&P 600 / Russell 2000). Intenta refrescar el screener en Ratios Peter Lynch.')
         setStep1Phase('done'); setPhase('done'); return
       }
-      addLog(`✓ ${small.length} acción(es) Small-Cap (score ≥5, <$2B): ${small.map(r => r.ticker).join(', ')}`)
+      addLog(`✓ ${small.length} acción(es) Small-Cap (score ≥4/6, criterios Lynch adaptados): ${small.map(r => r.ticker).join(', ')}`)
       const initial: TickerStage[] = small.map(r => ({
         ticker: r.ticker, name: r.name, score: r.score,
         marketCapM: r.market_cap != null ? Math.round(r.market_cap / 1_000_000) : undefined,

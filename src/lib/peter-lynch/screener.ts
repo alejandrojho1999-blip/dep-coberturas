@@ -22,7 +22,7 @@ export interface ScreenerResult {
   score: number
 }
 
-// S&P 500 + NASDAQ 100 — universo completo (~560 tickers únicos)
+// S&P 500 + NASDAQ 100 — universo large-cap (~560 tickers únicos)
 const SP500_NASDAQ100_TICKERS = [
   // Mega-cap tech / NASDAQ 100 core
   'AAPL','MSFT','NVDA','GOOGL','GOOG','AMZN','META','TSLA','AVGO','ORCL',
@@ -87,10 +87,89 @@ const SP500_NASDAQ100_TICKERS = [
   'DDOG','ZS','SNOW','SE','MELI',
 ]
 
+// S&P 600 + Russell 2000 — universo small/mid-cap (~310 tickers)
+const SMALL_CAP_TICKERS = [
+  // ── S&P 600 · Technology ─────────────────────────────────────────
+  'QLYS','TNET','BL','SPSC','CEVA','DIOD','POWI','SMTC','SLAB','OSIS',
+  'VIAV','HLIT','CRUS','CALX','CCOI','NSIT','ICFI','EXPO','KFRC','MMS',
+  'PRFT','FORR','CSGS','NCNO','NOVT','RBBN','JAMF','ALKT','CLFD','COHU',
+  'ACMR','MTSI','FORM','LSPD','TASK','MCBC','CSWI',
+  // ── S&P 600 · Industrials ────────────────────────────────────────
+  'POWL','MTRN','KTOS','AVAV','TREX','ESNT','ROCK','ITRI','GMS','CVCO',
+  'AIN','HXL','BCPC','WMS','STRL','IBP','HURN','AIMC','ACCO','ARCB',
+  'NARI','PGNY','MGRC','MRCY','UFPT','SAIA','PRMW','HLIO','CECO','NNBR',
+  'LYTS','NRC','SPXC','TISI','BMI','VRRM','REVG','SMRT','ARIS',
+  // ── S&P 600 · Healthcare ─────────────────────────────────────────
+  'ACAD','INVA','HALO','SEM','ASGN','AMSF','LMAT','MLAB','MMSI','OMCL',
+  'PRCT','CUTR','CERT','EVBG','INSP','IRTC','PCRX','TGTX','XRAY','PDCO',
+  'PACB','ICAD','LNTH','MGLN','NEOG','NKTR','PNTG','PRVA','SDGR','TMDX',
+  'AXNX','NVCR','NVST','MDGL','MNMD','SGMO',
+  // ── S&P 600 · Financials ─────────────────────────────────────────
+  'CATY','CVBF','EFSC','FCF','FFBC','FULT','HBT','HTLF','IBOC','INDB',
+  'LKFN','RNST','SFBS','STBA','WAFD','WSBC','WSFS','SEIC','PRAA','BSVN',
+  'CBAN','CCBG','CHCO','FBMS','FFIN','FMBH','GBCI','HWC','HTBK','INBK',
+  'NBTB','NWBI','PFBC','PEBO','SRCE','TCBK','TOWN','TRMK','UMBF',
+  // ── S&P 600 · Consumer Discretionary ────────────────────────────
+  'BOOT','CAKE','CHUY','DIN','JACK','MNRO','MUSA','THO','WGO','PLCE',
+  'SBH','HIBB','GSHD','UFPI','KRUS','FNKO','VSCO','WRLD','CONN','LCUT',
+  'HAYW','EVGO','SFIX','LGND','FRPT','CLAR',
+  // ── S&P 600 · Energy ─────────────────────────────────────────────
+  'MGY','MTDR','REX','SM','TALO','VAALCO','SBOW','STNG','CIVI','NOG',
+  'OII','RES','WHD','DINO','NGL','BATL','SND',
+  // ── S&P 600 · Materials ──────────────────────────────────────────
+  'BCPC','HWKN','IOSP','KOP','NGVT','PRLB','TROX','MTUS','ASIX',
+  'RYAM','SLCA','SXT','TREC','WOR','SUL',
+  // ── S&P 600 · Consumer Staples ───────────────────────────────────
+  'JJSF','MGPI','POST','SMPL','TWNK','UNFI','CHEF','OLLI','LANC','BGS',
+  'NATR','VITL','NRDS','MAMA',
+  // ── S&P 600 · Utilities ──────────────────────────────────────────
+  'MGEE','ARTNA','MSEX','SJW','YORW','AWR','CWCO',
+  // ── Russell 2000 · Technology ────────────────────────────────────
+  'CRSR','DFIN','EVTC','EXTR','FLGT','HIMX','INMD','MODN','NOVA',
+  'OPFI','OSUR','HCKT','CCSI','CNXN','IMXI','LQDT','DOMO',
+  // ── Russell 2000 · Industrials ───────────────────────────────────
+  'APOG','ASTE','CMCO','CNMD','CVLG','EPAC','ESE','GLDD','GEF',
+  'HEES','IES','JELD','JOUT','KMT','LBRT','LCII','MATX','MRTN',
+  'ORN','OTTR','HTLD','HAYN','DLTH',
+  // ── Russell 2000 · Healthcare ────────────────────────────────────
+  'CORT','DVAX','EYE','HRMY','IART','MNKD','HCAT','HROW','KRYS',
+  'MRUS','NKTR','RXRX','TMDX',
+  // ── Russell 2000 · Financials ────────────────────────────────────
+  'CASS','CCRN','EIG','EZPW','GHLD','GLP','GPRE','GSBC','HASI',
+  'HOPE','HRTG','JRVR','KFY','MLKN','ESSA','NRIM','FSBC','FBIZ',
+  // ── Russell 2000 · Consumer ──────────────────────────────────────
+  'CENT','FIZZ','FELE','GDEN','JBSS','LOVE','HOFT','LNDC',
+  // ── Russell 2000 · Energy / Materials ────────────────────────────
+  'CENX','GPRE','LBRT',
+]
+
+interface ScreenerOptions {
+  peTrailing: number
+  peForward: number
+  debtRatio: number
+  epsGrowth: number
+  pegMax: number
+  marketCapMin: number
+  marketCapMax: number
+}
+
+const LARGE_CAP_OPTIONS: ScreenerOptions = {
+  peTrailing: 25, peForward: 15, debtRatio: 0.35,
+  epsGrowth: 0.15, pegMax: 2,
+  marketCapMin: 5_000_000_000, marketCapMax: Infinity,
+}
+
+const SMALL_CAP_OPTIONS: ScreenerOptions = {
+  peTrailing: 20, peForward: 18, debtRatio: 0.5,
+  epsGrowth: 0.15, pegMax: 1.5,
+  marketCapMin: 100_000_000, marketCapMax: 2_000_000_000,
+}
+
 let cache: { data: ScreenerResult[]; ts: number } | null = null
+let cacheSmall: { data: ScreenerResult[]; ts: number } | null = null
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000  // 6 horas
 
-async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
+async function fetchBatch(tickers: string[], opts: ScreenerOptions): Promise<ScreenerResult[]> {
   const yf = new YahooFinance()
   const results = await Promise.allSettled(
     tickers.map(async (ticker) => {
@@ -111,7 +190,6 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
         ?? (ks?.forwardPE  as number | null | undefined) ?? null
       const pegRatio   = (ks?.pegRatio   as number | null | undefined) ?? null
 
-      // EPS growth: YoY anual de net income (igual que Liberty) — más estable que quarterly
       let earningsGrowth: number | null = null
       if (incStmts && incStmts.length >= 2) {
         const latestNi = incStmts[0]?.netIncome ?? null
@@ -125,23 +203,21 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
       const marketCap = (pr?.marketCap as number | null | undefined) ?? null
       const totalDebt = (fd?.totalDebt as number | null | undefined) ?? null
       const totalCash = (fd?.totalCash as number | null | undefined) ?? null
-      // D/E = netDebt / marketCap (igual que Liberty): consistente entre empresas,
-      // evita distorsión del equity contable negativo (buybacks, bancos)
       const netDebt = totalDebt != null ? totalDebt - (totalCash ?? 0) : null
       const debtToEquity = netDebt != null && marketCap != null && marketCap > 0
         ? Math.max(0, netDebt) / marketCap
         : null
       const currentPrice = (pr?.regularMarketPrice as number | null | undefined) ?? null
       const name         = (pr?.longName   as string | undefined) ?? (pr?.shortName as string | undefined) ?? ticker
-      const sector     = (sp?.sector     as string | undefined) ?? '—'
+      const sector       = (sp?.sector     as string | undefined) ?? '—'
 
       const criteria = {
-        pe_historico:    trailingPE   != null && trailingPE   > 0 && trailingPE   < 25,
-        pe_proyectado:   forwardPE    != null && forwardPE    > 0 && forwardPE    < 15,
-        deuda_capital:   debtToEquity != null && debtToEquity >= 0 && debtToEquity < 0.35,
-        crecimiento_eps: earningsGrowth != null && earningsGrowth > 0.15,
-        peg:             pegRatio     != null && pegRatio     > 0 && pegRatio     < 2,
-        market_cap:      marketCap    != null && marketCap    > 5_000_000_000,
+        pe_historico:    trailingPE    != null && trailingPE    > 0 && trailingPE    < opts.peTrailing,
+        pe_proyectado:   forwardPE     != null && forwardPE     > 0 && forwardPE     < opts.peForward,
+        deuda_capital:   debtToEquity  != null && debtToEquity  >= 0 && debtToEquity < opts.debtRatio,
+        crecimiento_eps: earningsGrowth != null && earningsGrowth > opts.epsGrowth,
+        peg:             pegRatio      != null && pegRatio      > 0 && pegRatio      < opts.pegMax,
+        market_cap:      marketCap     != null && marketCap     >= opts.marketCapMin && marketCap <= opts.marketCapMax,
       }
 
       const score = Object.values(criteria).filter(Boolean).length
@@ -168,16 +244,22 @@ async function fetchBatch(tickers: string[]): Promise<ScreenerResult[]> {
     .map((r) => r.value)
 }
 
-export async function runScreener(forceRefresh = false): Promise<ScreenerResult[]> {
-  if (!forceRefresh && cache && Date.now() - cache.ts < CACHE_TTL_MS) return cache.data
+export async function runScreener(
+  forceRefresh = false,
+  universe: 'large_cap' | 'small_cap' = 'large_cap'
+): Promise<ScreenerResult[]> {
+  const activeCache = universe === 'small_cap' ? cacheSmall : cache
+  const opts        = universe === 'small_cap' ? SMALL_CAP_OPTIONS : LARGE_CAP_OPTIONS
+  const tickerList  = [...new Set(universe === 'small_cap' ? SMALL_CAP_TICKERS : SP500_NASDAQ100_TICKERS)]
 
-  const uniqueTickers = [...new Set(SP500_NASDAQ100_TICKERS)]
+  if (!forceRefresh && activeCache && Date.now() - activeCache.ts < CACHE_TTL_MS) return activeCache.data
+
   const BATCH_SIZE = 25
   const all: ScreenerResult[] = []
 
-  for (let i = 0; i < uniqueTickers.length; i += BATCH_SIZE) {
-    const batch = uniqueTickers.slice(i, i + BATCH_SIZE)
-    const batchResults = await fetchBatch(batch)
+  for (let i = 0; i < tickerList.length; i += BATCH_SIZE) {
+    const batch = tickerList.slice(i, i + BATCH_SIZE)
+    const batchResults = await fetchBatch(batch, opts)
     all.push(...batchResults)
   }
 
@@ -186,6 +268,8 @@ export async function runScreener(forceRefresh = false): Promise<ScreenerResult[
     return (b.market_cap ?? 0) - (a.market_cap ?? 0)
   })
 
-  cache = { data: sorted, ts: Date.now() }
+  if (universe === 'small_cap') cacheSmall = { data: sorted, ts: Date.now() }
+  else cache = { data: sorted, ts: Date.now() }
+
   return sorted
 }
