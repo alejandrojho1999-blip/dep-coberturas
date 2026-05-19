@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useRef, useState } from 'react'
-import { Loader2, Play, Square, RotateCcw, TrendingUp, BarChart2, Brain, BookOpen, CheckCircle2 } from 'lucide-react'
+import { Loader2, Play, Square, RotateCcw, TrendingUp, BarChart2, Brain, BookOpen, CheckCircle2, ArrowRight } from 'lucide-react'
 import type { ScreenerResult } from '@/lib/peter-lynch/screener'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
@@ -458,18 +459,46 @@ export default function AgentePeter() {
       </div>
 
       {/* Summary */}
-      {summary && (
-        <div
-          className="rounded-xl border p-4 text-sm font-medium"
-          style={
-            summary.created > 0
-              ? { background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)', color: '#4ade80' }
-              : { background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }
-          }
-        >
-          {summary.created > 0
-            ? `✅ ${summary.created} recomendación(es) — ve a RECOMENDACIONES → AGENTE PETER`
-            : `⚠ Ninguna recomendación aprobó los 4 filtros de ${summary.total} candidatos`}
+      {summary && summary.created > 0 && (() => {
+        const approved = tickers.filter(t => t.step5 === 'done')
+        return (
+          <div className="rounded-xl border p-4 space-y-3" style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.25)' }}>
+            <p className="text-xs font-bold font-mono" style={{ color: '#4ade80' }}>
+              ✅ {summary.created} acción(es) aprobaron los 4 filtros
+            </p>
+            <div className="space-y-1.5">
+              {approved.map(t => {
+                const conv = t.conviction ?? 0
+                const convColor = conv >= 8 ? '#4ade80' : conv >= 7 ? '#fbbf24' : '#f87171'
+                const fret = t.forecastReturn ?? 0
+                return (
+                  <div key={t.ticker} className="flex items-center gap-3 py-1.5 px-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <span className="font-mono font-bold text-sm w-14 shrink-0" style={{ color: '#00ff88' }}>{t.ticker}</span>
+                    <span className="text-xs text-[#94a3b8] truncate flex-1">{t.empresa ?? t.name ?? t.ticker}</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ color: convColor, border: `1px solid ${convColor}40`, background: `${convColor}10` }}>
+                      {conv}/10
+                    </span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ color: fret >= 0 ? '#4ade80' : '#f87171', border: `1px solid ${fret >= 0 ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`, background: fret >= 0 ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)' }}>
+                      {fret >= 0 ? '+' : ''}{fret.toFixed(1)}%
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <Link
+              href="/informes"
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
+              style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}
+            >
+              <ArrowRight size={13} />
+              Ver en RECOMENDACIONES
+            </Link>
+          </div>
+        )
+      })()}
+      {summary && summary.created === 0 && (
+        <div className="rounded-xl border p-4 text-sm font-medium" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
+          ⚠ Ninguna recomendación aprobó los 4 filtros de {summary.total} candidatos
         </div>
       )}
 
