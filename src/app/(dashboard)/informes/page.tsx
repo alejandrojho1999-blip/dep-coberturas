@@ -39,6 +39,7 @@ interface AgentRec {
   market_cap_m: number | null
   estado: string | null
   created_at: string
+  ai_report?: Record<string, unknown> | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -1332,6 +1333,221 @@ export default function InformesPage() {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* ── AGENTE GAMMA recommendations ─────────────────────────── */}
+        {(() => {
+          const gammaRecs = agentRecs.filter(r => r.category === 'OPTIONS_GAMMA')
+          return (
+            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                  <Cpu size={14} style={{ color: '#a78bfa' }} />
+                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE GAMMA</h2>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(167,139,250,0.1)', color: '#a78bfa' }}>
+                    {gammaRecs.length}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-[#475569]">Opciones direccionales · CALL alcista / PUT bajista · TimesFM 30d</span>
+              </div>
+              {agentRecsLoading ? (
+                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
+              ) : gammaRecs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                  <Cpu size={20} className="text-[#475569]" />
+                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE GAMMA aún.</p>
+                  <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
+                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
+                        <th className="px-3 py-2.5 text-center font-medium text-[#64748b]">Tipo</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] md:table-cell">Strike</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Expiry</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Prima</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Delta</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">IV</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Breakeven</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Forecast</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
+                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gammaRecs.map((rec, i) => {
+                        const rpt = rec.ai_report ?? {}
+                        const optionType = rpt.optionType as string | undefined
+                        const strike = rpt.strike as number | undefined
+                        const expiration = rpt.expiration as string | undefined
+                        const delta = rpt.delta as number | undefined
+                        const iv = rpt.iv as number | undefined
+                        const breakeven = rpt.breakeven as number | undefined
+                        const forecastReturn = rpt.forecastReturn as number | undefined
+                        const typeColor = optionType === 'CALL' ? '#4ade80' : optionType === 'PUT' ? '#f87171' : '#64748b'
+                        return (
+                          <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
+                            <td className="px-3 py-2.5"><span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span></td>
+                            <td className="px-3 py-2.5 text-center">
+                              {optionType ? (
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ color: typeColor, border: `1px solid ${typeColor}40`, background: `${typeColor}10` }}>{optionType}</span>
+                              ) : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] md:table-cell">{strike != null ? `$${strike}` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-[#64748b] md:table-cell">{expiration ?? '—'}</td>
+                            <td className="px-3 py-2.5 text-right font-mono">
+                              <span className="text-[#e2e8f0]">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">{delta != null ? delta.toFixed(2) : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono lg:table-cell">
+                              {forecastReturn != null ? (
+                                <span style={{ color: forecastReturn >= 0 ? '#4ade80' : '#f87171' }}>{forecastReturn >= 0 ? '+' : ''}{forecastReturn.toFixed(1)}%</span>
+                              ) : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                            <td className="px-3 py-2.5">
+                              {(() => { const badge = estadoBadge(rec.estado); return (
+                                <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
+                                  className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
+                                  style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}>
+                                  <option value="Comprar">Comprar</option>
+                                  <option value="Mantener">Mantener</option>
+                                  <option value="Vender">Vender</option>
+                                  <option value="Observacion">Observar</option>
+                                </select>
+                              )})()}
+                            </td>
+                            <td className="px-3 py-2.5 text-right">
+                              {confirmDeleteAgentId === rec.id ? (
+                                <div className="flex items-center justify-end gap-1 text-xs">
+                                  <span className="text-[#94a3b8]">¿Eliminar?</span>
+                                  <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
+                                  <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-[#64748b] hover:bg-[#1e1e2e]">No</button>
+                                </div>
+                              ) : (
+                                <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-[#475569] hover:bg-[#1e1e2e] hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* ── AGENTE THETA recommendations ──────────────────────────── */}
+        {(() => {
+          const thetaRecs = agentRecs.filter(r => r.category === 'OPTIONS_THETA')
+          return (
+            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                  <Cpu size={14} style={{ color: '#fb923c' }} />
+                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE THETA</h2>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c' }}>
+                    {thetaRecs.length}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-[#475569]">Venta de primas · Sell-put / Covered-call · Income</span>
+              </div>
+              {agentRecsLoading ? (
+                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
+              ) : thetaRecs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                  <Cpu size={20} className="text-[#475569]" />
+                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE THETA aún.</p>
+                  <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
+                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
+                        <th className="px-3 py-2.5 text-center font-medium text-[#64748b]">Estrategia</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] md:table-cell">Strike</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Expiry</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Prima recibida</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">|Delta|</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">IV</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Breakeven</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">DTE</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
+                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {thetaRecs.map((rec, i) => {
+                        const rpt = rec.ai_report ?? {}
+                        const strategy = rpt.strategy as string | undefined
+                        const strike = rpt.strike as number | undefined
+                        const expiration = rpt.expiration as string | undefined
+                        const delta = rpt.delta as number | undefined
+                        const iv = rpt.iv as number | undefined
+                        const dte = rpt.dte as number | undefined
+                        const breakeven = rpt.breakeven as number | undefined
+                        const stratColor = strategy === 'SELL_PUT' ? '#fb923c' : strategy === 'COVERED_CALL' ? '#38bdf8' : '#64748b'
+                        const stratLabel = strategy === 'SELL_PUT' ? 'SELL-PUT' : strategy === 'COVERED_CALL' ? 'COV-CALL' : '—'
+                        return (
+                          <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
+                            <td className="px-3 py-2.5"><span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span></td>
+                            <td className="px-3 py-2.5 text-center">
+                              {strategy ? (
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ color: stratColor, border: `1px solid ${stratColor}40`, background: `${stratColor}10` }}>{stratLabel}</span>
+                              ) : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] md:table-cell">{strike != null ? `$${strike}` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-[#64748b] md:table-cell">{expiration ?? '—'}</td>
+                            <td className="px-3 py-2.5 text-right font-mono">
+                              <span className="font-semibold" style={{ color: '#4ade80' }}>{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">{delta != null ? Math.abs(delta).toFixed(2) : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#64748b] lg:table-cell">{dte != null ? `${dte}d` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                            <td className="px-3 py-2.5">
+                              {(() => { const badge = estadoBadge(rec.estado); return (
+                                <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
+                                  className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
+                                  style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}>
+                                  <option value="Comprar">Comprar</option>
+                                  <option value="Mantener">Mantener</option>
+                                  <option value="Vender">Vender</option>
+                                  <option value="Observacion">Observar</option>
+                                </select>
+                              )})()}
+                            </td>
+                            <td className="px-3 py-2.5 text-right">
+                              {confirmDeleteAgentId === rec.id ? (
+                                <div className="flex items-center justify-end gap-1 text-xs">
+                                  <span className="text-[#94a3b8]">¿Eliminar?</span>
+                                  <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
+                                  <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-[#64748b] hover:bg-[#1e1e2e]">No</button>
+                                </div>
+                              ) : (
+                                <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-[#475569] hover:bg-[#1e1e2e] hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
