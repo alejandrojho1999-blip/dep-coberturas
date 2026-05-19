@@ -19,7 +19,7 @@ function calcRSI(closes: number[], period = 14): number {
     avgLoss = (avgLoss * (period - 1) + losses[i]) / period
   }
 
-  if (avgLoss === 0) return 100
+  if (avgLoss === 0) return avgGain === 0 ? 50 : 100
   return 100 - 100 / (1 + avgGain / avgLoss)
 }
 
