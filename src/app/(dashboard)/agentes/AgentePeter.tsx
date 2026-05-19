@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRef, useState } from 'react'
-import { Loader2, Play, Square, RotateCcw, TrendingUp, BarChart2, Brain, BookOpen, CheckCircle2, ArrowRight } from 'lucide-react'
+import { Loader2, Play, Square, RotateCcw, TrendingUp, BarChart2, Brain, BookOpen, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react'
 import type { ScreenerResult } from '@/lib/peter-lynch/screener'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
@@ -132,6 +132,7 @@ function FunnelBar({ stages }: { stages: { label: string; count: number; color: 
 
 export default function AgentePeter() {
   const [phase, setPhase]           = useState<Phase>('idle')
+  const [step0Phase, setStep0Phase] = useState<Phase>('idle')
   const [step1Phase, setStep1Phase] = useState<Phase>('idle')
   const [step2Phase, setStep2Phase] = useState<Phase>('idle')
   const [step3Phase, setStep3Phase] = useState<Phase>('idle')
@@ -150,7 +151,7 @@ export default function AgentePeter() {
 
   function reset() {
     setPhase('idle')
-    setStep1Phase('idle'); setStep2Phase('idle'); setStep3Phase('idle')
+    setStep0Phase('idle'); setStep1Phase('idle'); setStep2Phase('idle'); setStep3Phase('idle')
     setStep4Phase('idle'); setStep5Phase('idle')
     setTickers([]); setLog([]); setSummary(null)
   }
@@ -159,7 +160,7 @@ export default function AgentePeter() {
     abortRef.current?.abort()
     addLog('⛔ Agente detenido por el usuario')
     setPhase('idle')
-    setStep1Phase('idle'); setStep2Phase('idle'); setStep3Phase('idle')
+    setStep0Phase('idle'); setStep1Phase('idle'); setStep2Phase('idle'); setStep3Phase('idle')
     setStep4Phase('idle'); setStep5Phase('idle')
   }
 
@@ -169,6 +170,48 @@ export default function AgentePeter() {
     setPhase('running'); setLog([]); setTickers([]); setSummary(null)
 
     try {
+      // ── PASO 0: Re-evaluación de posiciones activas ────────────────
+      setStep0Phase('running')
+      addLog('🔄 Re-evaluando posiciones activas del Agente Peter...')
+
+      type ActivePickReview = {
+        id: string; ticker: string; precio_entrada: number;
+        forecastPass: boolean; momentumPass: boolean; forecastLastPrice: number;
+      }
+      let activePicksReview: ActivePickReview[] = []
+
+      const picksRes = await fetch('/api/agentes/picks?category=PETER_LYNCH', { signal })
+      const allPicks = picksRes.ok
+        ? await picksRes.json() as Array<{ id: string; ticker: string; precio_entrada: number; estado: string }>
+        : []
+      const activePicks = allPicks.filter(p => p.estado !== 'Vender')
+
+      if (!activePicks.length) {
+        addLog('✓ Sin posiciones activas para re-evaluar')
+      } else {
+        addLog(`📋 ${activePicks.length} posición(es) activa(s): ${activePicks.map(p => p.ticker).join(', ')}`)
+        const activeTickers = activePicks.map(p => p.ticker).join(',')
+        const [fRes0, mRes0] = await Promise.all([
+          fetch(`/api/agentes/forecast?tickers=${activeTickers}`, { signal }),
+          fetch(`/api/agentes/momentum?tickers=${activeTickers}`, { signal }),
+        ])
+        const fData0 = fRes0.ok
+          ? await fRes0.json() as Record<string, { lastPrice: number; pass: boolean }>
+          : {}
+        const mData0 = mRes0.ok
+          ? await mRes0.json() as Record<string, { pass: boolean }>
+          : {}
+        activePicksReview = activePicks.map(p => ({
+          id: p.id, ticker: p.ticker, precio_entrada: p.precio_entrada,
+          forecastPass:  fData0[p.ticker]?.pass  ?? true,
+          momentumPass:  mData0[p.ticker]?.pass  ?? true,
+          forecastLastPrice: fData0[p.ticker]?.lastPrice ?? p.precio_entrada,
+        }))
+        addLog(`✓ Datos preliminares de re-evaluación listos para ${activePicksReview.length} posición(es)`)
+      }
+      setStep0Phase('done')
+      if (signal.aborted) { setPhase('idle'); return }
+
       // ── PASO 1: Lynch 6/6 ─────────────────────────────────────────
       setStep1Phase('running')
       addLog('🔍 Ejecutando screener Lynch (score 6/6)...')
@@ -188,6 +231,39 @@ export default function AgentePeter() {
       }))
       setTickers([...initial])
       setStep1Phase('done')
+
+      // ── RE-EVALUACIÓN: señales de venta ───────────────────────────
+      if (activePicksReview.length) {
+        const lynchSet = new Set(six.map(r => r.ticker))
+        for (const review of activePicksReview) {
+          if (signal.aborted) break
+          const lynchPass = lynchSet.has(review.ticker)
+          const failCount = (!lynchPass ? 1 : 0) + (!review.forecastPass ? 1 : 0) + (!review.momentumPass ? 1 : 0)
+          if (failCount >= 2) {
+            const cp = review.forecastLastPrice
+            const rent = review.precio_entrada > 0
+              ? ((cp - review.precio_entrada) / review.precio_entrada * 100)
+              : 0
+            const rentStr = (rent >= 0 ? '+' : '') + rent.toFixed(1) + '%'
+            addLog(`⬇ ${review.ticker}: SEÑAL VENDER — falla ${failCount}/3 filtros | entrada $${review.precio_entrada.toFixed(2)} → salida $${cp.toFixed(2)} | rentabilidad ${rentStr}`)
+            try {
+              await fetch('/api/agentes/picks', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: review.id,
+                  estado: 'Vender',
+                  precio_venta: parseFloat(cp.toFixed(2)),
+                  rentabilidad: parseFloat(rent.toFixed(2)),
+                }),
+                signal,
+              })
+            } catch { addLog(`⚠ ${review.ticker}: error al registrar señal de venta`) }
+          } else {
+            addLog(`✓ ${review.ticker}: posición OK — falla ${failCount}/3 filtros (umbral: 2)`)
+          }
+        }
+      }
       if (signal.aborted) { setPhase('idle'); return }
 
       // ── PASO 2: TimesFM Forecast 30d ──────────────────────────────
@@ -343,10 +419,15 @@ export default function AgentePeter() {
             signal,
           })
           if (!sRes.ok) throw new Error(`Picks HTTP ${sRes.status}`)
-          addLog(`✓ ${t.ticker}: guardado — ${t.empresa ?? t.ticker} (conviction ${t.conviction}/10)`)
-          const idx = paso5.findIndex(x => x.ticker === t.ticker)
-          if (idx !== -1) paso5[idx] = { ...paso5[idx], step5: 'done' }
-          created++
+          const sData = await sRes.json() as { skipped?: boolean }
+          if (sData.skipped) {
+            addLog(`↩ ${t.ticker}: ya tiene posición activa — omitido`)
+          } else {
+            addLog(`✓ ${t.ticker}: guardado — ${t.empresa ?? t.ticker} (conviction ${t.conviction}/10)`)
+            const idx = paso5.findIndex(x => x.ticker === t.ticker)
+            if (idx !== -1) paso5[idx] = { ...paso5[idx], step5: 'done' }
+            created++
+          }
         } catch (e) {
           if (signal.aborted) break
           addLog(`⚠ ${t.ticker}: error guardando — ${(e as Error).message}`)
@@ -368,11 +449,12 @@ export default function AgentePeter() {
   }
 
   const steps = [
+    { label: 'RE-EVALUACIÓN', desc: 'Auto-sell si ≥2/3 filtros fallan', phase: step0Phase, icon: RefreshCw },
     { label: 'LYNCH 6/6', desc: 'Screener S&P500+NASDAQ100', phase: step1Phase, icon: BookOpen },
     { label: 'TIMESFM FORECAST', desc: 'Proyección 30 días ≥2%', phase: step2Phase, icon: TrendingUp },
     { label: 'MOMENTUM SCANNER', desc: 'RSI · MACD · Volumen ≥2/3', phase: step3Phase, icon: BarChart2 },
     { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7', phase: step4Phase, icon: Brain },
-    { label: 'PICKS & INFORME', desc: 'Guardar recomendaciones', phase: step5Phase, icon: CheckCircle2 },
+    { label: 'PICKS & INFORME', desc: 'Sin duplicados, solo aprobados', phase: step5Phase, icon: CheckCircle2 },
   ]
 
   // Funnel counts
@@ -387,7 +469,7 @@ export default function AgentePeter() {
   return (
     <div className="space-y-4">
       {/* Step cards */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {steps.map((s, i) => {
           const Icon = s.icon
           return (

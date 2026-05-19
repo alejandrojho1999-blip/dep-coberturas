@@ -28,6 +28,22 @@ export async function POST(request: Request): Promise<Response> {
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json() as Record<string, unknown>
+  const { ticker, category } = body as { ticker?: string; category?: string }
+
+  // Dedup: skip if an active (non-sold) recommendation already exists for this ticker
+  if (ticker && category) {
+    const { data: existing } = await supabase
+      .from('agent_recommendations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('ticker', ticker)
+      .eq('category', category)
+      .neq('estado', 'Vender')
+      .limit(1)
+      .single()
+    if (existing) return Response.json({ skipped: true, id: existing.id }, { status: 200 })
+  }
+
   const { error, data } = await supabase
     .from('agent_recommendations')
     .insert({ ...body, user_id: user.id })
@@ -38,7 +54,7 @@ export async function POST(request: Request): Promise<Response> {
   return Response.json(data, { status: 201 })
 }
 
-const EDITABLE = ['estado', 'precio_venta', 'precio_entrada', 'precio_objetivo', 'stop_loss', 'cantidad_acciones', 'resumen']
+const EDITABLE = ['estado', 'precio_venta', 'precio_entrada', 'precio_objetivo', 'stop_loss', 'cantidad_acciones', 'resumen', 'rentabilidad']
 
 export async function PATCH(request: Request): Promise<Response> {
   const supabase = await createClient()
