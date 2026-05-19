@@ -1098,6 +1098,7 @@ export default function InformesPage() {
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
                         <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendimiento</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
@@ -1146,6 +1147,15 @@ export default function InformesPage() {
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs">
                             {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
+                            {(() => {
+                              const cp = livePrices[rec.ticker]; const ep = rec.precio_entrada
+                              if (cp == null || ep == null || ep === 0) return <span className="text-[#475569]">—</span>
+                              const pct = ((cp - ep) / ep) * 100
+                              const pos = pct >= 0
+                              return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}{pct.toFixed(2)}%</span>
+                            })()}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
                             {(() => { const g = calcAgentGanancia(rec); if (g == null) return <span className="text-[#475569]">—</span>; const pos = g >= 0; return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}${fmtNum(g)}</span> })()}
@@ -1227,6 +1237,7 @@ export default function InformesPage() {
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
                         <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendimiento</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
@@ -1276,6 +1287,15 @@ export default function InformesPage() {
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs">
                             {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
+                            {(() => {
+                              const cp = livePrices[rec.ticker]; const ep = rec.precio_entrada
+                              if (cp == null || ep == null || ep === 0) return <span className="text-[#475569]">—</span>
+                              const pct = ((cp - ep) / ep) * 100
+                              const pos = pct >= 0
+                              return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}{pct.toFixed(2)}%</span>
+                            })()}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
                             {(() => { const g = calcAgentGanancia(rec); if (g == null) return <span className="text-[#475569]">—</span>; const pos = g >= 0; return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}${fmtNum(g)}</span> })()}
