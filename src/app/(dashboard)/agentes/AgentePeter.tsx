@@ -136,8 +136,8 @@ export default function AgentePeter() {
           addLog(`⚠ ${t.ticker}: sin datos de tendencia`)
           return { ...t, step2: 'fail' }
         }
-        const pass = td.direction === 'ALCISTA'
-        addLog(`${pass ? '✓' : '✗'} ${t.ticker}: ${td.direction} ($${td.lastPrice.toFixed(2)} vs SMA-20 $${td.sma20.toFixed(2)})`)
+        const pass = td.direction !== 'BAJISTA'
+        addLog(`${pass ? '✓' : '✗'} ${t.ticker}: SMA-20 ${td.direction} ($${td.lastPrice.toFixed(2)} vs SMA20 $${td.sma20.toFixed(2)})${!pass ? ' → descartado (bajista)' : ''}`)
         return { ...t, step2: pass ? 'pass' : 'fail', lastPrice: td.lastPrice, sma20: td.sma20, direction: td.direction }
       })
       setTickers([...paso2])
@@ -146,7 +146,7 @@ export default function AgentePeter() {
 
       const paso2Pass = paso2.filter(t => t.step2 === 'pass')
       if (!paso2Pass.length) {
-        addLog('⚠ Ningún ticker con tendencia alcista confirmada.')
+        addLog('⚠ Ningún ticker sin tendencia bajista confirmada.')
         setStep3Phase('done'); setStep4Phase('done')
         setPhase('done'); setSummary({ created: 0, total: six.length }); return
       }
@@ -249,7 +249,7 @@ export default function AgentePeter() {
 
   const steps = [
     { label: 'INVESTIGACIÓN LYNCH 6/6', desc: 'Screener S&P500+NASDAQ100 con puntuación perfecta', phase: step1Phase },
-    { label: 'TENDENCIA ALCISTA (SMA-20)', desc: 'Precio actual por encima de media móvil 20 días', phase: step2Phase },
+    { label: 'FILTRO TENDENCIA (SMA-20)', desc: 'Excluir tickers con tendencia claramente bajista', phase: step2Phase },
     { label: 'CONFIRMACIÓN IA', desc: 'Análisis fundamental y tesis de inversión por OpenRouter', phase: step3Phase },
     { label: 'GENERAR RECOMENDACIONES', desc: 'Guardar picks validados en sección RECOMENDACIONES', phase: step4Phase },
   ]
