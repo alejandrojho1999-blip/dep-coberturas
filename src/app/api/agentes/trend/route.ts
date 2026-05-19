@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<Response> {
     tickers.map(async (ticker) => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const hist = await (yf as any).historical(ticker, { period1, interval: '1d' }) as Array<{ close: number | null }>
+        const hist = await (yf as any).historical(ticker, { period1, period2: new Date(), interval: '1d' }) as Array<{ close: number | null }>
         const closes = hist.map(h => h.close).filter((c): c is number => c != null)
         if (closes.length < 5) return
         const lastPrice = closes[closes.length - 1]
@@ -33,7 +33,9 @@ export async function GET(request: Request): Promise<Response> {
           : lastPrice < sma20 * 0.999 ? 'BAJISTA'
           : 'LATERAL'
         results[ticker] = { direction, lastPrice, sma20: parseFloat(sma20.toFixed(2)) }
-      } catch { /* skip */ }
+      } catch (e) {
+        console.error(`[trend] ${ticker}:`, (e as Error).message)
+      }
     })
   )
 

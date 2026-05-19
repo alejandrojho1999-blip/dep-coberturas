@@ -11,7 +11,11 @@ interface AnalyzeBody {
   category: string
   score: number
   marketCapM?: number
-  sma20?: number
+  forecastReturn?: number
+  momentumScore?: number
+  rsi?: number
+  macd?: number
+  macdSignal?: number
 }
 
 interface AnalysisResult {
@@ -22,6 +26,8 @@ interface AnalysisResult {
   precio_objetivo: number
   stop_loss: number
   resumen: string
+  conviction?: number
+  consensus?: string
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -33,8 +39,9 @@ export async function POST(request: Request): Promise<Response> {
   if (!apiKey) return Response.json({ error: 'OPENROUTER_API_KEY no configurada' }, { status: 500 })
 
   const body = await request.json() as AnalyzeBody
-  const { ticker, lastPrice, category, score, marketCapM, sma20 } = body
+  const { ticker, lastPrice, category, score, marketCapM, forecastReturn, momentumScore, rsi, macd, macdSignal } = body
 
+  let empresa = ticker
   let fundamentals = `Ticker: ${ticker}\nPrecio: $${lastPrice.toFixed(2)}\nScore Lynch: ${score}/6`
   try {
     const yf = new YahooFinance()
@@ -43,10 +50,11 @@ export async function POST(request: Request): Promise<Response> {
     const p = summary?.summaryProfile ?? {}
     const f = summary?.financialData ?? {}
     const s = summary?.defaultKeyStatistics ?? {}
+    empresa = (p.longName ?? p.shortName ?? ticker) as string
     fundamentals = [
-      `Empresa: ${(p.longName ?? p.shortName ?? ticker) as string}`,
+      `Empresa: ${empresa}`,
       `Sector: ${(p.sector ?? 'N/D') as string} | Industria: ${(p.industry ?? 'N/D') as string}`,
-      `Precio actual: $${lastPrice.toFixed(2)} | SMA-20: $${sma20?.toFixed(2) ?? 'N/D'}`,
+      `Precio actual: $${lastPrice.toFixed(2)}`,
       `Score Lynch: ${score}/6`,
       `Market Cap: ${marketCapM != null ? `$${(marketCapM / 1000).toFixed(1)}B` : 'N/D'}`,
       `P/E Forward: ${s.forwardPE ?? 'N/D'} | PEG: ${s.pegRatio ?? 'N/D'}`,
@@ -59,20 +67,45 @@ export async function POST(request: Request): Promise<Response> {
   const model = process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat-v3-0324'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
-  const prompt = `Eres analista cuantitativo de Emporium Quality Funds. El ${agentName} ha preseleccionado ${ticker} con score Lynch ${score}/6 y tendencia alcista confirmada.
+  const forecastLine = forecastReturn != null
+    ? `TimesFM Forecast 30d: ${forecastReturn >= 0 ? '+' : ''}${forecastReturn.toFixed(1)}%`
+    : ''
+  const momentumLine = momentumScore != null
+    ? `Momentum Score: ${momentumScore}/3 | RSI-14: ${rsi?.toFixed(0) ?? 'N/D'} | MACD: ${(macd ?? 0) > (macdSignal ?? 0) ? 'ALCISTA' : 'BAJISTA'}`
+    : ''
 
-DATOS:
+  const prompt = `Eres el Chief Investment Officer de Emporium Quality Funds coordinando 3 agentes especializados para analizar ${ticker}.
+
+DATOS CUANTITATIVOS:
 ${fundamentals}
+${forecastLine}
+${momentumLine}
+
+=== AGENTE 1 — ANALISTA TÉCNICO ===
+Evalúa el forecast de precio a 30 días y los indicadores de momentum (RSI, MACD).
+Determina si los indicadores técnicos apoyan una posición larga. Sé conciso (1 oración).
+Recomendación técnica: COMPRA / NEUTRO / VENTA con confianza 1-10.
+
+=== AGENTE 2 — ANALISTA FUNDAMENTAL ===
+Evalúa el score Lynch ${score}/6, P/E, PEG, márgenes y ROE.
+Determina si los fundamentales justifican una valoración premium. Sé conciso (1 oración).
+Recomendación fundamental: COMPRA / NEUTRO / VENTA con confianza 1-10.
+
+=== AGENTE 3 — PORTFOLIO MANAGER (SÍNTESIS) ===
+Considera ambos agentes y genera la recomendación final. Solo aprueba si hay consenso alcista.
+conviction = promedio ponderado de ambas confianzas (técnica 40% + fundamental 60%), redondeado a entero.
 
 Responde SOLO con JSON válido (sin markdown, sin explicación):
 {
-  "empresa": "nombre completo",
+  "empresa": "${empresa}",
   "direction": "COMPRA",
   "riesgo": "BAJO|MEDIO|ALTO",
   "timeframe": "CORTO|MEDIANO|LARGO",
-  "precio_objetivo": <número, precio objetivo 12 meses basado en fundamentales>,
-  "stop_loss": <número, típicamente 8-12% debajo del precio actual>,
-  "resumen": "2-3 oraciones: tesis de inversión basada en score Lynch y fundamentales"
+  "precio_objetivo": <número, objetivo 12 meses>,
+  "stop_loss": <número, 8-12% debajo del precio actual>,
+  "conviction": <entero 1-10, donde 10 = máxima convicción alcista>,
+  "consensus": "ALCISTA|NEUTRAL|BAJISTA",
+  "resumen": "2-3 oraciones: tesis de inversión integrando Lynch, forecast y momentum"
 }`
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -87,8 +120,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicación):
     body: JSON.stringify({
       model,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.1,
-      max_tokens: 400,
+      temperature: 0.15,
+      max_tokens: 600,
     }),
   })
 
