@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.local
+venv/
+.venv/
+outputs/
+*.pkl
+*.zip
+ticker_data/custom_configs.json
