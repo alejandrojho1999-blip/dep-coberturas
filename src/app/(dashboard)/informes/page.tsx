@@ -835,7 +835,7 @@ export default function InformesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              <table className="w-full min-w-[860px] text-xs">
                 <thead>
                   <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
                     <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
@@ -1088,37 +1088,38 @@ export default function InformesPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full min-w-[860px] text-xs">
                     <thead>
                       <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
-                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Score</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Entrada</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
                         <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendimiento</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Obj.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
-                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Riesgo</th>
-                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Plazo</th>
                         <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
                       </tr>
                     </thead>
                     <tbody>
                       {peterRecs.map((rec, i) => (
                         <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
-                          <td className="px-3 py-2.5"><span className="font-semibold text-[#00ff88]">{rec.ticker}</span></td>
-                          <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
-                          <td className="hidden px-3 py-2.5 text-center lg:table-cell">
-                            <span className="font-mono text-xs font-bold" style={{ color: '#F59E0B' }}>{rec.score ?? '—'}/6</span>
+                          <td className="px-3 py-2.5">
+                            <span className="font-semibold text-[#00ff88]">{rec.ticker}</span>
+                            <div className="mt-0.5 flex flex-wrap gap-1">
+                              {rec.score != null && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)' }}>Lynch {rec.score}/6</span>}
+                              {rec.riesgo && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24', background: rec.riesgo === 'BAJO' ? 'rgba(74,222,128,0.08)' : rec.riesgo === 'ALTO' ? 'rgba(248,113,113,0.08)' : 'rgba(251,191,36,0.08)' }}>{rec.riesgo}</span>}
+                              {rec.timeframe && <span className="text-[9px] font-mono text-[#475569]">{rec.timeframe}</span>}
+                            </div>
                           </td>
+                          <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
                           <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
-                          {/* P.Venta editable */}
                           <td className="hidden px-3 py-2.5 text-right xl:table-cell">
                             <input type="number" min="0" step="0.01" placeholder="—"
                               value={getAgentEditVal(rec, 'precio_venta')}
@@ -1132,7 +1133,6 @@ export default function InformesPage() {
                               className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
                             />
                           </td>
-                          {/* Cant. editable */}
                           <td className="hidden px-3 py-2.5 text-right xl:table-cell">
                             <input type="number" min="0" step="1" placeholder="—"
                               value={getAgentEditVal(rec, 'cantidad_acciones')}
@@ -1148,6 +1148,9 @@ export default function InformesPage() {
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs">
                             {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                          </td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
+                            {rec.precio_objetivo != null ? `$${fmtNum(rec.precio_objetivo)}` : '—'}
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                             {(() => {
@@ -1176,10 +1179,6 @@ export default function InformesPage() {
                               </select>
                             )})()}
                           </td>
-                          <td className="hidden px-3 py-2.5 text-center lg:table-cell">
-                            <span className="text-[10px] font-mono" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24' }}>{rec.riesgo ?? '—'}</span>
-                          </td>
-                          <td className="hidden px-3 py-2.5 text-center text-[10px] font-mono text-[#64748b] lg:table-cell">{rec.timeframe ?? '—'}</td>
                           <td className="px-3 py-2.5 text-right">
                             {confirmDeleteAgentId === rec.id ? (
                               <div className="flex items-center justify-end gap-1 text-xs">
@@ -1226,38 +1225,37 @@ export default function InformesPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full min-w-[860px] text-xs">
                     <thead>
                       <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
-                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Score</th>
-                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Cap</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Entrada</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
                         <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendimiento</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Obj.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
-                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Riesgo</th>
-                        <th className="hidden px-3 py-2.5 text-center font-medium text-[#64748b] lg:table-cell">Plazo</th>
                         <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
                       </tr>
                     </thead>
                     <tbody>
                       {smallRecs.map((rec, i) => (
                         <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
-                          <td className="px-3 py-2.5"><span className="font-semibold text-[#00ff88]">{rec.ticker}</span></td>
+                          <td className="px-3 py-2.5">
+                            <span className="font-semibold text-[#00ff88]">{rec.ticker}</span>
+                            <div className="mt-0.5 flex flex-wrap gap-1">
+                              {rec.score != null && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)' }}>Lynch {rec.score}/6</span>}
+                              {rec.market_cap_m != null && <span className="text-[9px] font-mono px-1 py-px rounded text-[#64748b]" style={{ background: 'rgba(100,116,139,0.1)' }}>${(rec.market_cap_m / 1000).toFixed(1)}B</span>}
+                              {rec.riesgo && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24', background: rec.riesgo === 'BAJO' ? 'rgba(74,222,128,0.08)' : rec.riesgo === 'ALTO' ? 'rgba(248,113,113,0.08)' : 'rgba(251,191,36,0.08)' }}>{rec.riesgo}</span>}
+                              {rec.timeframe && <span className="text-[9px] font-mono text-[#475569]">{rec.timeframe}</span>}
+                            </div>
+                          </td>
                           <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
-                          <td className="hidden px-3 py-2.5 text-center lg:table-cell">
-                            <span className="font-mono text-xs font-bold" style={{ color: '#F59E0B' }}>{rec.score ?? '—'}/6</span>
-                          </td>
-                          <td className="hidden px-3 py-2.5 text-center text-[10px] font-mono text-[#64748b] lg:table-cell">
-                            {rec.market_cap_m != null ? `$${(rec.market_cap_m / 1000).toFixed(1)}B` : '—'}
-                          </td>
                           <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
                           <td className="hidden px-3 py-2.5 text-right xl:table-cell">
@@ -1289,6 +1287,9 @@ export default function InformesPage() {
                           <td className="px-3 py-2.5 text-right font-mono text-xs">
                             {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
                           </td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
+                            {rec.precio_objetivo != null ? `$${fmtNum(rec.precio_objetivo)}` : '—'}
+                          </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                             {(() => {
                               const cp = livePrices[rec.ticker]; const ep = rec.precio_entrada
@@ -1316,10 +1317,6 @@ export default function InformesPage() {
                               </select>
                             )})()}
                           </td>
-                          <td className="hidden px-3 py-2.5 text-center lg:table-cell">
-                            <span className="text-[10px] font-mono" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24' }}>{rec.riesgo ?? '—'}</span>
-                          </td>
-                          <td className="hidden px-3 py-2.5 text-center text-[10px] font-mono text-[#64748b] lg:table-cell">{rec.timeframe ?? '—'}</td>
                           <td className="px-3 py-2.5 text-right">
                             {confirmDeleteAgentId === rec.id ? (
                               <div className="flex items-center justify-end gap-1 text-xs">
@@ -1366,19 +1363,20 @@ export default function InformesPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full min-w-[860px] text-xs">
                     <thead>
                       <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                        <th className="px-3 py-2.5 text-center font-medium text-[#64748b]">Tipo</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] md:table-cell">Strike</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Expiry</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Prima</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Delta</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">IV</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Breakeven</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Forecast</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Tipo</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Strike</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] xl:table-cell">Expiry</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Breakeven</th>
+                        <th className="px-3 py-2.5 text-right font-medium" style={{ color: '#a78bfa' }}>Forecast</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Delta</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">IV</th>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
                         <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
                       </tr>
@@ -1396,26 +1394,34 @@ export default function InformesPage() {
                         const typeColor = optionType === 'CALL' ? '#4ade80' : optionType === 'PUT' ? '#f87171' : '#64748b'
                         return (
                           <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
-                            <td className="px-3 py-2.5"><span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span></td>
-                            <td className="px-3 py-2.5 text-center">
-                              {optionType ? (
-                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ color: typeColor, border: `1px solid ${typeColor}40`, background: `${typeColor}10` }}>{optionType}</span>
-                              ) : <span className="text-[#475569]">—</span>}
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span>
+                                {optionType && <span className="text-[9px] font-mono px-1 py-px rounded font-bold" style={{ color: typeColor, border: `1px solid ${typeColor}40`, background: `${typeColor}10` }}>{optionType}</span>}
+                              </div>
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] md:table-cell">{strike != null ? `$${strike}` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-[#64748b] md:table-cell">{expiration ?? '—'}</td>
-                            <td className="px-3 py-2.5 text-right font-mono">
-                              <span className="text-[#e2e8f0]">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
+                            <td className="hidden px-3 py-2.5 text-[#475569] md:table-cell">
+                              <span className="text-[10px] font-mono">OPCIÓN</span>
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">{delta != null ? delta.toFixed(2) : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono lg:table-cell">
+                            <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">
+                              {rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-[#64748b] xl:table-cell">{expiration ?? '—'}</td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs">
+                              {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
+                              {breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                               {forecastReturn != null ? (
                                 <span style={{ color: forecastReturn >= 0 ? '#4ade80' : '#f87171' }}>{forecastReturn >= 0 ? '+' : ''}{forecastReturn.toFixed(1)}%</span>
                               ) : <span className="text-[#475569]">—</span>}
                             </td>
-                            <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{delta != null ? delta.toFixed(2) : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
                             <td className="px-3 py-2.5">
                               {(() => { const badge = estadoBadge(rec.estado); return (
                                 <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
@@ -1475,19 +1481,20 @@ export default function InformesPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full min-w-[860px] text-xs">
                     <thead>
                       <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                        <th className="px-3 py-2.5 text-center font-medium text-[#64748b]">Estrategia</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] md:table-cell">Strike</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Expiry</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Prima recibida</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">|Delta|</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">IV</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Breakeven</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">DTE</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Estrategia</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Strike</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] xl:table-cell">Expiry</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Breakeven</th>
+                        <th className="px-3 py-2.5 text-right font-medium" style={{ color: '#fb923c' }}>DTE</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">|Delta|</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">IV</th>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
                         <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
                       </tr>
@@ -1506,22 +1513,34 @@ export default function InformesPage() {
                         const stratLabel = strategy === 'SELL_PUT' ? 'SELL-PUT' : strategy === 'COVERED_CALL' ? 'COV-CALL' : '—'
                         return (
                           <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
-                            <td className="px-3 py-2.5"><span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span></td>
-                            <td className="px-3 py-2.5 text-center">
-                              {strategy ? (
-                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ color: stratColor, border: `1px solid ${stratColor}40`, background: `${stratColor}10` }}>{stratLabel}</span>
-                              ) : <span className="text-[#475569]">—</span>}
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span>
+                                {strategy && <span className="text-[9px] font-mono px-1 py-px rounded font-bold" style={{ color: stratColor, border: `1px solid ${stratColor}40`, background: `${stratColor}10` }}>{stratLabel}</span>}
+                              </div>
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] md:table-cell">{strike != null ? `$${strike}` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-[#64748b] md:table-cell">{expiration ?? '—'}</td>
-                            <td className="px-3 py-2.5 text-right font-mono">
+                            <td className="hidden px-3 py-2.5 text-[#475569] md:table-cell">
+                              <span className="text-[10px] font-mono">OPCIÓN</span>
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono xl:table-cell">
                               <span className="font-semibold" style={{ color: '#4ade80' }}>{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">{delta != null ? Math.abs(delta).toFixed(2) : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#64748b] lg:table-cell">{dte != null ? `${dte}d` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-[#64748b] xl:table-cell">{expiration ?? '—'}</td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs">
+                              {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
+                              {breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
+                              {dte != null ? (
+                                <span style={{ color: dte <= 7 ? '#f87171' : dte <= 21 ? '#fbbf24' : '#4ade80' }}>{dte}d</span>
+                              ) : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{delta != null ? Math.abs(delta).toFixed(2) : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
                             <td className="px-3 py-2.5">
                               {(() => { const badge = estadoBadge(rec.estado); return (
                                 <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
