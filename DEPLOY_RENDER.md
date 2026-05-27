@@ -9,6 +9,11 @@ El archivo `render.yaml` de la raiz define dos servicios:
 - `dep-coberturas`: frontend Next.js.
 - `ergo-quant-api`: backend FastAPI privado en `ergo-quant-api/`.
 
+Importante:
+- El deploy de la aplicacion completa se hace desde el `render.yaml` de la raiz del repositorio.
+- No uses `ergo-quant-api/render.yaml` para publicar la app: ese archivo es solo para el backend.
+- Si al abrir la URL ves un JSON con `service: "ergo-quant-api"`, estas abriendo el backend. La URL correcta del login es la del servicio `dep-coberturas`.
+
 El backend queda como private service de Render y tambien protegido con `X-API-Key`. El frontend recibe `ERGO_QUANT_API_URL` y `ERGO_QUANT_API_KEY` desde `fromService` en el Blueprint.
 
 ## Variables del frontend `dep-coberturas`
@@ -76,7 +81,8 @@ Esta migracion cierra las policies amplias de `informes_history` y mantiene acce
 
 ## Checklist previo al deploy
 
-- Crear ambos servicios desde el Blueprint `render.yaml`.
+- Crear ambos servicios desde el Blueprint `render.yaml` de la raiz.
+- Verificar que Render haya creado un servicio web Node llamado `dep-coberturas`; esa es la URL publica que debe mostrar el login.
 - Configurar todas las variables `sync: false` en Render.
 - Confirmar que `API_KEY` fue generada en el backend.
 - Confirmar que `ERGO_QUANT_API_URL` del frontend viene de `fromService` y apunta a `ergo-quant-api`.

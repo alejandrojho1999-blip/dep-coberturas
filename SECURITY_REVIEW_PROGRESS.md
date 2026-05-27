@@ -12,6 +12,7 @@
 - Endurecido `ir-extract` para exigir usuario y bloquear URLs internas/no HTTPS.
 - Fijado Python del backend Render en `3.11.11` para compatibilidad con `dowhy`/`econml`.
 - Agregada respuesta raiz en FastAPI para distinguir backend de frontend durante el deploy en Render.
+- Cambiado `ergo-quant-api/render.yaml` a private service y documentado que el Blueprint principal es el `render.yaml` raiz.
 
 ## En progreso
 - Resolver vulnerabilidades de dependencias y errores de lint existentes.
