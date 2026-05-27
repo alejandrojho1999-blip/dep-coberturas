@@ -5,6 +5,13 @@ export const maxDuration = 60
 
 const API_URL = process.env.ERGO_QUANT_API_URL ?? ''
 const API_KEY = process.env.ERGO_QUANT_API_KEY ?? ''
+const ALLOWED_SEGMENT = /^[a-zA-Z0-9._-]+$/
+
+function normalizeApiUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim().replace(/\/+$/, '')
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  return `http://${trimmed}`
+}
 
 async function proxyRequest(
   req: Request,
@@ -18,13 +25,21 @@ async function proxyRequest(
   if (!API_URL) {
     return Response.json({ error: 'ERGO_QUANT_API_URL not configured' }, { status: 503 })
   }
+  if (!API_KEY) {
+    return Response.json({ error: 'ERGO_QUANT_API_KEY not configured' }, { status: 503 })
+  }
 
   const { path } = await params
-  const endpoint = path.join('/')
-  const url = `${API_URL}/${endpoint}`
+  if (!path.length || path.some((segment) => !ALLOWED_SEGMENT.test(segment))) {
+    return Response.json({ error: 'Invalid upstream path' }, { status: 400 })
+  }
 
-  const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (API_KEY) headers['X-API-Key'] = API_KEY
+  const endpoint = path.map(encodeURIComponent).join('/')
+  const incoming = new URL(req.url)
+  const upstreamUrl = new URL(`${normalizeApiUrl(API_URL)}/${endpoint}`)
+  upstreamUrl.search = incoming.search
+
+  const headers: HeadersInit = { 'Content-Type': 'application/json', 'X-API-Key': API_KEY }
 
   const init: RequestInit = { method, headers }
   if (method !== 'GET') {
@@ -36,9 +51,18 @@ async function proxyRequest(
   }
 
   try {
-    const upstream = await fetch(url, init)
-    const data = await upstream.json()
-    return Response.json(data, { status: upstream.status })
+    const upstream = await fetch(upstreamUrl, init)
+    const text = await upstream.text()
+    if (!text) return new Response(null, { status: upstream.status })
+
+    try {
+      return Response.json(JSON.parse(text), { status: upstream.status })
+    } catch {
+      return new Response(text, {
+        status: upstream.status,
+        headers: { 'Content-Type': upstream.headers.get('Content-Type') ?? 'text/plain' },
+      })
+    }
   } catch (err) {
     return Response.json({ error: `Backend unreachable: ${err}` }, { status: 502 })
   }

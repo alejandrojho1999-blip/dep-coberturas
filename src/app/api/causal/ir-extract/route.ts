@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isIP } from 'node:net'
 
 const SECTOR_TREATMENTS: Record<string, { treatment: string; label: string }> = {
   Technology:           { treatment: 'RND_Growth',   label: 'Crecimiento en I+D (YoY)' },
@@ -26,6 +27,41 @@ const DEFAULT_COLLIDERS: ExtractedVariable[] = [
   { variable: 'PE_RATIO',      label: 'Price/Earnings ratio', rationale: 'Endógeno al precio — colisionador clásico' },
   { variable: 'PX_TO_BOOK',   label: 'Price/Book ratio',      rationale: 'Precio de mercado causa tanto P/B como retorno futuro' },
 ]
+
+function isPrivateHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase()
+  if (normalized === 'localhost' || normalized.endsWith('.localhost')) return true
+
+  const ipVersion = isIP(normalized)
+  if (ipVersion === 4) {
+    const [a, b] = normalized.split('.').map(Number)
+    return (
+      a === 10 ||
+      a === 127 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 169 && b === 254) ||
+      normalized === '0.0.0.0'
+    )
+  }
+  if (ipVersion === 6) {
+    return normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80')
+  }
+
+  return false
+}
+
+function safeExternalHttpsUrl(rawUrl: string): URL | null {
+  try {
+    const parsed = new URL(rawUrl)
+    if (parsed.protocol !== 'https:') return null
+    if (parsed.username || parsed.password) return null
+    if (isPrivateHostname(parsed.hostname)) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
 
 const DEEPSEEK_SYSTEM = (ticker: string, sector: string) => `
 Eres un analista financiero causal experto en el framework de López de Prado (2025).
@@ -58,6 +94,7 @@ Responde EXCLUSIVAMENTE en JSON válido sin markdown:
 export async function POST(request: Request): Promise<Response> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json() as {
     irUrl?: string
@@ -73,8 +110,11 @@ export async function POST(request: Request): Promise<Response> {
   // Fetch IR page content
   let irContent = ''
   if (irUrl && !irUrl.includes('google.com/search')) {
+    const safeUrl = safeExternalHttpsUrl(irUrl)
+    if (!safeUrl) return Response.json({ error: 'Invalid IR URL' }, { status: 400 })
+
     try {
-      const res = await fetch(irUrl, { signal: AbortSignal.timeout(8000) })
+      const res = await fetch(safeUrl, { signal: AbortSignal.timeout(8000) })
       if (res.ok) {
         const html = await res.text()
         irContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 8000)
@@ -172,5 +212,5 @@ export async function POST(request: Request): Promise<Response> {
       .upsert(rows, { onConflict: 'user_id,ticker,variable,type' })
   }
 
-  return Response.json({ treatment, label, rationale, irContent, confounders, colliders })
+  return Response.json({ treatment, label, rationale, confounders, colliders })
 }
