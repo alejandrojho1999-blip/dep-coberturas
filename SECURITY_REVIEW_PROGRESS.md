@@ -10,6 +10,7 @@
 - Cerrado proxy Next para exigir `ERGO_QUANT_API_KEY` y usar red privada de Render.
 - Agregada migracion `016_lock_down_informes_history_rls.sql`.
 - Endurecido `ir-extract` para exigir usuario y bloquear URLs internas/no HTTPS.
+- Fijado Python del backend Render en `3.11.11` para compatibilidad con `dowhy`/`econml`.
 
 ## En progreso
 - Resolver vulnerabilidades de dependencias y errores de lint existentes.

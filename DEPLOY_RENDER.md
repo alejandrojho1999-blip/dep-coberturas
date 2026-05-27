@@ -34,6 +34,7 @@ Notas:
 Configurar en Render:
 
 ```text
+PYTHON_VERSION=3.11.11
 FRED_API_KEY=<fred key>
 OPENROUTER_API_KEY=<openrouter key>
 API_KEY=<generada por Render>
@@ -41,6 +42,7 @@ CORS_ORIGINS=https://<frontend-service>.onrender.com,http://localhost:3000
 ```
 
 Notas:
+- `PYTHON_VERSION` debe quedarse en Python 3.11.x porque `dowhy`/`econml` no resuelven correctamente con el default actual de Render ni con Python 3.12+ en este proyecto.
 - `API_KEY` se genera automaticamente con `generateValue: true`.
 - `CORS_ORIGINS` acepta multiples origenes separados por coma.
 - `/health` queda sin API key, pero el servicio es privado si se despliega desde el Blueprint raiz.
