@@ -53,6 +53,15 @@ app.include_router(configs.router, prefix="/configs", tags=["configs"], dependen
 app.include_router(documents.router, prefix="/documents", tags=["documents"], dependencies=protected)
 
 
+@app.get("/")
+def root():
+    return {
+        "service": "ergo-quant-api",
+        "detail": "Backend service is running. Open the dep-coberturas frontend service URL.",
+        "health": "/health",
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
