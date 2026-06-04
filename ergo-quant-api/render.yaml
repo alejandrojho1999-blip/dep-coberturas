@@ -1,5 +1,5 @@
 services:
-  - type: pserv
+  - type: web
     name: ergo-quant-api
     runtime: python
     plan: starter
