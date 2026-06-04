@@ -18,6 +18,7 @@
 - Agregado `scripts/render-start-single.sh` para desplegar frontend Next y backend FastAPI en un unico Web Service Render.
 - Documentada la opcion manual de un solo Web Service con `ERGO_QUANT_API_URL=http://127.0.0.1:8000`.
 - Agregados `.python-version` y `runtime.txt` en la raiz para que el servicio unico Render use Python `3.11.11` al instalar dependencias del backend.
+- Reordenado `scripts/render-start-single.sh` para abrir primero el puerto publico de Next y despues iniciar FastAPI interno, evitando que Render detecte el puerto `8000` del backend.
 
 ## En progreso
 - Resolver vulnerabilidades de dependencias y errores de lint existentes.
