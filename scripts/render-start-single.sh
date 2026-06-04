@@ -3,6 +3,7 @@ set -euo pipefail
 
 BACKEND_PORT="${ERGO_QUANT_BACKEND_PORT:-8000}"
 export ERGO_QUANT_API_URL="${ERGO_QUANT_API_URL:-http://127.0.0.1:${BACKEND_PORT}}"
+export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 
 python -m uvicorn main:app \
   --app-dir ergo-quant-api \
@@ -18,7 +19,7 @@ cleanup() {
 trap cleanup EXIT
 
 for _ in $(seq 1 30); do
-  if curl -fsS "${ERGO_QUANT_API_URL}/health" >/dev/null 2>&1; then
+  if python -c "import urllib.request; urllib.request.urlopen('${ERGO_QUANT_API_URL}/health', timeout=2).read()" >/dev/null 2>&1; then
     backend_ready=true
     break
   fi
@@ -36,4 +37,4 @@ if [ "${backend_ready}" != "true" ]; then
   exit 1
 fi
 
-npm run start
+exec npm run start
