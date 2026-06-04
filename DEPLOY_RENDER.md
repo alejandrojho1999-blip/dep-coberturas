@@ -55,6 +55,8 @@ CORS_ORIGINS=https://<este-mismo-servicio>.onrender.com,http://localhost:3000
 
 En esta opcion, la URL publica del servicio debe mostrar el frontend. FastAPI no queda expuesto publicamente; solo escucha dentro del contenedor en `127.0.0.1:8000`.
 
+Si `pip install` falla con dependencias Python como `dowhy`, confirma que Render esta usando Python `3.11.11`. En modo servicio unico, la version esta declarada tambien en `.python-version` y `runtime.txt` en la raiz. Despues de cambiarla, usa "Clear build cache & deploy" en Render.
+
 ### Opcion B: dos Web Services
 
 Usa esta opcion si quieres separar frontend y backend manualmente.

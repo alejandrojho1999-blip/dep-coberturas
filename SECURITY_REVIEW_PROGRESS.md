@@ -17,6 +17,7 @@
 - Revisada la lista de variables de entorno requeridas para Render; no hay `.env*` visible en la raiz local.
 - Agregado `scripts/render-start-single.sh` para desplegar frontend Next y backend FastAPI en un unico Web Service Render.
 - Documentada la opcion manual de un solo Web Service con `ERGO_QUANT_API_URL=http://127.0.0.1:8000`.
+- Agregados `.python-version` y `runtime.txt` en la raiz para que el servicio unico Render use Python `3.11.11` al instalar dependencias del backend.
 
 ## En progreso
 - Resolver vulnerabilidades de dependencias y errores de lint existentes.
@@ -28,6 +29,7 @@
 - Verificar en Render que exista un servicio Node publico `dep-coberturas` creado desde la raiz del repo y abrir esa URL para login/dashboard.
 - Cargar en Render las variables requeridas del frontend y backend antes de redeploy.
 - Si se usa un solo Web Service, actualizar Build Command y Start Command en Render segun `DEPLOY_RENDER.md`.
+- Tras cambiar version de Python en Render, ejecutar "Clear build cache & deploy".
 
 ## Decisiones tomadas
 - El backend se deja como private service en el Blueprint raiz; no debe exponerse publicamente salvo necesidad explicita.
