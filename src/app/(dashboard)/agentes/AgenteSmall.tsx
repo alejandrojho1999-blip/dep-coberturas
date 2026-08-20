@@ -593,7 +593,7 @@ export default function AgenteSmall() {
               })}
             </div>
             <Link
-              href="/informes"
+              href="/recomendaciones"
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
               style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}
             >

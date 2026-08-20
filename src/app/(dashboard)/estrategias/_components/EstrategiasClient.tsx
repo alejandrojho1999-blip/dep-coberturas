@@ -2,7 +2,7 @@
 
 import { Construction, LineChart } from 'lucide-react'
 
-export default function CoberturasClient() {
+export default function EstrategiasClient() {
   return (
     <div className="space-y-6">
       {/* Header */}

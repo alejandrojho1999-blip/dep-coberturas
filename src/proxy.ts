@@ -40,8 +40,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/agentes') ||
     pathname.startsWith('/portafolios-quant') ||
-    pathname.startsWith('/coberturas') ||
-    pathname.startsWith('/informes') ||
+    pathname.startsWith('/estrategias') ||
+    pathname.startsWith('/recomendaciones') ||
     pathname.startsWith('/ergos-quant') ||
     pathname.startsWith('/fincept-terminal') ||
     pathname.startsWith('/perfil')

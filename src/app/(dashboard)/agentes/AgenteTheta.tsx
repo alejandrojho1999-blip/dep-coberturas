@@ -628,7 +628,7 @@ export default function AgenteTheta() {
                 )
               })}
             </div>
-            <Link href="/informes"
+            <Link href="/recomendaciones"
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
               style={{ background: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.3)' }}
             >

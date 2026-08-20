@@ -311,7 +311,7 @@ function PreviewModal({
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-export default function InformesPage() {
+export default function RecomendacionesPage() {
   const [ticker, setTicker]                   = useState('')
   const [loading, setLoading]                 = useState(false)
   const [history, setHistory]                 = useState<HistoryEntry[]>([])

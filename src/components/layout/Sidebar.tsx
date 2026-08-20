@@ -19,8 +19,8 @@ import {
 const NAV_ITEMS = [
   { icon: Briefcase, label: 'Portafolios Quant', href: '/portafolios-quant' },
   { icon: Cpu,       label: 'Agentes',           href: '/agentes' },
-  { icon: LineChart, label: 'Estrategias',       href: '/coberturas' },
-  { icon: FileText,  label: 'Recomendaciones',   href: '/informes' },
+  { icon: LineChart, label: 'Estrategias',       href: '/estrategias' },
+  { icon: FileText,  label: 'Recomendaciones',   href: '/recomendaciones' },
 ] as const
 
 const STORAGE_KEY = 'sidebar-collapsed'

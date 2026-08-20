@@ -609,7 +609,7 @@ export default function AgenteGamma() {
                 )
               })}
             </div>
-            <Link href="/informes"
+            <Link href="/recomendaciones"
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
               style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)' }}
             >
