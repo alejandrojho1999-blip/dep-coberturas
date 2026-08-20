@@ -47,11 +47,24 @@ describe('pickPositionsToSettle()', () => {
     expect(pending).toHaveLength(1)
   })
 
-  it('respeta las cerradas con un resultado ya calculado', () => {
+  it('respeta las cerradas que ya anotaron su precio de liquidación', () => {
     const { pending } = pickPositionsToSettle(
-      [pick({ estado: 'Vender', rentabilidad: -42.5 })], NOW
+      [pick({
+        estado: 'Vender',
+        rentabilidad: -42.5,
+        ai_report: { optionType: 'CALL', strike: 230, expiration: '2026-06-18', underlyingAtExpiry: 257.70 },
+      })], NOW
     )
     expect(pending).toHaveLength(0)
+  })
+
+  it('re-liquida las cerradas sin precio de liquidación anotado', () => {
+    // Se cerraron con una versión que podía usar el cierre del día anterior
+    // al vencimiento, así que hay que rehacerlas.
+    const { pending } = pickPositionsToSettle(
+      [pick({ estado: 'Vender', rentabilidad: 57.46 })], NOW
+    )
+    expect(pending).toHaveLength(1)
   })
 
   it('reporta las que no traen fecha de vencimiento', () => {

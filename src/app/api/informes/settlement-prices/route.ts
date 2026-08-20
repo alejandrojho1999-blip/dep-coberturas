@@ -15,6 +15,11 @@ interface SettlementQuery {
   expiration: string
 }
 
+/** Día natural de una barra diaria, en formato `YYYY-MM-DD`. */
+function isoDay(date: Date | string): string {
+  return new Date(date).toISOString().slice(0, 10)
+}
+
 /** Clave con la que el cliente indexa el resultado. */
 function queryKey(q: SettlementQuery): string {
   return `${q.ticker.toUpperCase()}|${q.expiration}`
@@ -81,10 +86,13 @@ export async function POST(request: Request): Promise<Response> {
           period1, period2, interval: '1d',
         }) as Array<{ date: Date; close: number | null }>
 
-        // Último cierre que no supere la fecha de vencimiento.
+        // Último cierre que no supere la fecha de vencimiento. La comparación
+        // es por día natural, no por timestamp: las barras diarias llevan la
+        // hora de apertura del mercado, así que comparar contra la medianoche
+        // del vencimiento descartaría el propio día en que expira el contrato.
         const usable = hist
-          .filter((h) => h.close != null && new Date(h.date).getTime() <= expiry.getTime())
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .filter((h) => h.close != null && isoDay(h.date) <= q.expiration)
+          .sort((a, b) => isoDay(a.date).localeCompare(isoDay(b.date)))
 
         const close = usable.at(-1)?.close
         if (close != null) result[queryKey(q)] = close

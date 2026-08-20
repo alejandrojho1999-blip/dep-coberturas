@@ -36,6 +36,8 @@ export interface SettlementOutcome {
   isShort: boolean
   /** true si la posición ya estaba cerrada con el resultado cableado. */
   wasMisreported: boolean
+  /** Informe original, para poder ampliarlo sin perder lo que ya contenía. */
+  aiReport: Record<string, unknown>
 }
 
 export interface SettlementSkip {
@@ -46,6 +48,15 @@ export interface SettlementSkip {
 /** Firma del cálculo cableado que hay que rehacer: ±100% exacto. */
 function hasHardcodedOutcome(pick: AgentPickForSettlement): boolean {
   return pick.rentabilidad === -100 || pick.rentabilidad === 100
+}
+
+/**
+ * Una liquidación fiable deja anotado el precio del subyacente con el que se
+ * calculó. Su ausencia marca las filas cerradas por versiones anteriores, que
+ * pudieron usar el cierre del día anterior al vencimiento.
+ */
+function lacksSettlementPrice(pick: AgentPickForSettlement): boolean {
+  return (pick.ai_report ?? {}).underlyingAtExpiry == null
 }
 
 function daysToExpiry(expiration: string, now: Date): number {
@@ -74,7 +85,7 @@ export function pickPositionsToSettle(
     if (daysToExpiry(expiration, now) > 0) continue
 
     const closed = pick.estado === 'Vender'
-    if (!closed || hasHardcodedOutcome(pick)) pending.push(pick)
+    if (!closed || hasHardcodedOutcome(pick) || lacksSettlementPrice(pick)) pending.push(pick)
   }
 
   return { pending, skipped }
@@ -151,7 +162,9 @@ export function computeSettlements(
       pnlTotal: result.pnlTotal,
       expiredInTheMoney: result.expiredInTheMoney,
       isShort: result.isShort,
-      wasMisreported: pick.estado === 'Vender' && hasHardcodedOutcome(pick),
+      wasMisreported: pick.estado === 'Vender'
+        && (hasHardcodedOutcome(pick) || lacksSettlementPrice(pick)),
+      aiReport: report,
     })
   }
 
@@ -207,6 +220,10 @@ export async function settleExpiredPicks(
           estado: 'Vender',
           precio_venta: o.precioVenta,
           rentabilidad: o.rentabilidad,
+          // Se conserva el informe original y se le añade el precio del
+          // subyacente en el vencimiento, para que la tabla pueda mostrar el
+          // dato con el que se liquidó en vez del precio de mercado de hoy.
+          ai_report: { ...o.aiReport, underlyingAtExpiry: o.underlyingAtExpiry },
         }),
         signal,
       })

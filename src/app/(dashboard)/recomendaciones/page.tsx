@@ -1530,6 +1530,11 @@ export default function RecomendacionesPage() {
                 <div className="flex items-center gap-2">
                   <Cpu size={14} style={{ color: '#a78bfa' }} />
                   <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE GAMMA</h2>
+                  <span
+                    className="rounded px-1.5 py-0.5 text-[10px] font-mono font-bold"
+                    style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.35)' }}
+                    title="Se paga la prima al abrir: la posición gana si el contrato vale más al cerrar o al vencer"
+                  >COMPRA DE OPCIONES</span>
                   <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(167,139,250,0.1)', color: '#a78bfa' }}>
                     {gammaRecs.length}
                   </span>
@@ -1550,7 +1555,6 @@ export default function RecomendacionesPage() {
                     <thead>
                       <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Tipo</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Prima Act.</th>
@@ -1597,9 +1601,6 @@ export default function RecomendacionesPage() {
                                 {vencido && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: '#64748b', border: '1px solid #1e2035' }} title={`Venció el ${expiration}`}>VENC.</span>}
                               </div>
                             </td>
-                            <td className="hidden px-3 py-2.5 text-[#475569] md:table-cell">
-                              <span className="text-[10px] font-mono">OPCIÓN</span>
-                            </td>
                             <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">
                               {rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}
@@ -1626,7 +1627,22 @@ export default function RecomendacionesPage() {
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
                             <td className="hidden px-3 py-2.5 text-[#64748b] xl:table-cell">{expiration ?? '—'}</td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
-                              {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                              {(() => {
+                                // En una posición cerrada el precio relevante es el
+                                // del vencimiento, no el de hoy: es el que determinó
+                                // el resultado de la operación.
+                                const alVencer = rpt.underlyingAtExpiry as number | undefined
+                                if (alVencer != null) return (
+                                  <span className="text-[#e2e8f0]" title={`Cierre del subyacente el ${expiration}, usado para liquidar el contrato`}>
+                                    {alVencer.toFixed(2)}
+                                    <span className="ml-1 text-[9px] text-[#475569]">al vencer</span>
+                                  </span>
+                                )
+                                const live = livePrices[rec.ticker]
+                                return live != null
+                                  ? <span className="text-[#e2e8f0]">{live.toFixed(2)}</span>
+                                  : <span className="text-[#475569]">—</span>
+                              })()}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
                               {breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}
@@ -1681,6 +1697,11 @@ export default function RecomendacionesPage() {
                 <div className="flex items-center gap-2">
                   <Cpu size={14} style={{ color: '#fb923c' }} />
                   <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE THETA</h2>
+                  <span
+                    className="rounded px-1.5 py-0.5 text-[10px] font-mono font-bold"
+                    style={{ background: 'rgba(251,146,60,0.12)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.35)' }}
+                    title="Se cobra la prima al abrir: la posición gana si el contrato vale menos al cerrar o vence sin valor"
+                  >VENTA DE OPCIONES</span>
                   <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c' }}>
                     {thetaRecs.length}
                   </span>
@@ -1701,7 +1722,6 @@ export default function RecomendacionesPage() {
                     <thead>
                       <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Estrategia</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Prima Act.</th>
@@ -1744,9 +1764,6 @@ export default function RecomendacionesPage() {
                                 {strategy && <span className="text-[9px] font-mono px-1 py-px rounded font-bold" style={{ color: stratColor, border: `1px solid ${stratColor}40`, background: `${stratColor}10` }}>{stratLabel}</span>}
                               </div>
                             </td>
-                            <td className="hidden px-3 py-2.5 text-[#475569] md:table-cell">
-                              <span className="text-[10px] font-mono">OPCIÓN</span>
-                            </td>
                             <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
                             <td className="hidden px-3 py-2.5 text-right font-mono xl:table-cell">
                               <span className="font-semibold" style={{ color: '#4ade80' }}>{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
@@ -1773,7 +1790,22 @@ export default function RecomendacionesPage() {
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
                             <td className="hidden px-3 py-2.5 text-[#64748b] xl:table-cell">{expiration ?? '—'}</td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
-                              {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                              {(() => {
+                                // En una posición cerrada el precio relevante es el
+                                // del vencimiento, no el de hoy: es el que determinó
+                                // el resultado de la operación.
+                                const alVencer = rpt.underlyingAtExpiry as number | undefined
+                                if (alVencer != null) return (
+                                  <span className="text-[#e2e8f0]" title={`Cierre del subyacente el ${expiration}, usado para liquidar el contrato`}>
+                                    {alVencer.toFixed(2)}
+                                    <span className="ml-1 text-[9px] text-[#475569]">al vencer</span>
+                                  </span>
+                                )
+                                const live = livePrices[rec.ticker]
+                                return live != null
+                                  ? <span className="text-[#e2e8f0]">{live.toFixed(2)}</span>
+                                  : <span className="text-[#475569]">—</span>
+                              })()}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
                               {breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}
