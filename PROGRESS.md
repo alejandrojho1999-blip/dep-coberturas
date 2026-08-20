@@ -151,6 +151,22 @@
 - El log de Peter y Small explica que al omitir un ticker se conserva la
   recomendación original sin modificar.
 
+### Blindaje del precio de entrada (commit `26457e3`)
+- **Agente Small nunca tuvo el bug de APA**: su paso 4 no sobrescribe
+  `lastPrice`. Sus recomendaciones existentes son válidas y no hay que borrarlas.
+  Solo hay que limpiar las de Peter marcadas con `⚠ ENTRADA NO FIABLE`.
+- El detector se restringe a propósito a `PETER_LYNCH`: una fila **buena** de
+  Small anterior al arreglo también puede cumplir `entrada × 1.15 == objetivo`,
+  porque el fallback antiguo ponía el objetivo justo un 15 % sobre el precio
+  real. Extenderlo a Small marcaría filas correctas.
+- Eliminado `t.lastPrice ?? t.forecastPrice ?? 0` de ambos agentes:
+  `forecastPrice` es la proyección a 30 días y `0` daría rendimiento infinito.
+  Eran inalcanzables solo por el filtro `paso2Pass`. Ahora, sin precio real, el
+  ticker se descarta en el paso 4 (sin gastar la llamada a la IA) y no se guarda
+  en el paso 5.
+- `AgenteSmall` enviaba `category: 'SMALL_CAP'` a `/api/agentes/analyze` y
+  guardaba `'SMALL_CAPS'`. Solo afectaba a la cabecera `X-Title`; unificado.
+
 ## Decisiones sobre agentes
 
 - **La venta se dispara solo por deterioro de las condiciones de mercado**
@@ -166,7 +182,7 @@
   recomendación. Los datos corruptos se corrigen borrando filas, no cambiando
   esta regla.
 
-## Estado de verificación (commit `fa012a3`)
+## Estado de verificación (commit `26457e3`)
 
 | Check | Resultado |
 |---|---|
