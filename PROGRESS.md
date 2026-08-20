@@ -67,8 +67,20 @@
   vivas pero sin entrada de menú.
 - `OPENROUTER_API_KEY` y `FRED_API_KEY` están vacías en `.env.local`. En Vercel
   sí están cargadas, pero sin ellas no se puede probar informes/agentes en local.
-- Lint: 28 problemas preexistentes (19 errores por `no-explicit-any`, 9 warnings
-  de `no-unused-vars`). Bajó desde 37 al eliminar los componentes de coberturas.
+### Limpieza de lint (commit `d9869a5`)
+- `npm run lint` queda en **0 problemas** (venía de 37).
+- **Bug corregido:** los timeouts de Yahoo Finance nunca se aplicaban. Se pasaba
+  `{ signal }` como tercer argumento de `quote()`/`search()`, pero ese objeto es
+  `ModuleOptions` y solo reenvía a `fetch()` lo que venga en `fetchOptions`, así
+  que el `AbortSignal` se descartaba en silencio. Corregido en
+  `/api/options/search`, `/api/informes/live-prices` y `/api/informes/option-prices`.
+- **Bug corregido:** `MarketTicker` no cancelaba la petición en curso al
+  desmontar, así que una respuesta tardía escribía estado sobre un componente ya
+  desmontado. Ahora `fetchQuotes` vive dentro del efecto con un flag `cancelled`.
+- `Sidebar` abría el submenú de Configuración desde un efecto que encadenaba un
+  re-render; ahora se ajusta durante el render comparando el pathname anterior.
+- Los 16 `as any` del test de `causal/assets` pasan por un helper tipado.
+- ESLint configurado para respetar el prefijo `_` en `no-unused-vars`.
 
 ## Decisiones tomadas
 
@@ -86,11 +98,11 @@
 - Render y las vulnerabilidades de `npm audit` quedan congelados por decisión
   del usuario.
 
-## Estado de verificación (commit `2b199fc`)
+## Estado de verificación (commit `d9869a5`)
 
 | Check | Resultado |
 |---|---|
 | `npx tsc --noEmit` | exit 0 |
 | `npm run test:run` | 224/224 (baseline tenía 1 fallo en `Sidebar.test.tsx`) |
-| `npm run lint` | 28 problemas, todos preexistentes (baseline 37) |
+| `npm run lint` | **0 problemas** (baseline 37) |
 | `npm run build` | exit 0 |
