@@ -92,10 +92,10 @@
 
 - **Implementar la lógica nueva de Portafolio Quant** — la sección está vacía a
   propósito, esperando definición.
-- **Borrar a mano las recomendaciones de Agente Peter anteriores al commit
-  `9e9e3c5`.** Su `precio_entrada` es el valor sintético `objetivo / 1.15` y no
-  se puede reconstruir (haría falta saber a qué hora se generaron). Las de
-  Agente Small sí son válidas.
+- **Borrar a mano las recomendaciones de Agente Peter marcadas con
+  `⚠ ENTRADA NO FIABLE`** y volver a ejecutar el agente. La tabla las señala
+  sola desde el commit `fa012a3`; re-ejecutar sin borrarlas no las corrige
+  porque la deduplicación las omite. Las de Agente Small sí son válidas.
 - Re-ejecutar Gamma y Theta una vez para que liquiden con datos reales los
   contratos vencidos y recalculen los cerrados con el ±100% cableado.
 - Verificar en producción que las primas de opciones llegan: depende de que
@@ -137,6 +137,20 @@
 - Render y las vulnerabilidades de `npm audit` quedan congelados por decisión
   del usuario.
 
+### Señalización de entradas no fiables (commit `fa012a3`)
+- Re-ejecutar el Agente Peter **no** corrige las filas afectadas por el bug del
+  precio de entrada: la deduplicación de `/api/agentes/picks` omite los tickers
+  con posición activa y conserva la fila original.
+- Nuevo `lib/agentes/legacy-entry-price.ts`: identifica esas filas exigiendo dos
+  señales a la vez — la huella `entrada × 1.15 == objetivo` y la ausencia de
+  `ai_report.objetivo_fuente`. Ambas son necesarias, porque el fallback vigente
+  también genera un objetivo un 15 % por encima de la entrada, solo que ahí la
+  entrada sí es el precio real.
+- La tabla de Peter marca las filas con `⚠ ENTRADA NO FIABLE` y muestra un aviso
+  con el recuento en la cabecera. No se muta ningún dato automáticamente.
+- El log de Peter y Small explica que al omitir un ticker se conserva la
+  recomendación original sin modificar.
+
 ## Decisiones sobre agentes
 
 - **La venta se dispara solo por deterioro de las condiciones de mercado**
@@ -146,13 +160,18 @@
   asumido.
 - **La categoría en BD sigue siendo `SMALL_CAPS`** pese al renombrado visible,
   para no dejar huérfanas las recomendaciones existentes.
+- **La deduplicación de `/api/agentes/picks` se mantiene.** Sin ella, cada
+  ejecución sobrescribiría `precio_entrada` con el precio del día y el
+  rendimiento se reiniciaría a cero, perdiendo el seguimiento desde la fecha de
+  recomendación. Los datos corruptos se corrigen borrando filas, no cambiando
+  esta regla.
 
-## Estado de verificación (commit `9e9e3c5`)
+## Estado de verificación (commit `fa012a3`)
 
 | Check | Resultado |
 |---|---|
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **260/260** (36 nuevos de liquidación de opciones) |
+| `npm run test:run` | **268/268** (44 nuevos: liquidación de opciones + detector) |
 | `npm run lint` | **0 problemas** (baseline 37) |
 | `npm run build` | exit 0 |
 | Deploy Vercel | success |
