@@ -88,10 +88,24 @@
   `ai_report.objetivo_fuente`. Es informativo: **no dispara ventas**.
 - "Agente Small Cap" renombrado a "Agente Small" en las etiquetas visibles.
 
+### Menú definitivo (commit `04537ed`)
+Cuatro entradas, en este orden:
+1. **Portafolios Quant** → `/portafolios-quant` (nueva, vacía)
+2. **Agentes** → `/agentes` — *Agentes IA para Acciones y Opciones*
+3. **Estrategias** → `/coberturas` — *Estrategias para Trading de Futuros*
+4. **Recomendaciones** → `/informes`
+
+- "Estrategias" **conserva la ruta `/coberturas`**: renombrar la carpeta rompería
+  enlaces existentes sin ganar nada, ya que el nombre visible es lo que importa.
+- `/portafolios-quant` añadida a `isProtectedRoute` en `proxy.ts`; sin ello
+  quedaría accesible sin sesión.
+
 ## Pendiente
 
-- **Implementar la lógica nueva de Portafolio Quant** — la sección está vacía a
-  propósito, esperando definición.
+- **Definir e implementar Portafolios Quant** (`/portafolios-quant`) — sección
+  vacía a la espera de su lógica.
+- **Definir e implementar Estrategias** (`/coberturas`) — placeholder a la
+  espera de las estrategias de trading de futuros.
 - **Borrar a mano las recomendaciones de Agente Peter marcadas con
   `⚠ ENTRADA NO FIABLE`** y volver a ejecutar el agente. La tabla las señala
   sola desde el commit `fa012a3`; re-ejecutar sin borrarlas no las corrige
@@ -182,12 +196,12 @@
   recomendación. Los datos corruptos se corrigen borrando filas, no cambiando
   esta regla.
 
-## Estado de verificación (commit `26457e3`)
+## Estado de verificación (commit `04537ed`)
 
 | Check | Resultado |
 |---|---|
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **268/268** (44 nuevos: liquidación de opciones + detector) |
+| `npm run test:run` | **269/269** (45 nuevos: liquidación de opciones, detector y orden del menú) |
 | `npm run lint` | **0 problemas** (baseline 37) |
 | `npm run build` | exit 0 |
 | Deploy Vercel | success |
