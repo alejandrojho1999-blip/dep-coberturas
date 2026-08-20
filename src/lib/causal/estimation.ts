@@ -3,11 +3,7 @@ import {
   multiply,
   transpose,
   inv,
-  subtract,
   mean,
-  sum,
-  sqrt,
-  abs,
 } from 'mathjs'
 import type { CausalConfig, DataRow, ModelComparison, OLSResult } from './types'
 

@@ -243,8 +243,7 @@ export async function fetchTickerFinancials(ticker: string): Promise<TickerFinan
       const ev = safeNum(keyStats.enterpriseValue?.raw) ?? 0
       const mktCap = safeNum(price.marketCap?.raw) ?? 0
       const debt = safeNum(keyStats.totalDebt?.raw) ?? 0
-      const cash = safeNum(finData.totalCash?.raw) ?? 0
-      
+
       if (ev > 0 && mktCap > 0) {
         // Net Debt = EV - Market Cap (approximation of debt - cash)
         const netDebt = ev - mktCap

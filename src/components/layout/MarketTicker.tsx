@@ -38,21 +38,25 @@ function TickerItem({ symbol, value, change, up }: QuoteItem) {
 export function MarketTicker() {
   const [items, setItems] = useState<QuoteItem[]>(FALLBACK)
 
-  async function fetchQuotes() {
-    try {
-      const res = await fetch('/api/market/quotes', { cache: 'no-store' })
-      if (!res.ok) return
-      const data = await res.json() as QuoteItem[]
-      if (Array.isArray(data) && data.length > 0) setItems(data)
-    } catch {
-      // keep showing previous data silently
-    }
-  }
-
   useEffect(() => {
-    fetchQuotes()
-    const id = setInterval(fetchQuotes, 60_000)
-    return () => clearInterval(id)
+    // `cancelled` evita que una respuesta tardía escriba estado después de
+    // desmontar el componente.
+    let cancelled = false
+
+    async function fetchQuotes() {
+      try {
+        const res = await fetch('/api/market/quotes', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json() as QuoteItem[]
+        if (!cancelled && Array.isArray(data) && data.length > 0) setItems(data)
+      } catch {
+        // keep showing previous data silently
+      }
+    }
+
+    void fetchQuotes()
+    const id = setInterval(() => void fetchQuotes(), 60_000)
+    return () => { cancelled = true; clearInterval(id) }
   }, [])
 
   return (

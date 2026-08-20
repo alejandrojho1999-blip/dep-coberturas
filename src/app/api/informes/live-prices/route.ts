@@ -22,8 +22,11 @@ export async function GET(request: Request): Promise<Response> {
     tickers.map(async (ticker) => {
       try {
         const yf = new YahooFinance()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const q = await (yf.quote(ticker, {}, { signal: AbortSignal.timeout(8_000) } as any) as Promise<QuoteAny>)
+        // El signal va dentro de `fetchOptions`: es el único campo que la
+        // librería reenvía a fetch(), un `signal` suelto se descarta.
+        const q = await yf.quote(ticker, {}, {
+          fetchOptions: { signal: AbortSignal.timeout(8_000) },
+        }) as QuoteAny
         const price = q?.regularMarketPrice as number | undefined
         if (price != null) result[ticker] = price
       } catch { /* skip failed tickers */ }

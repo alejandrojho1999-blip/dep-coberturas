@@ -10,9 +10,12 @@ export async function GET(req: NextRequest) {
 
     console.log(`🔍 Buscando tickers para: ${query}`)
     
-    // Usar Yahoo Finance para búsqueda real con timeout
-    const fetchOptions = { signal: AbortSignal.timeout(10000) } as any
-    const searchResult = await yahooFinance.search(query, {}, fetchOptions)
+    // Usar Yahoo Finance para búsqueda real con timeout.
+    // El signal va dentro de `fetchOptions`: es el único campo que la librería
+    // reenvía a fetch(), un `signal` suelto se descarta en silencio.
+    const searchResult = await yahooFinance.search(query, {}, {
+      fetchOptions: { signal: AbortSignal.timeout(10000) },
+    })
     
     console.log(`✅ Resultados encontrados: ${searchResult?.quotes?.length || 0}`)
     

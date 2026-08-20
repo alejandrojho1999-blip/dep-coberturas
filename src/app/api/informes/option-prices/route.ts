@@ -51,8 +51,11 @@ export async function POST(request: Request): Promise<Response> {
       if (!symbol) return
       try {
         const yf = new YahooFinance()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const q = await (yf.quote(symbol, {}, { signal: AbortSignal.timeout(8_000) } as any) as Promise<QuoteAny>)
+        // El signal va dentro de `fetchOptions`: es el único campo que la
+        // librería reenvía a fetch(), un `signal` suelto se descarta.
+        const q = await yf.quote(symbol, {}, {
+          fetchOptions: { signal: AbortSignal.timeout(8_000) },
+        }) as QuoteAny
         // Para opciones el mid bid/ask es más representativo que el último
         // cruce, que puede ser de hace días en contratos poco líquidos.
         const bid = q?.bid as number | undefined

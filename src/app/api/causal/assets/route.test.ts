@@ -9,6 +9,14 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { createClient } from '@/lib/supabase/server'
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
+
+// Los mocks solo implementan la parte del cliente que cada test ejercita,
+// así que se castean al tipo completo al pasarlos a mockResolvedValue.
+function asSupabaseClient(mock: unknown): SupabaseServerClient {
+  return mock as SupabaseServerClient
+}
+
 // Helper to create a NextRequest-like object
 function makeRequest(body: unknown, method = 'POST'): Request {
   return new Request('http://localhost/api/causal/assets', {
@@ -35,7 +43,7 @@ describe('POST /api/causal/assets', () => {
           }),
         },
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',
@@ -57,7 +65,7 @@ describe('POST /api/causal/assets', () => {
           }),
         },
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',
@@ -79,7 +87,7 @@ describe('POST /api/causal/assets', () => {
           }),
         },
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         config: { ticker: 'AAPL', name: 'Apple' },
@@ -100,7 +108,7 @@ describe('POST /api/causal/assets', () => {
           }),
         },
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',
@@ -121,7 +129,7 @@ describe('POST /api/causal/assets', () => {
           }),
         },
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({})
 
@@ -140,7 +148,7 @@ describe('POST /api/causal/assets', () => {
           }),
         },
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: '',
@@ -151,6 +159,7 @@ describe('POST /api/causal/assets', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
+      expect(data.error).toContain('Missing required fields')
     })
 
     it('returns 400 when config is null', async () => {
@@ -161,7 +170,7 @@ describe('POST /api/causal/assets', () => {
           }),
         },
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',
@@ -203,7 +212,7 @@ describe('POST /api/causal/assets', () => {
           }),
         }),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const config: CausalConfig = {
         ticker: 'AAPL',
@@ -260,7 +269,7 @@ describe('POST /api/causal/assets', () => {
           insert: mockInsert,
         }),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const config: CausalConfig = {
         ticker: 'AAPL',
@@ -320,7 +329,7 @@ describe('POST /api/causal/assets', () => {
           }),
         }),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',
@@ -361,7 +370,7 @@ describe('POST /api/causal/assets', () => {
           }),
         }),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'GOOGL',
@@ -398,7 +407,7 @@ describe('POST /api/causal/assets', () => {
           }),
         }),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',
@@ -432,7 +441,7 @@ describe('POST /api/causal/assets', () => {
           }),
         }),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',
@@ -474,7 +483,7 @@ describe('POST /api/causal/assets', () => {
           }),
         }),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const config: CausalConfig = {
         ticker: 'MSFT',
@@ -512,7 +521,7 @@ describe('POST /api/causal/assets', () => {
         },
         from: vi.fn(),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',
@@ -533,7 +542,7 @@ describe('POST /api/causal/assets', () => {
         },
         from: vi.fn(),
       }
-      mockCreateClient.mockResolvedValue(mockSupabase as any)
+      mockCreateClient.mockResolvedValue(asSupabaseClient(mockSupabase))
 
       const request = makeRequest({
         ticker: 'AAPL',

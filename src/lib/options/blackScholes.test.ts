@@ -57,7 +57,7 @@ describe('blackScholesPrice()', () => {
   })
 
   it('put-call parity: call - put = S - K*e^(-rT)', () => {
-    const { S, K, T, r, sigma } = aaplLikeCall
+    const { S, K, T, r } = aaplLikeCall
     const callP = blackScholesPrice({ ...aaplLikeCall, type: 'call' })
     const putP  = blackScholesPrice({ ...aaplLikeCall, type: 'put' })
     const parity = S - K * Math.exp(-r * T)

@@ -64,7 +64,6 @@ export function placeboPermutation(
     return true
   })
 
-  const n = cleanData.length
   const betaReal = model.coefficients[treatment] ?? 0
   const absBetaReal = Math.abs(betaReal)
 

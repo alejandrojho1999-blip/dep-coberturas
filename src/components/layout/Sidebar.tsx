@@ -34,15 +34,17 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     if (typeof window === 'undefined') return false
     return localStorage.getItem(STORAGE_KEY) === 'true'
   })
-  const [settingsOpen, setSettingsOpen] = useState(
-    pathname === '/perfil' || pathname === '/fincept-terminal'
-  )
+  const isSettingsRoute = pathname === '/perfil' || pathname === '/fincept-terminal'
+  const [settingsOpen, setSettingsOpen] = useState(isSettingsRoute)
 
-  useEffect(() => {
-    if (pathname === '/perfil' || pathname === '/fincept-terminal') {
-      setSettingsOpen(true)
-    }
-  }, [pathname])
+  // Al navegar a una ruta de Configuración se despliega su submenú. Se ajusta
+  // durante el render en vez de en un efecto para no encadenar re-renders;
+  // el usuario puede seguir plegándolo a mano después.
+  const [lastPathname, setLastPathname] = useState(pathname)
+  if (lastPathname !== pathname) {
+    setLastPathname(pathname)
+    if (isSettingsRoute) setSettingsOpen(true)
+  }
 
   useEffect(() => {
     onMobileClose()
