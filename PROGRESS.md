@@ -55,10 +55,49 @@
 - Forecast de Gamma renombrado a "Forecast ini." para dejar claro que es del
   momento de la recomendación.
 
+### Correcciones de la sección Recomendaciones (commit `9e9e3c5`)
+- **Bug corregido — precio de entrada inventado en Agente Peter.** Tras la
+  llamada a la IA el paso 4 sobrescribía `lastPrice` con
+  `precio_objetivo / 1.15`, y ese valor se guardaba como `precio_entrada`. La
+  división revertía el fallback de `analyze/route` (`objetivo = lastPrice * 1.15`),
+  así que cuando la IA devolvía objetivo propio el número no significaba nada.
+  Caso reportado: APA con objetivo $48.50 registró entrada $42.17 con el mercado
+  en 44.40. `AgenteSmall` nunca tuvo este defecto.
+- **Bug corregido — liquidación de opciones cableada.** Gamma marcaba siempre
+  −100% al vencer y Theta siempre +100%, sin mirar el subyacente. Nuevos
+  `lib/options/settlement.ts` (valor intrínseco y P&L por contrato) y
+  `lib/options/settle-picks.ts` (orquestación), más
+  `POST /api/informes/settlement-prices` que devuelve el cierre histórico del
+  subyacente en la fecha de vencimiento. Las posiciones cerradas con el ±100%
+  cableado se recalculan solas en la siguiente ejecución del agente.
+- **Bug corregido — no se podía borrar un precio de venta.** El `onBlur` era
+  `if (!isNaN(val))`, así que vaciar el campo no guardaba nada. Ahora un campo
+  vacío guarda `null` y libera el rendimiento. Aplicado a P.Compra, P.Venta,
+  Cantidad y P.Objetivo.
+- **Incoherencia corregida:** la columna Rendim. de Peter y Small ignoraba
+  `precio_venta` y seguía moviéndose con el mercado tras vender, al contrario
+  que la columna G/P. Ahora se congela y muestra candado.
+- El precio de venta de Peter y Small pasa a solo lectura: lo registra el agente
+  al cerrar por deterioro de la tesis.
+- Gamma y Theta: columna Rendim. sustituida por **Result. ($)** y **Result. (%)**
+  con el P&L de 1 contrato (100 acciones) y tooltip con el desglose. "Forecast
+  ini." gana un tooltip que aclara que es la señal de entrada, no el resultado.
+  Gamma marca los vencidos con `VENC.`, como ya hacía Theta.
+- `precio_objetivo` pasa a tomarse del consenso de analistas (`targetMeanPrice`),
+  con la cifra de la IA en `ai_report.precio_objetivo_ia` y el origen en
+  `ai_report.objetivo_fuente`. Es informativo: **no dispara ventas**.
+- "Agente Small Cap" renombrado a "Agente Small" en las etiquetas visibles.
+
 ## Pendiente
 
 - **Implementar la lógica nueva de Portafolio Quant** — la sección está vacía a
   propósito, esperando definición.
+- **Borrar a mano las recomendaciones de Agente Peter anteriores al commit
+  `9e9e3c5`.** Su `precio_entrada` es el valor sintético `objetivo / 1.15` y no
+  se puede reconstruir (haría falta saber a qué hora se generaron). Las de
+  Agente Small sí son válidas.
+- Re-ejecutar Gamma y Theta una vez para que liquiden con datos reales los
+  contratos vencidos y recalculen los cerrados con el ±100% cableado.
 - Verificar en producción que las primas de opciones llegan: depende de que
   Yahoo cotice los símbolos OCC construidos. Si algún contrato aparece con "—"
   de forma sistemática, revisar el formato del símbolo contra el
@@ -98,11 +137,22 @@
 - Render y las vulnerabilidades de `npm audit` quedan congelados por decisión
   del usuario.
 
-## Estado de verificación (commit `d9869a5`)
+## Decisiones sobre agentes
+
+- **La venta se dispara solo por deterioro de las condiciones de mercado**
+  (≥2 de 3 filtros fallando al re-ejecutar). Sin take-profit por objetivo.
+- **El precio de referencia de un contrato vencido es su valor intrínseco**
+  calculado contra el cierre real del subyacente ese día, nunca un valor
+  asumido.
+- **La categoría en BD sigue siendo `SMALL_CAPS`** pese al renombrado visible,
+  para no dejar huérfanas las recomendaciones existentes.
+
+## Estado de verificación (commit `9e9e3c5`)
 
 | Check | Resultado |
 |---|---|
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | 224/224 (baseline tenía 1 fallo en `Sidebar.test.tsx`) |
+| `npm run test:run` | **260/260** (36 nuevos de liquidación de opciones) |
 | `npm run lint` | **0 problemas** (baseline 37) |
 | `npm run build` | exit 0 |
+| Deploy Vercel | success |
