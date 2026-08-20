@@ -28,6 +28,10 @@ interface AnalysisResult {
   resumen: string
   conviction?: number
   consensus?: string
+  /** Cifra propuesta por la IA, conservada para poder contrastar el objetivo. */
+  precio_objetivo_ia?: number | null
+  /** De dónde salió `precio_objetivo`. */
+  objetivo_fuente?: 'consenso' | 'ia' | 'fallback'
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -43,6 +47,9 @@ export async function POST(request: Request): Promise<Response> {
 
   let empresa = ticker
   let fundamentals = `Ticker: ${ticker}\nPrecio: $${lastPrice.toFixed(2)}\nScore Lynch: ${score}/6`
+  // Objetivo del consenso de analistas de Yahoo. Es un dato verificable, a
+  // diferencia de la cifra que propone la IA, así que tiene prioridad.
+  let targetMeanPrice: number | null = null
   try {
     const yf = new YahooFinance()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,6 +58,8 @@ export async function POST(request: Request): Promise<Response> {
     const f = summary?.financialData ?? {}
     const s = summary?.defaultKeyStatistics ?? {}
     empresa = (p.longName ?? p.shortName ?? ticker) as string
+    const rawTarget = Number(f.targetMeanPrice)
+    if (Number.isFinite(rawTarget) && rawTarget > 0) targetMeanPrice = rawTarget
     fundamentals = [
       `Empresa: ${empresa}`,
       `Sector: ${(p.sector ?? 'N/D') as string} | Industria: ${(p.industry ?? 'N/D') as string}`,
@@ -63,7 +72,7 @@ export async function POST(request: Request): Promise<Response> {
     ].join('\n')
   } catch { /* use minimal data */ }
 
-  const agentName = category === 'PETER_LYNCH' ? 'AGENTE PETER' : 'AGENTE SMALL CAP'
+  const agentName = category === 'PETER_LYNCH' ? 'AGENTE PETER' : 'AGENTE SMALL'
   const model = process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat-v3-0324'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
@@ -143,8 +152,25 @@ Responde SOLO con JSON válido (sin markdown, sin explicación):
 
   if (!parsed.stop_loss || parsed.stop_loss >= lastPrice)
     parsed.stop_loss = parseFloat((lastPrice * 0.92).toFixed(2))
-  if (!parsed.precio_objetivo || parsed.precio_objetivo <= lastPrice)
+
+  // Precedencia del precio objetivo: consenso de analistas > cifra de la IA >
+  // fallback +15%. Se conserva la cifra de la IA aparte para poder contrastarla,
+  // y se marca el origen para que la procedencia sea auditable desde la tabla.
+  const precioObjetivoIa = Number.isFinite(Number(parsed.precio_objetivo))
+    ? parseFloat(Number(parsed.precio_objetivo).toFixed(2))
+    : null
+  parsed.precio_objetivo_ia = precioObjetivoIa
+
+  if (targetMeanPrice != null && targetMeanPrice > lastPrice) {
+    parsed.precio_objetivo = parseFloat(targetMeanPrice.toFixed(2))
+    parsed.objetivo_fuente = 'consenso'
+  } else if (precioObjetivoIa != null && precioObjetivoIa > lastPrice) {
+    parsed.precio_objetivo = precioObjetivoIa
+    parsed.objetivo_fuente = 'ia'
+  } else {
     parsed.precio_objetivo = parseFloat((lastPrice * 1.15).toFixed(2))
+    parsed.objetivo_fuente = 'fallback'
+  }
 
   return Response.json(parsed)
 }

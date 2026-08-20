@@ -7,6 +7,7 @@ import {
   TrendingUp, Brain, CheckCircle2, ArrowRight,
   RefreshCw, Activity, Filter, Layers,
 } from 'lucide-react'
+import { settleExpiredPicks } from '@/lib/options/settle-picks'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
 
@@ -198,33 +199,25 @@ export default function AgenteGamma() {
       } else {
         addLog(`📋 ${activeGamma.length} opción(es) Gamma activa(s)`)
         for (const pick of activeGamma) {
-          if (signal.aborted) break
           const report = pick.ai_report ?? {}
           const expStr = (report.expiration ?? '') as string
           const dte = expStr ? calcDTE(expStr) : -1
-          const premioOriginal = pick.precio_entrada
-
-          if (dte <= 0) {
-            addLog(`⬇ ${pick.ticker} ${expStr}: opción EXPIRADA (DTE=${dte}) → VENDER`)
-            try {
-              await fetch('/api/agentes/picks', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: pick.id, estado: 'Vender', precio_venta: 0, rentabilidad: -100 }),
-                signal,
-              })
-            } catch { /* ignore */ }
-          } else {
-            addLog(`✓ ${pick.ticker}: DTE=${dte}d · prima $${premioOriginal?.toFixed(2) ?? '?'} — vigente`)
+          if (dte > 0) {
+            addLog(`✓ ${pick.ticker}: DTE=${dte}d · prima $${pick.precio_entrada?.toFixed(2) ?? '?'} — vigente`)
           }
         }
       }
+
+      // Liquidación de contratos vencidos con el cierre real del subyacente en
+      // la fecha de expiración. Incluye las posiciones que se cerraron con el
+      // −100% cableado que asumía siempre pérdida total.
+      await settleExpiredPicks(gammaPicks, signal, addLog)
       setStep0Phase('done')
       if (signal.aborted) { setPhase('idle'); return }
 
       // ── PASO 1: Cargar candidatos ──────────────────────────────────
       setStep1Phase('running')
-      addLog('📋 Cargando picks activos de Agente Peter y Small Cap...')
+      addLog('📋 Cargando picks activos de Agente Peter y Agente Small...')
       const [peterRes, smallRes] = await Promise.all([
         fetch('/api/agentes/picks?category=PETER_LYNCH', { signal }),
         fetch('/api/agentes/picks?category=SMALL_CAPS', { signal }),

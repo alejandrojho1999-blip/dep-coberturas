@@ -11,7 +11,7 @@ type Tab = 'peter' | 'small' | 'gamma' | 'theta'
 
 const TABS: { key: Tab; label: string; accent: string }[] = [
   { key: 'peter', label: 'AGENTE PETER',    accent: '#00ff88' },
-  { key: 'small', label: 'AGENTE SMALL CAP', accent: '#00ff88' },
+  { key: 'small', label: 'AGENTE SMALL', accent: '#00ff88' },
   { key: 'gamma', label: 'AGENTE GAMMA',    accent: '#a78bfa' },
   { key: 'theta', label: 'AGENTE THETA',    accent: '#fb923c' },
 ]

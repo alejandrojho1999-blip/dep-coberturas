@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
 import { contractKey, type OccOptionType, type OptionContractRef } from '@/lib/options/occ-symbol'
 import { daysToExpiration } from '@/lib/options/pricing'
+import { CONTRACT_MULTIPLIER } from '@/lib/options/settlement'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,21 @@ function fmtNum(n: number | null | undefined): string {
 }
 
 /**
+ * Interpreta lo que el usuario dejó en un campo numérico editable.
+ *
+ * Un campo vacío significa "borrar el dato", no "ignorar el cambio": es lo que
+ * permite deshacer un precio de venta escrito por error y volver a dejar el
+ * rendimiento corriendo contra el precio de mercado.
+ */
+function parseNullableNumber(raw: string): { valid: boolean; value: number | null } {
+  const trimmed = raw.trim()
+  if (trimmed === '') return { valid: true, value: null }
+  const n = parseFloat(trimmed)
+  if (!Number.isFinite(n) || n < 0) return { valid: false, value: null }
+  return { valid: true, value: n }
+}
+
+/**
  * Extrae el contrato de opción de una recomendación de agente.
  * Devuelve null si el `ai_report` no trae strike/expiración/tipo utilizables.
  */
@@ -73,21 +89,57 @@ function optionRefFromRec(rec: AgentRec): OptionContractRef | null {
   return { ticker: rec.ticker, expiration, strike, type }
 }
 
+interface OptionOutcome {
+  /** Resultado en dólares para 1 contrato = 100 acciones. */
+  usd: number
+  /** Resultado sobre la prima, en porcentaje. */
+  pct: number | null
+  /** Valor por acción con el que se calcula el resultado. */
+  valorActual: number
+  /** true si el contrato ya venció y la cifra es definitiva. */
+  cerrada: boolean
+  /** Desglose legible del cálculo, para el tooltip. */
+  detalle: string
+}
+
 /**
- * Rendimiento porcentual de la prima desde la entrada del agente.
+ * Resultado de una recomendación de opciones, siempre expresado sobre 1
+ * contrato estándar (100 acciones).
  *
- * En posiciones compradas (GAMMA) se gana cuando la prima sube; en posiciones
- * vendidas (THETA cobra la prima al abrir) se gana cuando la prima cae, así que
- * el signo se invierte.
+ * Para una posición viva se compara la prima de entrada con la prima que
+ * cotiza ahora. Para una vencida se usa el valor de liquidación que dejó
+ * grabado el agente en `precio_venta`.
+ *
+ * El signo depende del lado: GAMMA compra la prima y gana si sube; THETA la
+ * cobra al abrir y gana si cae.
  */
-function premiumReturnPct(
-  entrada: number | null,
-  actual: number | undefined,
-  side: 'long' | 'short' = 'long'
-): number | null {
-  if (entrada == null || entrada === 0 || actual == null) return null
-  const pct = ((actual - entrada) / entrada) * 100
-  return side === 'short' ? -pct : pct
+function optionOutcome(
+  rec: AgentRec,
+  primaViva: number | undefined,
+  side: 'long' | 'short'
+): OptionOutcome | null {
+  const entrada = rec.precio_entrada
+  if (entrada == null || entrada === 0) return null
+
+  const cerrada = rec.precio_venta != null
+  const valorActual = cerrada ? rec.precio_venta! : primaViva
+  if (valorActual == null) return null
+
+  const porAccion = side === 'short' ? entrada - valorActual : valorActual - entrada
+  const usd = porAccion * CONTRACT_MULTIPLIER
+  const cobro = side === 'short' ? 'cobrada' : 'pagada'
+  const cierre = cerrada ? 'liquidación al vencimiento' : 'prima actual'
+
+  return {
+    usd,
+    pct: (porAccion / entrada) * 100,
+    valorActual,
+    cerrada,
+    detalle:
+      `Prima ${cobro}: $${entrada.toFixed(2)} × 100 = $${(entrada * CONTRACT_MULTIPLIER).toFixed(2)}\n` +
+      `Valor (${cierre}): $${valorActual.toFixed(2)} × 100 = $${(valorActual * CONTRACT_MULTIPLIER).toFixed(2)}\n` +
+      `Resultado: ${usd >= 0 ? '+' : '−'}$${Math.abs(usd).toFixed(2)} por contrato`,
+  }
 }
 
 // ─── Preview Modal ────────────────────────────────────────────────────────────
@@ -977,9 +1029,9 @@ export default function InformesPage() {
                           value={getEditVal(entry, 'precio_compra')}
                           onChange={(e) => setRowEdit(entry.id, 'precio_compra', e.target.value)}
                           onBlur={(e) => {
-                            const val = parseFloat(e.target.value)
+                            const { valid, value } = parseNullableNumber(e.target.value)
                             clearRowEdit(entry.id, 'precio_compra')
-                            if (!isNaN(val) && val >= 0) void saveField(entry.id, { precio_compra: val })
+                            if (valid) void saveField(entry.id, { precio_compra: value })
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
@@ -992,11 +1044,13 @@ export default function InformesPage() {
                           value={getEditVal(entry, 'precio_venta')}
                           onChange={(e) => setRowEdit(entry.id, 'precio_venta', e.target.value)}
                           onBlur={(e) => {
-                            const val = parseFloat(e.target.value)
+                            const { valid, value } = parseNullableNumber(e.target.value)
                             clearRowEdit(entry.id, 'precio_venta')
-                            if (!isNaN(val) && val >= 0) void saveField(entry.id, { precio_venta: val })
+                            // Vaciar el campo borra la venta y libera el rendimiento.
+                            if (valid) void saveField(entry.id, { precio_venta: value })
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                          title="Vacía el campo para deshacer la venta y reanudar el seguimiento del rendimiento"
                           className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
                         />
                       </td>
@@ -1007,9 +1061,9 @@ export default function InformesPage() {
                           value={getEditVal(entry, 'cantidad_acciones')}
                           onChange={(e) => setRowEdit(entry.id, 'cantidad_acciones', e.target.value)}
                           onBlur={(e) => {
-                            const val = parseFloat(e.target.value)
+                            const { valid, value } = parseNullableNumber(e.target.value)
                             clearRowEdit(entry.id, 'cantidad_acciones')
-                            if (!isNaN(val) && val >= 0) void saveField(entry.id, { cantidad_acciones: val })
+                            if (valid) void saveField(entry.id, { cantidad_acciones: value })
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           className="w-16 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
@@ -1028,9 +1082,9 @@ export default function InformesPage() {
                           value={getEditVal(entry, 'precio_objetivo_personal')}
                           onChange={(e) => setRowEdit(entry.id, 'precio_objetivo_personal', e.target.value)}
                           onBlur={(e) => {
-                            const val = parseFloat(e.target.value)
+                            const { valid, value } = parseNullableNumber(e.target.value)
                             clearRowEdit(entry.id, 'precio_objetivo_personal')
-                            if (!isNaN(val) && val >= 0) void saveField(entry.id, { precio_objetivo_personal: val })
+                            if (valid) void saveField(entry.id, { precio_objetivo_personal: value })
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
@@ -1212,18 +1266,14 @@ export default function InformesPage() {
                           <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
                           <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
-                          <td className="hidden px-3 py-2.5 text-right xl:table-cell">
-                            <input type="number" min="0" step="0.01" placeholder="—"
-                              value={getAgentEditVal(rec, 'precio_venta')}
-                              onChange={e => setAgentRowEdits(prev => ({ ...prev, [rec.id]: { ...prev[rec.id], precio_venta: e.target.value } }))}
-                              onBlur={e => {
-                                const val = parseFloat(e.target.value)
-                                setAgentRowEdits(prev => { const c = { ...prev }; if (c[rec.id]) { const f = { ...c[rec.id] }; delete f.precio_venta; c[rec.id] = f }; return c })
-                                if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { precio_venta: val })
-                              }}
-                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                              className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
-                            />
+                          {/* P.Venta — solo lectura: lo registra el agente al cerrar */}
+                          <td
+                            className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell"
+                            title={rec.precio_venta != null
+                              ? 'Venta ejecutada por el agente al deteriorarse la tesis'
+                              : 'Se rellena automáticamente cuando el agente cierre la posición'}
+                          >
+                            {rec.precio_venta != null ? `$${fmtNum(rec.precio_venta)}` : <span className="text-[#475569]">—</span>}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right xl:table-cell">
                             <input type="number" min="0" step="1" placeholder="—"
@@ -1246,11 +1296,20 @@ export default function InformesPage() {
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                             {(() => {
-                              const cp = livePrices[rec.ticker]; const ep = rec.precio_entrada
-                              if (cp == null || ep == null || ep === 0) return <span className="text-[#475569]">—</span>
-                              const pct = ((cp - ep) / ep) * 100
+                              const ep = rec.precio_entrada
+                              // Una vez vendida, el rendimiento se congela en el
+                              // precio de salida en vez de seguir al mercado.
+                              const cerrada = rec.precio_venta != null
+                              const ref = cerrada ? rec.precio_venta! : livePrices[rec.ticker]
+                              if (ref == null || ep == null || ep === 0) return <span className="text-[#475569]">—</span>
+                              const pct = ((ref - ep) / ep) * 100
                               const pos = pct >= 0
-                              return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}{pct.toFixed(2)}%</span>
+                              return (
+                                <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? '#4ade80' : '#f87171' }}>
+                                  {cerrada && <span title="Posición cerrada por el agente: rendimiento final" className="text-[10px]">🔒</span>}
+                                  {pos ? '+' : ''}{pct.toFixed(2)}%
+                                </span>
+                              )
                             })()}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
@@ -1292,7 +1351,7 @@ export default function InformesPage() {
           )
         })()}
 
-        {/* ── AGENTE SMALL CAP recommendations ─────────────────────── */}
+        {/* ── AGENTE SMALL recommendations ─────────────────────── */}
         {(() => {
           const smallRecs = agentRecs.filter(r => r.category === 'SMALL_CAPS')
           return (
@@ -1300,7 +1359,7 @@ export default function InformesPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
                 <div className="flex items-center gap-2">
                   <Cpu size={14} style={{ color: '#00ff88' }} />
-                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE SMALL CAP</h2>
+                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE SMALL</h2>
                   <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
                     {smallRecs.length}
                   </span>
@@ -1312,7 +1371,7 @@ export default function InformesPage() {
               ) : smallRecs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
                   <Cpu size={20} className="text-[#475569]" />
-                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE SMALL CAP aún.</p>
+                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE SMALL aún.</p>
                   <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
                 </div>
               ) : (
@@ -1350,18 +1409,14 @@ export default function InformesPage() {
                           <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
                           <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
-                          <td className="hidden px-3 py-2.5 text-right xl:table-cell">
-                            <input type="number" min="0" step="0.01" placeholder="—"
-                              value={getAgentEditVal(rec, 'precio_venta')}
-                              onChange={e => setAgentRowEdits(prev => ({ ...prev, [rec.id]: { ...prev[rec.id], precio_venta: e.target.value } }))}
-                              onBlur={e => {
-                                const val = parseFloat(e.target.value)
-                                setAgentRowEdits(prev => { const c = { ...prev }; if (c[rec.id]) { const f = { ...c[rec.id] }; delete f.precio_venta; c[rec.id] = f }; return c })
-                                if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { precio_venta: val })
-                              }}
-                              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                              className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
-                            />
+                          {/* P.Venta — solo lectura: lo registra el agente al cerrar */}
+                          <td
+                            className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell"
+                            title={rec.precio_venta != null
+                              ? 'Venta ejecutada por el agente al deteriorarse la tesis'
+                              : 'Se rellena automáticamente cuando el agente cierre la posición'}
+                          >
+                            {rec.precio_venta != null ? `$${fmtNum(rec.precio_venta)}` : <span className="text-[#475569]">—</span>}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right xl:table-cell">
                             <input type="number" min="0" step="1" placeholder="—"
@@ -1384,11 +1439,20 @@ export default function InformesPage() {
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                             {(() => {
-                              const cp = livePrices[rec.ticker]; const ep = rec.precio_entrada
-                              if (cp == null || ep == null || ep === 0) return <span className="text-[#475569]">—</span>
-                              const pct = ((cp - ep) / ep) * 100
+                              const ep = rec.precio_entrada
+                              // Una vez vendida, el rendimiento se congela en el
+                              // precio de salida en vez de seguir al mercado.
+                              const cerrada = rec.precio_venta != null
+                              const ref = cerrada ? rec.precio_venta! : livePrices[rec.ticker]
+                              if (ref == null || ep == null || ep === 0) return <span className="text-[#475569]">—</span>
+                              const pct = ((ref - ep) / ep) * 100
                               const pos = pct >= 0
-                              return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}{pct.toFixed(2)}%</span>
+                              return (
+                                <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? '#4ade80' : '#f87171' }}>
+                                  {cerrada && <span title="Posición cerrada por el agente: rendimiento final" className="text-[10px]">🔒</span>}
+                                  {pos ? '+' : ''}{pct.toFixed(2)}%
+                                </span>
+                              )
                             })()}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
@@ -1462,13 +1526,18 @@ export default function InformesPage() {
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Tipo</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Prima Act.</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Prima Act.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Result. (%)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Strike</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] xl:table-cell">Expiry</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Breakeven</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium xl:table-cell" style={{ color: '#a78bfa' }}>Forecast ini.</th>
+                        <th
+                          className="hidden px-3 py-2.5 text-right font-medium xl:table-cell"
+                          style={{ color: '#a78bfa' }}
+                          title="Proyección TimesFM del subyacente a 30 días en el momento de recomendar. Es la señal de entrada, NO el resultado de la operación."
+                        >Forecast ini.</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Delta</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">IV</th>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
@@ -1488,13 +1557,17 @@ export default function InformesPage() {
                         const typeColor = optionType === 'CALL' ? '#4ade80' : optionType === 'PUT' ? '#f87171' : '#64748b'
                         const ref = optionRefFromRec(rec)
                         const primaActual = ref ? optionPrices[contractKey(ref)] : undefined
-                        const rendimPrima = premiumReturnPct(rec.precio_entrada, primaActual)
+                        // Gamma compra la prima: gana si sube.
+                        const outcome = optionOutcome(rec, primaActual, 'long')
+                        const dteActual = expiration ? daysToExpiration(expiration) : null
+                        const vencido = expiration != null && dteActual === 0
                         return (
                           <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
                             <td className="px-3 py-2.5">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span>
                                 {optionType && <span className="text-[9px] font-mono px-1 py-px rounded font-bold" style={{ color: typeColor, border: `1px solid ${typeColor}40`, background: `${typeColor}10` }}>{optionType}</span>}
+                                {vencido && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: '#64748b', border: '1px solid #1e2035' }} title={`Venció el ${expiration}`}>VENC.</span>}
                               </div>
                             </td>
                             <td className="hidden px-3 py-2.5 text-[#475569] md:table-cell">
@@ -1504,12 +1577,23 @@ export default function InformesPage() {
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">
                               {rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs">
-                              {primaActual != null ? <span className="text-[#e2e8f0]">${fmtNum(primaActual)}</span> : <span className="text-[#475569]">—</span>}
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
+                              {outcome != null
+                                ? <span className="text-[#e2e8f0]">${fmtNum(outcome.valorActual)}</span>
+                                : <span className="text-[#475569]">—</span>}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
-                              {rendimPrima != null ? (
-                                <span style={{ color: rendimPrima >= 0 ? '#4ade80' : '#f87171' }}>{rendimPrima >= 0 ? '+' : ''}{rendimPrima.toFixed(2)}%</span>
+                            {/* Resultado en dólares de 1 contrato = 100 acciones */}
+                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
+                              {outcome != null ? (
+                                <span className="flex items-center justify-end gap-0.5" style={{ color: outcome.usd >= 0 ? '#4ade80' : '#f87171' }}>
+                                  {outcome.cerrada && <span title="Contrato vencido: resultado definitivo" className="text-[10px]">🔒</span>}
+                                  {outcome.usd >= 0 ? '+' : '−'}${fmtNum(Math.abs(outcome.usd))}
+                                </span>
+                              ) : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
+                              {outcome?.pct != null ? (
+                                <span style={{ color: outcome.pct >= 0 ? '#4ade80' : '#f87171' }}>{outcome.pct >= 0 ? '+' : ''}{outcome.pct.toFixed(2)}%</span>
                               ) : <span className="text-[#475569]">—</span>}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
@@ -1593,8 +1677,9 @@ export default function InformesPage() {
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Estrategia</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Prima Act.</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Prima Act.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Result. (%)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Strike</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] xl:table-cell">Expiry</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
@@ -1622,8 +1707,8 @@ export default function InformesPage() {
                         const vencido = expiration != null && dteActual === 0
                         const ref = optionRefFromRec(rec)
                         const primaActual = ref ? optionPrices[contractKey(ref)] : undefined
-                        // THETA vende la prima: el rendimiento es favorable cuando cae.
-                        const rendimPrima = premiumReturnPct(rec.precio_entrada, primaActual, 'short')
+                        // Theta cobra la prima al abrir: gana si la prima cae.
+                        const outcome = optionOutcome(rec, primaActual, 'short')
                         return (
                           <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
                             <td className="px-3 py-2.5">
@@ -1639,12 +1724,23 @@ export default function InformesPage() {
                             <td className="hidden px-3 py-2.5 text-right font-mono xl:table-cell">
                               <span className="font-semibold" style={{ color: '#4ade80' }}>{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs">
-                              {primaActual != null ? <span className="text-[#e2e8f0]">${fmtNum(primaActual)}</span> : <span className="text-[#475569]">—</span>}
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
+                              {outcome != null
+                                ? <span className="text-[#e2e8f0]">${fmtNum(outcome.valorActual)}</span>
+                                : <span className="text-[#475569]">—</span>}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
-                              {rendimPrima != null ? (
-                                <span style={{ color: rendimPrima >= 0 ? '#4ade80' : '#f87171' }}>{rendimPrima >= 0 ? '+' : ''}{rendimPrima.toFixed(2)}%</span>
+                            {/* Resultado en dólares de 1 contrato = 100 acciones */}
+                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
+                              {outcome != null ? (
+                                <span className="flex items-center justify-end gap-0.5" style={{ color: outcome.usd >= 0 ? '#4ade80' : '#f87171' }}>
+                                  {outcome.cerrada && <span title="Contrato vencido: resultado definitivo" className="text-[10px]">🔒</span>}
+                                  {outcome.usd >= 0 ? '+' : '−'}${fmtNum(Math.abs(outcome.usd))}
+                                </span>
+                              ) : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
+                              {outcome?.pct != null ? (
+                                <span style={{ color: outcome.pct >= 0 ? '#4ade80' : '#f87171' }}>{outcome.pct >= 0 ? '+' : ''}{outcome.pct.toFixed(2)}%</span>
                               ) : <span className="text-[#475569]">—</span>}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>

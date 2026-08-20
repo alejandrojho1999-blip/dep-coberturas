@@ -7,6 +7,7 @@ import {
   TrendingDown, Brain, CheckCircle2, ArrowRight,
   RefreshCw, BarChart2, Filter, Layers,
 } from 'lucide-react'
+import { settleExpiredPicks } from '@/lib/options/settle-picks'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
 
@@ -199,27 +200,19 @@ export default function AgenteTheta() {
       } else {
         addLog(`📋 ${activeTheta.length} opción(es) Theta activa(s)`)
         for (const pick of activeTheta) {
-          if (signal.aborted) break
           const report = pick.ai_report ?? {}
           const expStr = (report.expiration ?? '') as string
           const dte = expStr ? calcDTE(expStr) : -1
-          const primaOriginal = pick.precio_entrada
-
-          if (dte <= 0) {
-            addLog(`✓ ${pick.ticker} ${expStr}: opción EXPIRADA → prima cobrada completa ($${primaOriginal?.toFixed(2) ?? '?'})`)
-            try {
-              await fetch('/api/agentes/picks', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: pick.id, estado: 'Vender', precio_venta: 0, rentabilidad: 100 }),
-                signal,
-              })
-            } catch { /* ignore */ }
-          } else {
-            addLog(`✓ ${pick.ticker}: DTE=${dte}d · prima cobrada $${primaOriginal?.toFixed(2) ?? '?'} — vigente`)
+          if (dte > 0) {
+            addLog(`✓ ${pick.ticker}: DTE=${dte}d · prima cobrada $${pick.precio_entrada?.toFixed(2) ?? '?'} — vigente`)
           }
         }
       }
+
+      // Liquidación de contratos vencidos con el cierre real del subyacente.
+      // Un put vendido que vence ITM es pérdida, no la prima íntegra que
+      // asumía el cálculo anterior.
+      await settleExpiredPicks(thetaPicks, signal, addLog)
       setStep0Phase('done')
       if (signal.aborted) { setPhase('idle'); return }
 

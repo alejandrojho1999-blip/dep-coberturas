@@ -372,7 +372,8 @@ export default function AgentePeter() {
             empresa: result.empresa as string,
             conviction,
             consensus: result.consensus as string,
-            lastPrice: result.precio_objetivo ? (result.precio_objetivo as number) / 1.15 : undefined,
+            // lastPrice NO se toca: es el precio real de mercado del paso 2 y
+            // es el que se registra como precio_entrada de la recomendación.
             aiResult: result,
           }
           if (pass) analyzed.push({ ...paso4[idx] })
