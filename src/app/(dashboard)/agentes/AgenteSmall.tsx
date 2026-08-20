@@ -428,7 +428,7 @@ export default function AgenteSmall() {
           if (!sRes.ok) throw new Error(`Picks HTTP ${sRes.status}`)
           const sData = await sRes.json() as { skipped?: boolean }
           if (sData.skipped) {
-            addLog(`↩ ${t.ticker}: ya tiene posición activa — omitido`)
+            addLog(`↩ ${t.ticker}: ya tiene posición activa — se conserva la recomendación original sin modificar`)
           } else {
             addLog(`✓ ${t.ticker}: guardado — ${t.empresa ?? t.ticker} (conviction ${t.conviction}/10)`)
             const idx = paso5.findIndex(x => x.ticker === t.ticker)

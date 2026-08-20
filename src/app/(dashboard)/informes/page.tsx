@@ -7,6 +7,7 @@ import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
 import { contractKey, type OccOptionType, type OptionContractRef } from '@/lib/options/occ-symbol'
 import { daysToExpiration } from '@/lib/options/pricing'
 import { CONTRACT_MULTIPLIER } from '@/lib/options/settlement'
+import { hasFabricatedEntryPrice, FABRICATED_ENTRY_WARNING } from '@/lib/agentes/legacy-entry-price'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1212,6 +1213,7 @@ export default function InformesPage() {
         {/* ── AGENTE PETER recommendations ──────────────────────── */}
         {(() => {
           const peterRecs = agentRecs.filter(r => r.category === 'PETER_LYNCH')
+          const dudosas = peterRecs.filter(hasFabricatedEntryPrice).length
           return (
             <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
@@ -1224,6 +1226,21 @@ export default function InformesPage() {
                 </div>
                 <span className="text-[10px] font-mono text-[#475569]">Lynch score 6/6 · Tendencia alcista · IA confirmada</span>
               </div>
+              {dudosas > 0 && (
+                <div
+                  className="flex items-start gap-2 border-b border-[#1e1e2e] px-5 py-2.5"
+                  style={{ background: 'rgba(248,113,113,0.06)' }}
+                >
+                  <span className="text-[11px] leading-relaxed" style={{ color: '#f87171' }}>
+                    <strong>{dudosas} recomendación{dudosas > 1 ? 'es' : ''} con precio de entrada no fiable.</strong>{' '}
+                    <span className="text-[#94a3b8]">
+                      Se generaron antes de corregir el cálculo y su entrada es un valor que nunca cotizó.
+                      Elimínalas con la papelera y vuelve a ejecutar el Agente Peter: al existir una posición
+                      activa del mismo ticker, el agente las omite en vez de rehacerlas.
+                    </span>
+                  </span>
+                </div>
+              )}
               {agentRecsLoading ? (
                 <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
               ) : peterRecs.length === 0 ? (
@@ -1253,11 +1270,20 @@ export default function InformesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {peterRecs.map((rec, i) => (
+                      {peterRecs.map((rec, i) => {
+                        const entradaDudosa = hasFabricatedEntryPrice(rec)
+                        return (
                         <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
                           <td className="px-3 py-2.5">
                             <span className="font-semibold text-[#00ff88]">{rec.ticker}</span>
                             <div className="mt-0.5 flex flex-wrap gap-1">
+                              {entradaDudosa && (
+                                <span
+                                  className="text-[9px] font-mono px-1 py-px rounded font-bold"
+                                  style={{ color: '#f87171', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(248,113,113,0.1)' }}
+                                  title={FABRICATED_ENTRY_WARNING}
+                                >⚠ ENTRADA NO FIABLE</span>
+                              )}
                               {rec.score != null && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)' }}>Lynch {rec.score}/6</span>}
                               {rec.riesgo && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24', background: rec.riesgo === 'BAJO' ? 'rgba(74,222,128,0.08)' : rec.riesgo === 'ALTO' ? 'rgba(248,113,113,0.08)' : 'rgba(251,191,36,0.08)' }}>{rec.riesgo}</span>}
                               {rec.timeframe && <span className="text-[9px] font-mono text-[#475569]">{rec.timeframe}</span>}
@@ -1342,7 +1368,8 @@ export default function InformesPage() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
