@@ -344,8 +344,18 @@ export default function AgenteSmall() {
 
       for (const t of paso3Pass) {
         if (signal.aborted) break
-        addLog(`⟳ ${t.ticker}: debate técnico + fundamental + síntesis...`)
         const idx = paso4.findIndex(x => x.ticker === t.ticker)
+
+        // Sin precio real de mercado no se analiza: el objetivo y el stop de la
+        // IA se derivan de él, y el precio de entrada quedaría inventado.
+        if (t.lastPrice == null || t.lastPrice <= 0) {
+          addLog(`⚠ ${t.ticker}: sin precio de mercado fiable — descartado`)
+          if (idx !== -1) paso4[idx] = { ...paso4[idx], step4: 'fail' }
+          setTickers([...paso4])
+          continue
+        }
+
+        addLog(`⟳ ${t.ticker}: debate técnico + fundamental + síntesis...`)
         if (idx !== -1) paso4[idx] = { ...paso4[idx], step4: 'running' }
         setTickers([...paso4])
 
@@ -355,8 +365,8 @@ export default function AgenteSmall() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ticker: t.ticker,
-              lastPrice: t.lastPrice ?? t.forecastPrice ?? 0,
-              category: 'SMALL_CAP',
+              lastPrice: t.lastPrice,
+              category: 'SMALL_CAPS',
               score: t.score,
               forecastReturn: t.forecastReturn,
               momentumScore: t.momentumScore,
@@ -402,7 +412,14 @@ export default function AgenteSmall() {
       for (const t of analyzed) {
         if (signal.aborted) break
         const ai = t.aiResult ?? {}
-        const entryPrice = t.lastPrice ?? t.forecastPrice ?? 0
+        // Precio real de mercado del paso 2. Nunca se sustituye por la
+        // proyección ni por cero: una entrada inventada falsea el rendimiento
+        // de la recomendación durante toda su vida.
+        const entryPrice = t.lastPrice
+        if (entryPrice == null || entryPrice <= 0) {
+          addLog(`⚠ ${t.ticker}: sin precio de entrada fiable — no se guarda`)
+          continue
+        }
 
         try {
           const sRes = await fetch('/api/agentes/picks', {
