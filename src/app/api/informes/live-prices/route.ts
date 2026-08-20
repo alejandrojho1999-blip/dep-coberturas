@@ -12,7 +12,7 @@ export async function GET(request: Request): Promise<Response> {
     .split(',')
     .map((t) => t.trim().toUpperCase())
     .filter(Boolean)
-    .slice(0, 25)
+    .slice(0, 100)
 
   if (!tickers.length) return Response.json({})
 

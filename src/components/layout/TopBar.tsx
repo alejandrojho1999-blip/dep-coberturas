@@ -39,11 +39,11 @@ export function TopBar({ userName, onMobileMenuOpen }: TopBarProps) {
         {/* Desktop brand */}
         <div className="hidden md:flex items-center gap-2">
           <span className="text-[11px] font-bold tracking-[0.2em] text-[#F59E0B] font-mono uppercase">
-            EQF Terminal
+            EQF QUANT
           </span>
           <span className="h-3 w-px bg-[#1e2035]" />
           <span className="text-[10px] tracking-wide text-[#374151] uppercase font-mono">
-            Sistema de Análisis de Riesgos
+            Agentes y Estrategias Cuantitativas
           </span>
         </div>
 

@@ -35,7 +35,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/dashboard')
+      router.push('/agentes')
       router.refresh()
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
@@ -50,8 +50,8 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center">
           <div className="mb-2 text-3xl font-bold text-[#00ff88]">◈</div>
-          <h1 className="text-xl font-bold text-[#e2e8f0]">Dep. Coberturas</h1>
-          <p className="mt-1 text-sm text-[#64748b]">Sistema de Análisis de Riesgos</p>
+          <h1 className="text-xl font-bold text-[#e2e8f0]">EQF Quant</h1>
+          <p className="mt-1 text-sm text-[#64748b]">Agentes y Estrategias Cuantitativas</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dep. Coberturas — Sistema de Análisis de Riesgos",
-  description: "Sistema de análisis de mercados financieros y cobertura de riesgos para carteras de inversión",
+  title: "EQF Quant — Agentes y Estrategias Cuantitativas",
+  description: "Plataforma de agentes y estrategias cuantitativas para el análisis y seguimiento de recomendaciones de inversión",
 };
 
 export default function RootLayout({

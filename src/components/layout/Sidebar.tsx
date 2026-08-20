@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard,
-  TrendingUp,
   Shield,
   FileText,
   UserCircle,
@@ -18,11 +16,9 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: 'Dashboard',        href: '/dashboard' },
-  { icon: TrendingUp,      label: 'ERGOS QUANT',      href: '/ergos-quant' },
-  { icon: Shield,          label: 'Coberturas',        href: '/coberturas' },
-  { icon: FileText,        label: 'Recomendaciones',   href: '/informes' },
-  { icon: Cpu,             label: 'Agentes',           href: '/agentes' },
+  { icon: Cpu,        label: 'Agentes',          href: '/agentes' },
+  { icon: Shield,     label: 'Portafolio Quant', href: '/coberturas' },
+  { icon: FileText,   label: 'Recomendaciones',  href: '/informes' },
 ] as const
 
 const STORAGE_KEY = 'sidebar-collapsed'
@@ -116,7 +112,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               </span>
               <span className="h-3 w-px bg-[#1e2035]" />
               <span className="truncate text-xs font-medium tracking-wide text-[#64748b] uppercase">
-                Coberturas
+                Quant
               </span>
             </div>
           )}

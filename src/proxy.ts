@@ -38,10 +38,11 @@ export async function proxy(request: NextRequest) {
 
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/inversion-causal') ||
-    pathname.startsWith('/portafolios') ||
-    pathname.startsWith('/agente-ppo') ||
+    pathname.startsWith('/agentes') ||
     pathname.startsWith('/coberturas') ||
+    pathname.startsWith('/informes') ||
+    pathname.startsWith('/ergos-quant') ||
+    pathname.startsWith('/fincept-terminal') ||
     pathname.startsWith('/perfil')
 
   if (!user && isProtectedRoute) {
@@ -52,7 +53,7 @@ export async function proxy(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/agentes'
     return NextResponse.redirect(url)
   }
 

@@ -3,18 +3,29 @@ import { describe, it, expect, vi } from 'vitest'
 import { Sidebar } from './Sidebar'
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/dashboard',
+  usePathname: () => '/agentes',
 }))
 
 describe('Sidebar', () => {
   it('renderiza los items de navegación', () => {
     render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
-    expect(screen.getByText('Dashboard')).toBeInTheDocument()
-    expect(screen.getByText('Inversión Causal')).toBeInTheDocument()
-    expect(screen.getByText('Portafolios Híbridos')).toBeInTheDocument()
-    expect(screen.getByText('Agente PPO')).toBeInTheDocument()
-    expect(screen.getByText('Coberturas')).toBeInTheDocument()
+    expect(screen.getByText('Agentes')).toBeInTheDocument()
+    expect(screen.getByText('Portafolio Quant')).toBeInTheDocument()
+    expect(screen.getByText('Recomendaciones')).toBeInTheDocument()
+  })
+
+  it('muestra Mi Perfil al abrir Configuración', () => {
+    render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
+    // El submenú arranca cerrado en rutas que no son /perfil ni /fincept-terminal.
+    expect(screen.queryByText('Mi Perfil')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Configuración'))
     expect(screen.getByText('Mi Perfil')).toBeInTheDocument()
+  })
+
+  it('no muestra los módulos retirados del menú', () => {
+    render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
+    expect(screen.queryByText('ERGOS QUANT')).not.toBeInTheDocument()
   })
 
   it('colapsa y expande al hacer click en el toggle', () => {

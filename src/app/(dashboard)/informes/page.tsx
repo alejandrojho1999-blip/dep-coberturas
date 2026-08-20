@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { BarChart2, Cpu, Download, Eye, FileText, Loader2, Search, Trash2, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
+import { contractKey, type OccOptionType, type OptionContractRef } from '@/lib/options/occ-symbol'
+import { daysToExpiration } from '@/lib/options/pricing'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +54,40 @@ function formatDate(iso: string): string {
 function fmtNum(n: number | null | undefined): string {
   if (n == null) return 'N/D'
   return n.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+/**
+ * Extrae el contrato de opción de una recomendación de agente.
+ * Devuelve null si el `ai_report` no trae strike/expiración/tipo utilizables.
+ */
+function optionRefFromRec(rec: AgentRec): OptionContractRef | null {
+  const rpt = rec.ai_report ?? {}
+  const strike = rpt.strike as number | undefined
+  const expiration = rpt.expiration as string | undefined
+  if (strike == null || !expiration) return null
+  // THETA guarda la estrategia en vez del tipo: SELL_PUT es un put, el resto call.
+  const rawType = rpt.optionType as string | undefined
+  const type: OccOptionType = rawType === 'PUT' || rawType === 'CALL'
+    ? rawType
+    : (rpt.strategy === 'SELL_PUT' ? 'PUT' : 'CALL')
+  return { ticker: rec.ticker, expiration, strike, type }
+}
+
+/**
+ * Rendimiento porcentual de la prima desde la entrada del agente.
+ *
+ * En posiciones compradas (GAMMA) se gana cuando la prima sube; en posiciones
+ * vendidas (THETA cobra la prima al abrir) se gana cuando la prima cae, así que
+ * el signo se invierte.
+ */
+function premiumReturnPct(
+  entrada: number | null,
+  actual: number | undefined,
+  side: 'long' | 'short' = 'long'
+): number | null {
+  if (entrada == null || entrada === 0 || actual == null) return null
+  const pct = ((actual - entrada) / entrada) * 100
+  return side === 'short' ? -pct : pct
 }
 
 // ─── Preview Modal ────────────────────────────────────────────────────────────
@@ -237,6 +273,7 @@ export default function InformesPage() {
   const uploadTargetRef                       = useRef<HistoryEntry | null>(null)
   const [livePrices,    setLivePrices]        = useState<Record<string, number>>({})
   const [pricesLoading, setPricesLoading]     = useState(false)
+  const [optionPrices,  setOptionPrices]      = useState<Record<string, number>>({})
   const [rowEdits,      setRowEdits]          = useState<Record<string, Record<string, string>>>({})
   const [toasts, setToasts]                   = useState<Toast[]>([])
   const toastId                               = useRef(0)
@@ -427,8 +464,8 @@ export default function InformesPage() {
 
   // ── Live prices ────────────────────────────────────────────────────────────
 
-  const fetchLivePrices = useCallback(async (hist: HistoryEntry[]) => {
-    const tickers = [...new Set(hist.map((h) => h.ticker))].join(',')
+  const fetchLivePrices = useCallback(async (tickerList: string[]) => {
+    const tickers = tickerList.join(',')
     if (!tickers) return
     setPricesLoading(true)
     try {
@@ -437,16 +474,71 @@ export default function InformesPage() {
     } finally { setPricesLoading(false) }
   }, [])
 
+  // Tickers a cotizar: portafolio del operador + recomendaciones de todos los agentes.
+  const trackedTickers = useMemo(
+    () => [...new Set([
+      ...history.map((h) => h.ticker),
+      ...agentRecs.map((r) => r.ticker),
+    ])].filter(Boolean),
+    [history, agentRecs]
+  )
+
   useEffect(() => {
-    if (history.length > 0) void fetchLivePrices(history)
-  }, [history, fetchLivePrices])
+    if (trackedTickers.length > 0) void fetchLivePrices(trackedTickers)
+  }, [trackedTickers, fetchLivePrices])
 
   useEffect(() => {
     const id = setInterval(() => {
-      if (history.length > 0) void fetchLivePrices(history)
+      if (trackedTickers.length > 0) void fetchLivePrices(trackedTickers)
     }, 60_000)
     return () => clearInterval(id)
-  }, [history, fetchLivePrices])
+  }, [trackedTickers, fetchLivePrices])
+
+  // ── Live option premiums (GAMMA / THETA) ───────────────────────────────────
+
+  // Contratos derivados de las recomendaciones de opciones. Se serializa a JSON
+  // para que el efecto solo se dispare cuando cambian los contratos en sí.
+  const trackedContracts = useMemo(() => {
+    const refs: OptionContractRef[] = []
+    for (const rec of agentRecs) {
+      if (rec.category !== 'OPTIONS_GAMMA' && rec.category !== 'OPTIONS_THETA') continue
+      const ref = optionRefFromRec(rec)
+      if (ref) refs.push(ref)
+    }
+    return refs
+  }, [agentRecs])
+
+  const contractsKey = useMemo(
+    () => trackedContracts.map(contractKey).sort().join(','),
+    [trackedContracts]
+  )
+
+  const fetchOptionPrices = useCallback(async (contracts: OptionContractRef[]) => {
+    if (!contracts.length) return
+    try {
+      const res = await fetch('/api/informes/option-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contracts }),
+      })
+      if (res.ok) setOptionPrices(await res.json() as Record<string, number>)
+    } catch { /* la tabla cae al guion si falla */ }
+  }, [])
+
+  useEffect(() => {
+    if (trackedContracts.length > 0) void fetchOptionPrices(trackedContracts)
+    // trackedContracts se recalcula en cada render de agentRecs; contractsKey
+    // evita repetir la petición cuando el conjunto de contratos no cambió.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractsKey, fetchOptionPrices])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (trackedContracts.length > 0) void fetchOptionPrices(trackedContracts)
+    }, 60_000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractsKey, fetchOptionPrices])
 
   // ── Portfolio inline editing ────────────────────────────────────────────────
 
@@ -1370,11 +1462,13 @@ export default function InformesPage() {
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Tipo</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Prima Act.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Strike</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] xl:table-cell">Expiry</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Breakeven</th>
-                        <th className="px-3 py-2.5 text-right font-medium" style={{ color: '#a78bfa' }}>Forecast</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium xl:table-cell" style={{ color: '#a78bfa' }}>Forecast ini.</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Delta</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">IV</th>
                         <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
@@ -1392,6 +1486,9 @@ export default function InformesPage() {
                         const breakeven = rpt.breakeven as number | undefined
                         const forecastReturn = rpt.forecastReturn as number | undefined
                         const typeColor = optionType === 'CALL' ? '#4ade80' : optionType === 'PUT' ? '#f87171' : '#64748b'
+                        const ref = optionRefFromRec(rec)
+                        const primaActual = ref ? optionPrices[contractKey(ref)] : undefined
+                        const rendimPrima = premiumReturnPct(rec.precio_entrada, primaActual)
                         return (
                           <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
                             <td className="px-3 py-2.5">
@@ -1407,15 +1504,23 @@ export default function InformesPage() {
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">
                               {rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}
                             </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs">
+                              {primaActual != null ? <span className="text-[#e2e8f0]">${fmtNum(primaActual)}</span> : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
+                              {rendimPrima != null ? (
+                                <span style={{ color: rendimPrima >= 0 ? '#4ade80' : '#f87171' }}>{rendimPrima >= 0 ? '+' : ''}{rendimPrima.toFixed(2)}%</span>
+                              ) : <span className="text-[#475569]">—</span>}
+                            </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
                             <td className="hidden px-3 py-2.5 text-[#64748b] xl:table-cell">{expiration ?? '—'}</td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs">
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
                               {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
                               {breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
                               {forecastReturn != null ? (
                                 <span style={{ color: forecastReturn >= 0 ? '#4ade80' : '#f87171' }}>{forecastReturn >= 0 ? '+' : ''}{forecastReturn.toFixed(1)}%</span>
                               ) : <span className="text-[#475569]">—</span>}
@@ -1488,9 +1593,11 @@ export default function InformesPage() {
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Estrategia</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Prima Act.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Strike</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] xl:table-cell">Expiry</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Breakeven</th>
                         <th className="px-3 py-2.5 text-right font-medium" style={{ color: '#fb923c' }}>DTE</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">|Delta|</th>
@@ -1507,10 +1614,16 @@ export default function InformesPage() {
                         const expiration = rpt.expiration as string | undefined
                         const delta = rpt.delta as number | undefined
                         const iv = rpt.iv as number | undefined
-                        const dte = rpt.dte as number | undefined
                         const breakeven = rpt.breakeven as number | undefined
                         const stratColor = strategy === 'SELL_PUT' ? '#fb923c' : strategy === 'COVERED_CALL' ? '#38bdf8' : '#64748b'
                         const stratLabel = strategy === 'SELL_PUT' ? 'SELL-PUT' : strategy === 'COVERED_CALL' ? 'COV-CALL' : '—'
+                        // DTE recalculado contra hoy: el valor de ai_report es del día en que corrió el agente.
+                        const dteActual = expiration ? daysToExpiration(expiration) : null
+                        const vencido = expiration != null && dteActual === 0
+                        const ref = optionRefFromRec(rec)
+                        const primaActual = ref ? optionPrices[contractKey(ref)] : undefined
+                        // THETA vende la prima: el rendimiento es favorable cuando cae.
+                        const rendimPrima = premiumReturnPct(rec.precio_entrada, primaActual, 'short')
                         return (
                           <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
                             <td className="px-3 py-2.5">
@@ -1526,17 +1639,27 @@ export default function InformesPage() {
                             <td className="hidden px-3 py-2.5 text-right font-mono xl:table-cell">
                               <span className="font-semibold" style={{ color: '#4ade80' }}>{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
                             </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs">
+                              {primaActual != null ? <span className="text-[#e2e8f0]">${fmtNum(primaActual)}</span> : <span className="text-[#475569]">—</span>}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
+                              {rendimPrima != null ? (
+                                <span style={{ color: rendimPrima >= 0 ? '#4ade80' : '#f87171' }}>{rendimPrima >= 0 ? '+' : ''}{rendimPrima.toFixed(2)}%</span>
+                              ) : <span className="text-[#475569]">—</span>}
+                            </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
                             <td className="hidden px-3 py-2.5 text-[#64748b] xl:table-cell">{expiration ?? '—'}</td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs">
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
                               {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
                               {breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}
                             </td>
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
-                              {dte != null ? (
-                                <span style={{ color: dte <= 7 ? '#f87171' : dte <= 21 ? '#fbbf24' : '#4ade80' }}>{dte}d</span>
+                              {vencido ? (
+                                <span style={{ color: '#64748b' }} title={`Venció el ${expiration}`}>VENC.</span>
+                              ) : dteActual != null ? (
+                                <span style={{ color: dteActual <= 7 ? '#f87171' : dteActual <= 21 ? '#fbbf24' : '#4ade80' }}>{dteActual}d</span>
                               ) : <span className="text-[#475569]">—</span>}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{delta != null ? Math.abs(delta).toFixed(2) : '—'}</td>
