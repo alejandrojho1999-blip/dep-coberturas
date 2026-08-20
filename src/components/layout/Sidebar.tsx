@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Shield,
+  Briefcase,
+  LineChart,
   FileText,
   UserCircle,
   ChevronLeft,
@@ -16,9 +17,10 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { icon: Cpu,        label: 'Agentes',          href: '/agentes' },
-  { icon: Shield,     label: 'Portafolio Quant', href: '/coberturas' },
-  { icon: FileText,   label: 'Recomendaciones',  href: '/informes' },
+  { icon: Briefcase, label: 'Portafolios Quant', href: '/portafolios-quant' },
+  { icon: Cpu,       label: 'Agentes',           href: '/agentes' },
+  { icon: LineChart, label: 'Estrategias',       href: '/coberturas' },
+  { icon: FileText,  label: 'Recomendaciones',   href: '/informes' },
 ] as const
 
 const STORAGE_KEY = 'sidebar-collapsed'

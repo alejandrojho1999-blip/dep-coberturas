@@ -31,7 +31,7 @@ export default function AgentesClient() {
         </div>
         <div>
           <h1 className="text-lg font-semibold text-[#e2e8f0]">Agentes</h1>
-          <p className="text-sm text-[#64748b]">Emporium Quality Funds — Agentes Autónomos de Inversión</p>
+          <p className="text-sm text-[#64748b]">Emporium Quality Funds — Agentes IA para Acciones y Opciones</p>
         </div>
       </div>
 

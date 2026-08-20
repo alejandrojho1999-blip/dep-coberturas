@@ -9,9 +9,16 @@ vi.mock('next/navigation', () => ({
 describe('Sidebar', () => {
   it('renderiza los items de navegación', () => {
     render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
+    expect(screen.getByText('Portafolios Quant')).toBeInTheDocument()
     expect(screen.getByText('Agentes')).toBeInTheDocument()
-    expect(screen.getByText('Portafolio Quant')).toBeInTheDocument()
+    expect(screen.getByText('Estrategias')).toBeInTheDocument()
     expect(screen.getByText('Recomendaciones')).toBeInTheDocument()
+  })
+
+  it('sitúa Portafolios Quant como primera entrada del menú', () => {
+    render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
+    const labels = screen.getAllByRole('link').map(a => a.textContent)
+    expect(labels[0]).toBe('Portafolios Quant')
   })
 
   it('muestra Mi Perfil al abrir Configuración', () => {

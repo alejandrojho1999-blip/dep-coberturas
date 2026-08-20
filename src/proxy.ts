@@ -39,6 +39,7 @@ export async function proxy(request: NextRequest) {
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/agentes') ||
+    pathname.startsWith('/portafolios-quant') ||
     pathname.startsWith('/coberturas') ||
     pathname.startsWith('/informes') ||
     pathname.startsWith('/ergos-quant') ||
