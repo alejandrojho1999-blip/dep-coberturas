@@ -7,13 +7,13 @@
 
 ## Estado actual
 
-**Último commit verificado:** `04537ed` · Deploy Vercel: success
+**Último commit verificado:** `74e0892` · Deploy Vercel: success
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** (baseline era 37) |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **269/269** |
+| `npm run test:run` | **270/270** |
 | `npm run build` | exit 0 |
 
 ### Mapa de navegación
@@ -40,7 +40,9 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ### Acciones en la app
 - **Re-ejecutar Gamma y Theta una vez** para que liquiden con datos reales los
-  contratos vencidos y recalculen los cerrados con el ±100% cableado.
+  contratos vencidos y recalculen tanto los cerrados con el ±100% cableado como
+  los que se liquidaron con el cierre del día anterior al vencimiento. FSLR
+  debe pasar de +$905 / +57.46 % a **+$1 195 / +75.87 %**.
 - **Verificar que las primas de opciones llegan** en producción: depende de que
   Yahoo cotice los símbolos OCC construidos. Si un contrato aparece con "—" de
   forma sistemática, contrastar el símbolo generado con el `contractSymbol` que
@@ -162,6 +164,28 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
   en el paso 5.
 - `AgenteSmall` enviaba `category: 'SMALL_CAP'` a `/api/agentes/analyze` y
   guardaba `'SMALL_CAPS'`. Solo afectaba a la cabecera `X-Title`; unificado.
+
+### Liquidación con el día correcto y lectura de las tablas (commit `74e0892`)
+- **Bug corregido — se liquidaba con el cierre del día anterior.** El endpoint
+  filtraba con `fecha_barra <= vencimiento` comparando timestamps, pero las
+  barras diarias llevan la hora de apertura del mercado mientras el vencimiento
+  se construía a medianoche UTC, así que la barra del propio día quedaba fuera.
+  FSLR CALL $230 venc. 2026-06-18 cerró a 257.70 y se liquidó con los 254.80
+  del 17. La comparación pasa a hacerse por día natural.
+- La liquidación anota `underlyingAtExpiry` en `ai_report`; su ausencia marca
+  las filas pendientes de recalcular. El PATCH conserva el resto del informe
+  (`ai_report` añadido a `EDITABLE` en `/api/agentes/picks`).
+- **Corrección de una lectura errónea previa:** se dio por perdedora la
+  operación de FSLR leyendo el valor de P.Subyac. como el precio al vencer,
+  cuando era el precio del día en curso. El contrato venció ITM y ganó.
+- **Causa de fondo, corregida:** P.Subyac. mostraba el precio de hoy incluso en
+  contratos ya vencidos. En posiciones cerradas muestra el cierre del
+  vencimiento, etiquetado "al vencer".
+- Eliminada la columna que repetía el literal "OPCIÓN" en todas las filas de
+  Gamma y Theta. En su lugar, cada tabla lleva junto al título un distintivo
+  con el lado de la operación: **COMPRA DE OPCIONES** en Gamma (paga la prima,
+  gana si sube) y **VENTA DE OPCIONES** en Theta (cobra la prima, gana si baja
+  o vence sin valor).
 
 ### Limpieza de lint (commit `d9869a5`)
 - `npm run lint` queda en **0 problemas** (venía de 37).
