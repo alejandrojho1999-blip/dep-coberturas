@@ -220,6 +220,9 @@ export async function settleExpiredPicks(
           estado: 'Vender',
           precio_venta: o.precioVenta,
           rentabilidad: o.rentabilidad,
+          // El contrato dejó de existir el día del vencimiento, no hoy: esa es
+          // la fecha con la que el portafolio debe registrar el cierre.
+          closed_at: `${o.expiration}T21:00:00.000Z`,
           // Se conserva el informe original y se le añade el precio del
           // subyacente en el vencimiento, para que la tabla pueda mostrar el
           // dato con el que se liquidó en vez del precio de mercado de hoy.

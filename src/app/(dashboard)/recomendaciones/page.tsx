@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { BarChart2, Cpu, Download, Eye, FileText, Loader2, Search, Trash2, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
-import { contractKey, type OccOptionType, type OptionContractRef } from '@/lib/options/occ-symbol'
+import { contractKey, type OptionContractRef } from '@/lib/options/occ-symbol'
 import { daysToExpiration } from '@/lib/options/pricing'
-import { CONTRACT_MULTIPLIER } from '@/lib/options/settlement'
 import { hasFabricatedEntryPrice, FABRICATED_ENTRY_WARNING } from '@/lib/agentes/legacy-entry-price'
+import type { AgentRec } from '@/lib/agentes/types'
+import { optionOutcome, optionRefFromRec } from '@/lib/options/mark'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -24,27 +25,6 @@ interface Toast {
   variant: 'success' | 'error'
 }
 
-interface AgentRec {
-  id: string
-  user_id: string
-  ticker: string
-  empresa: string | null
-  category: string
-  precio_entrada: number | null
-  precio_objetivo: number | null
-  stop_loss: number | null
-  precio_venta: number | null
-  cantidad_acciones: number | null
-  direction: string | null
-  riesgo: string | null
-  timeframe: string | null
-  resumen: string | null
-  score: number | null
-  market_cap_m: number | null
-  estado: string | null
-  created_at: string
-  ai_report?: Record<string, unknown> | null
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -71,76 +51,6 @@ function parseNullableNumber(raw: string): { valid: boolean; value: number | nul
   const n = parseFloat(trimmed)
   if (!Number.isFinite(n) || n < 0) return { valid: false, value: null }
   return { valid: true, value: n }
-}
-
-/**
- * Extrae el contrato de opción de una recomendación de agente.
- * Devuelve null si el `ai_report` no trae strike/expiración/tipo utilizables.
- */
-function optionRefFromRec(rec: AgentRec): OptionContractRef | null {
-  const rpt = rec.ai_report ?? {}
-  const strike = rpt.strike as number | undefined
-  const expiration = rpt.expiration as string | undefined
-  if (strike == null || !expiration) return null
-  // THETA guarda la estrategia en vez del tipo: SELL_PUT es un put, el resto call.
-  const rawType = rpt.optionType as string | undefined
-  const type: OccOptionType = rawType === 'PUT' || rawType === 'CALL'
-    ? rawType
-    : (rpt.strategy === 'SELL_PUT' ? 'PUT' : 'CALL')
-  return { ticker: rec.ticker, expiration, strike, type }
-}
-
-interface OptionOutcome {
-  /** Resultado en dólares para 1 contrato = 100 acciones. */
-  usd: number
-  /** Resultado sobre la prima, en porcentaje. */
-  pct: number | null
-  /** Valor por acción con el que se calcula el resultado. */
-  valorActual: number
-  /** true si el contrato ya venció y la cifra es definitiva. */
-  cerrada: boolean
-  /** Desglose legible del cálculo, para el tooltip. */
-  detalle: string
-}
-
-/**
- * Resultado de una recomendación de opciones, siempre expresado sobre 1
- * contrato estándar (100 acciones).
- *
- * Para una posición viva se compara la prima de entrada con la prima que
- * cotiza ahora. Para una vencida se usa el valor de liquidación que dejó
- * grabado el agente en `precio_venta`.
- *
- * El signo depende del lado: GAMMA compra la prima y gana si sube; THETA la
- * cobra al abrir y gana si cae.
- */
-function optionOutcome(
-  rec: AgentRec,
-  primaViva: number | undefined,
-  side: 'long' | 'short'
-): OptionOutcome | null {
-  const entrada = rec.precio_entrada
-  if (entrada == null || entrada === 0) return null
-
-  const cerrada = rec.precio_venta != null
-  const valorActual = cerrada ? rec.precio_venta! : primaViva
-  if (valorActual == null) return null
-
-  const porAccion = side === 'short' ? entrada - valorActual : valorActual - entrada
-  const usd = porAccion * CONTRACT_MULTIPLIER
-  const cobro = side === 'short' ? 'cobrada' : 'pagada'
-  const cierre = cerrada ? 'liquidación al vencimiento' : 'prima actual'
-
-  return {
-    usd,
-    pct: (porAccion / entrada) * 100,
-    valorActual,
-    cerrada,
-    detalle:
-      `Prima ${cobro}: $${entrada.toFixed(2)} × 100 = $${(entrada * CONTRACT_MULTIPLIER).toFixed(2)}\n` +
-      `Valor (${cierre}): $${valorActual.toFixed(2)} × 100 = $${(valorActual * CONTRACT_MULTIPLIER).toFixed(2)}\n` +
-      `Resultado: ${usd >= 0 ? '+' : '−'}$${Math.abs(usd).toFixed(2)} por contrato`,
-  }
 }
 
 // ─── Preview Modal ────────────────────────────────────────────────────────────
@@ -663,7 +573,23 @@ export default function RecomendacionesPage() {
     return (ref - entrada) * cantidad
   }
 
-  const saveAgentField = async (id: string, updates: Record<string, unknown>) => {
+  /**
+   * Un cierre manual también tiene que dejar constancia de la fecha: los
+   * portafolios reconstruyen su curva con `closed_at` y sin ella tendrían que
+   * inferirla. Reabrir la posición la vuelve a limpiar.
+   */
+  const withClosedAt = (rec: AgentRec | undefined, updates: Record<string, unknown>): Record<string, unknown> => {
+    if (!rec) return updates
+    if (!('estado' in updates) && !('precio_venta' in updates)) return updates
+    const merged = { ...rec, ...updates } as AgentRec
+    const cerrada = merged.estado === 'Vender' || merged.precio_venta != null
+    if (cerrada && rec.closed_at == null) return { ...updates, closed_at: new Date().toISOString() }
+    if (!cerrada && rec.closed_at != null) return { ...updates, closed_at: null }
+    return updates
+  }
+
+  const saveAgentField = async (id: string, rawUpdates: Record<string, unknown>) => {
+    const updates = withClosedAt(agentRecs.find(r => r.id === id), rawUpdates)
     const res = await fetch('/api/agentes/picks', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

@@ -262,6 +262,7 @@ export default function AgenteSmall() {
                   estado: 'Vender',
                   precio_venta: parseFloat(cp.toFixed(2)),
                   rentabilidad: parseFloat(rent.toFixed(2)),
+                  closed_at: new Date().toISOString(),
                 }),
                 signal,
               })

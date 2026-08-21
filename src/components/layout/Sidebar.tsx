@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { icon: Briefcase, label: 'Portafolios Quant', href: '/portafolios-quant' },
+  { icon: Briefcase, label: 'Portafolios',       href: '/portafolios' },
   { icon: Cpu,       label: 'Agentes',           href: '/agentes' },
   { icon: LineChart, label: 'Estrategias',       href: '/estrategias' },
   { icon: FileText,  label: 'Recomendaciones',   href: '/recomendaciones' },

@@ -13,14 +13,14 @@
 |---|---|
 | `npm run lint` | **0 problemas** (baseline era 37) |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **270/270** |
+| `npm run test:run` | **343/343** |
 | `npm run build` | exit 0 |
 
 ### Mapa de navegación
 
 | # | Sección | Ruta | Subtítulo |
 |---|---|---|---|
-| 1 | Portafolios Quant | `/portafolios-quant` | Construcción y Gestión de Portafolios Cuantitativos |
+| 1 | Portafolios | `/portafolios` | Portafolios Algorítmicos de Acciones y Opciones |
 | 2 | Agentes | `/agentes` | Agentes IA para Acciones y Opciones |
 | 3 | Estrategias | `/estrategias` | Estrategias para Trading de Futuros |
 | 4 | Recomendaciones | `/recomendaciones` | Panel de Recomendaciones |
@@ -33,12 +33,13 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ## Pendiente
 
 ### Funcionalidad por definir
-- **Portafolios Quant** (`/portafolios-quant`) — sección vacía a la espera de su
-  lógica.
 - **Estrategias** (`/estrategias`) — placeholder a la espera de las estrategias
   de trading de futuros.
 
 ### Acciones en la app
+- **Aplicar la migración `017_agent_recommendations_closed_at.sql` en Supabase.**
+  Sin ella el PATCH de cierre falla al escribir `closed_at` y los portafolios
+  siguen infiriendo todas las fechas de cierre.
 - **Re-ejecutar Gamma y Theta una vez** para que liquiden con datos reales los
   contratos vencidos y recalculen tanto los cerrados con el ±100% cableado como
   los que se liquidaron con el cierre del día anterior al vencimiento. FSLR
@@ -203,6 +204,34 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 - Los 16 `as any` del test de `causal/assets` pasan por un helper tipado.
 - ESLint configurado para respetar el prefijo `_` en `no-unused-vars`.
 
+### Portafolios algorítmicos (`/portafolios`)
+- Sección renombrada de **Portafolios Quant** a **Portafolios**, con la ruta
+  movida por `git mv` de `/portafolios-quant` a `/portafolios`. Actualizados
+  `Sidebar.tsx`, su test y `proxy.ts`. De paso quedan arreglados los dos
+  enlaces a `/portafolios` de `dashboard/page.tsx`, que daban 404.
+- La página pasa a server component con guardia de auth propia, además del
+  proxy.
+- **Migración `017`:** nueva columna `closed_at` en `agent_recommendations`.
+  La escriben los tres caminos de cierre: la venta de Peter y Small (`now()`),
+  la liquidación de Gamma y Theta (**fecha de vencimiento**, no `now()`) y el
+  cierre manual de `/recomendaciones`. Añadida a la whitelist `EDITABLE` del
+  PATCH.
+- **Código extraído para reusar, no duplicar:** `AgentRec` sale de
+  `recomendaciones/page.tsx` a `lib/agentes/types.ts` (con `rentabilidad` y
+  `closed_at`, que faltaban), y `optionRefFromRec()` + `optionOutcome()` a
+  `lib/options/mark.ts`, ahora con tests propios.
+- **Nuevos módulos puros** en `lib/portafolios/`: `config` (reglas de cartera),
+  `types`, `closed-date` (inferencia para las filas anteriores a la migración),
+  `positions`, `metrics` y `equity`. 73 tests nuevos.
+- **Nuevo `POST /api/portafolios/history`**: cierres diarios por ticker vía
+  `yf.chart(...)` con `adjclose`, autenticado, máx. 60 símbolos.
+- **Recharts 3.10.1** instalado — el proyecto no tenía ninguna librería de
+  gráficos. Nuevos `components/charts/`: donut de composición, curva de equity
+  vs benchmark y barras de resultado por posición.
+- Refresco en vivo cada 60 s de recomendaciones, precios y primas; los
+  históricos cada 15 min. Al releer la tabla, una posición vendida sale sola
+  del pastel y entra en el track record.
+
 ---
 
 ## Decisiones tomadas
@@ -237,6 +266,26 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
   esta regla.
 - **La categoría en BD sigue siendo `SMALL_CAPS`** pese al renombrado visible,
   para no dejar huérfanas las recomendaciones existentes.
+
+### Portafolios
+- **El portafolio es derivado, no una tabla.** Se calcula aplicando las reglas
+  de `lib/portafolios/config.ts` a `agent_recommendations` en cada carga. Por eso
+  una venta del agente se refleja sola y corregir un dato corrige el pasado.
+- **Sizing fijo:** $100 000 y $1 000 por recomendación en acciones (cantidad
+  fraccional), $100 000 y 1 contrato por señal en opciones. `cantidad_acciones`
+  de la tabla se **ignora**: es la cartera manual del operador, no la del
+  portafolio algorítmico.
+- **El peso de una opción en el pastel es el capital que inmoviliza**, no la
+  prima: colateral del strike en un put vendido y valor de las acciones en una
+  call cubierta. Con la prima, Theta parecería una posición diminuta siendo la
+  que más capital retiene.
+- **La curva de opciones es escalonada a propósito.** Yahoo no publica histórico
+  de primas, así que la línea solo se mueve con cada liquidación real. Se
+  descartó revaluar con Black-Scholes: sería una curva suave pero teórica.
+- **Las filas con precio de entrada fabricado se excluyen** del portafolio y se
+  informa del recuento. Contarlas inventaría rendimiento en el track record.
+- **Cifras brutas**, sin comisión de rendimiento ni costes de transacción.
+- **Benchmark SPY** en ambos portafolios, normalizado al mismo capital.
 
 ### Congelado
 - Todo lo de Render y las vulnerabilidades de `npm audit`, documentado en

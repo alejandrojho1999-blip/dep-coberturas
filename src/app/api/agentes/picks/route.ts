@@ -54,7 +54,7 @@ export async function POST(request: Request): Promise<Response> {
   return Response.json(data, { status: 201 })
 }
 
-const EDITABLE = ['estado', 'precio_venta', 'precio_entrada', 'precio_objetivo', 'stop_loss', 'cantidad_acciones', 'resumen', 'rentabilidad', 'ai_report']
+const EDITABLE = ['estado', 'precio_venta', 'precio_entrada', 'precio_objetivo', 'stop_loss', 'cantidad_acciones', 'resumen', 'rentabilidad', 'ai_report', 'closed_at']
 
 export async function PATCH(request: Request): Promise<Response> {
   const supabase = await createClient()
