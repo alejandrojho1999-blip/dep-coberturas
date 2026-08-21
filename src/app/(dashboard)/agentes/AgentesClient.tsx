@@ -6,14 +6,17 @@ import AgentePeter from './AgentePeter'
 import AgenteSmall from './AgenteSmall'
 import AgenteGamma from './AgenteGamma'
 import AgenteTheta from './AgenteTheta'
+import { AGENT_COLORS } from '@/components/charts/chart-theme'
 
 type Tab = 'peter' | 'small' | 'gamma' | 'theta'
 
+// El color de cada agente vive en chart-theme para que pestañas y gráficos no
+// se desincronicen.
 const TABS: { key: Tab; label: string; accent: string }[] = [
-  { key: 'peter', label: 'AGENTE PETER',    accent: '#00ff88' },
-  { key: 'small', label: 'AGENTE SMALL', accent: '#00ff88' },
-  { key: 'gamma', label: 'AGENTE GAMMA',    accent: '#a78bfa' },
-  { key: 'theta', label: 'AGENTE THETA',    accent: '#fb923c' },
+  { key: 'peter', label: 'AGENTE PETER', accent: AGENT_COLORS.Peter },
+  { key: 'small', label: 'AGENTE SMALL', accent: AGENT_COLORS.Small },
+  { key: 'gamma', label: 'AGENTE GAMMA', accent: AGENT_COLORS.Gamma },
+  { key: 'theta', label: 'AGENTE THETA', accent: AGENT_COLORS.Theta },
 ]
 
 export default function AgentesClient() {
@@ -23,31 +26,32 @@ export default function AgentesClient() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)' }}
-        >
-          <Cpu size={20} style={{ color: '#00ff88' }} />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent">
+          <Cpu size={20} className="text-on-accent" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-[#e2e8f0]">Agentes</h1>
-          <p className="text-sm text-[#64748b]">Emporium Quality Funds — Agentes IA para Acciones y Opciones</p>
+          <h1 className="font-brand text-lg font-extrabold text-text-primary">Agentes</h1>
+          <p className="text-sm text-text-secondary">SynerGy — Agentes IA para Acciones y Opciones</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1 rounded-xl border border-[#1e1e2e] bg-[#0d0d14] p-1 w-fit">
+      <div className="flex flex-wrap gap-1 rounded-xl border border-border-subtle bg-background p-1 w-fit">
         {TABS.map(({ key, label, accent }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className="rounded-lg px-4 py-2 text-xs font-semibold font-mono transition-all"
-            style={
+            className={[
+              'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold font-mono transition-all',
               tab === key
-                ? { background: `${accent}26`, color: accent, border: `1px solid ${accent}4d` }
-                : { color: '#64748b', border: '1px solid transparent' }
-            }
+                ? 'bg-accent text-on-accent'
+                : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary',
+            ].join(' ')}
           >
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ background: accent }}
+            />
             {label}
           </button>
         ))}

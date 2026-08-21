@@ -22,18 +22,18 @@ export default function ErgoQuantClient() {
       <div className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-xl text-xl"
-          style={{ background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.2)' }}
+          style={{ background: 'rgba(0, 61, 102,0.08)', border: '1px solid rgba(0, 61, 102,0.2)' }}
         >
           ⚛
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#e2e8f0] font-mono">ERGOS QUANT</h1>
-          <p className="text-xs text-[#475569]">Sistema de Inversión Causal — powered by ERGO-Quant</p>
+          <h1 className="text-xl font-bold tracking-tight text-text-primary font-mono">ERGOS QUANT</h1>
+          <p className="text-xs text-text-muted">Sistema de Inversión Causal — powered by ERGO-Quant</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-[#1e293b]">
+      <div className="flex gap-1 border-b border-border">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -41,8 +41,8 @@ export default function ErgoQuantClient() {
             className={[
               'px-4 py-2 text-xs font-semibold font-mono tracking-wide transition-colors',
               active === tab.id
-                ? 'border-b-2 border-[#00ff88] text-[#00ff88]'
-                : 'text-[#475569] hover:text-[#94a3b8]',
+                ? 'border-b-2 border-accent text-positive'
+                : 'text-text-muted hover:text-text-secondary',
             ].join(' ')}
           >
             {tab.label}

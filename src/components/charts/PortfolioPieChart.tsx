@@ -49,7 +49,7 @@ export function PortfolioPieChart({ slices, caja = 0, centro, centroSub, altura 
   if (total <= 0) {
     return (
       <div
-        className="flex items-center justify-center rounded-lg border border-dashed border-[#1e2035] text-xs text-[#475569]"
+        className="flex items-center justify-center rounded-lg border border-dashed border-border text-xs text-text-muted"
         style={{ height: altura }}
       >
         Sin posiciones que representar
@@ -88,8 +88,8 @@ export function PortfolioPieChart({ slices, caja = 0, centro, centroSub, altura 
         </ResponsiveContainer>
         {centro && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="font-mono text-xl font-bold tabular-nums text-[#F0EFE8]">{centro}</span>
-            {centroSub && <span className="mt-0.5 text-[10px] tracking-wider text-[#64748b]">{centroSub}</span>}
+            <span className="font-mono text-xl font-bold tabular-nums text-text-primary">{centro}</span>
+            {centroSub && <span className="mt-0.5 text-[10px] tracking-wider text-text-secondary">{centroSub}</span>}
           </div>
         )}
       </div>
@@ -99,9 +99,9 @@ export function PortfolioPieChart({ slices, caja = 0, centro, centroSub, altura 
           <li key={d.nombre} className="flex items-center justify-between gap-2 text-xs">
             <span className="flex min-w-0 items-center gap-2">
               <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: d.color }} />
-              <span className="truncate text-[#94a3b8]">{d.nombre}</span>
+              <span className="truncate text-text-secondary">{d.nombre}</span>
             </span>
-            <span className="shrink-0 font-mono tabular-nums text-[#64748b]">
+            <span className="shrink-0 font-mono tabular-nums text-text-secondary">
               {((d.valor / total) * 100).toFixed(1)}%
             </span>
           </li>

@@ -20,14 +20,14 @@ interface Props {
  */
 export function KpiCard({ label, value, sub, signo, ayuda, acento }: Props) {
   const color = signo == null || signo === 0
-    ? (acento ?? '#e2e8f0')
-    : (signo > 0 ? '#22c55e' : '#ef4444')
+    ? (acento ?? 'var(--color-text-primary)')
+    : (signo > 0 ? 'var(--color-positive)' : 'var(--color-negative)')
 
   return (
-    <div className="bg-[#0f0f17] px-4 py-3" title={ayuda}>
-      <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-[#475569]">{label}</p>
+    <div className="bg-surface px-4 py-3" title={ayuda}>
+      <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-text-muted">{label}</p>
       <p className="mt-1 font-mono text-xl font-bold tabular-nums" style={{ color }}>{value}</p>
-      {sub && <p className="mt-0.5 text-[10px] text-[#475569]">{sub}</p>}
+      {sub && <p className="mt-0.5 text-[10px] text-text-muted">{sub}</p>}
     </div>
   )
 }
@@ -35,7 +35,7 @@ export function KpiCard({ label, value, sub, signo, ayuda, acento }: Props) {
 /** Rejilla de tarjetas con separación por bordes, no por márgenes. */
 export function KpiRow({ children }: { children: ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-px bg-[#1e2035] p-px sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-px bg-surface-raised p-px sm:grid-cols-3 lg:grid-cols-5">
       {children}
     </div>
   )

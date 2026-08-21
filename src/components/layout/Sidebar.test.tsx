@@ -17,7 +17,11 @@ describe('Sidebar', () => {
 
   it('sitúa Portafolios como primera entrada del menú', () => {
     render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
-    const labels = screen.getAllByRole('link').map(a => a.textContent)
+    // El primer enlace es el logotipo de marca, que no lleva texto.
+    const labels = screen
+      .getAllByRole('link')
+      .map(a => a.textContent)
+      .filter(Boolean)
     expect(labels[0]).toBe('Portafolios')
   })
 

@@ -7,7 +7,7 @@
 
 ## Estado actual
 
-**Último commit verificado:** `74e0892` · Deploy Vercel: success
+**Último commit:** `e2b586b` · **Sin commitear: el rebrand a SynerGy** (45 archivos)
 
 | Check | Resultado |
 |---|---|
@@ -32,9 +32,25 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ## Pendiente
 
+### Rebrand SynerGy — cierre
+- **Commitear y pushear.** El rebrand está completo y verificado pero sigue en
+  el working tree, sin commit.
+- **Recorrido visual autenticado** de las 8 rutas del dashboard. Solo se
+  comprobaron en navegador `/login`, `/register` y el shell del dashboard (con
+  una ruta temporal ya borrada). `recomendaciones/page.tsx` concentraba 419
+  sustituciones de color y es la de mayor riesgo de regresión.
+- **Generar un informe DOCX real** para confirmar la paleta azul del manual
+  (`1C3042` / `003D66`), la tipografía Roboto y el pie con "SynerGy".
+- Posible **segunda pasada de ajuste fino** en las pantallas densas
+  (`recomendaciones`, `fincept-terminal`): sin acento cálido, la jerarquía
+  depende de peso y relleno y puede necesitar retoques al verla en uso.
+
 ### Funcionalidad por definir
 - **Estrategias** (`/estrategias`) — placeholder a la espera de las estrategias
-  de trading de futuros.
+  de trading de futuros. En Drive existe
+  `Emporium/Trading Algoritmico/` con dos subcarpetas, **Estrategias
+  individuales** y **Portafolio conjunto**, que serían la fuente de contenido.
+  Su contenido no se ha podido listar todavía (ver más abajo).
 
 ### Acciones en la app
 - **Aplicar la migración `017_agent_recommendations_closed_at.sql` en Supabase.**
@@ -48,6 +64,12 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
   Yahoo cotice los símbolos OCC construidos. Si un contrato aparece con "—" de
   forma sistemática, contrastar el símbolo generado con el `contractSymbol` que
   devuelve la cadena de opciones.
+
+### Acceso a Google Drive
+El conector de Drive sigue la cuenta con la que está autenticado Claude Code.
+La carpeta `Emporium/` pertenece a **lriofrio915@gmail.com**; con
+`tefybel@gmail.com` no se ve nada de ella. Antes de trabajar con material de
+Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ### Decisiones abiertas
 - Qué hacer con `/dashboard` y `/ergos-quant`: siguen vivas pero sin entrada de
@@ -71,9 +93,34 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` (proyecto Supabase `replbokusvrqdbzuhulm`).
   Sigue gitignored.
 
+### Rebrand a SynerGy (2026-08-21)
+Aplicación completa del manual de marca oficial
+(`Emporium/Manual de Marca/BrandBook (Manual de marca)_SynerGy.pdf`).
+El sistema de diseño resultante está documentado en **`DESIGN.md`**.
+
+- **Assets** en `public/brand/`: logo horizontal y vertical (blanco y azul),
+  isotipo extraído del logotipo vertical, patronaje blanco y navy. Favicon
+  regenerado con el isotipo sobre `#05141f`. `public/emporium-logo.jpg` borrado.
+- **Tokens** (`src/app/globals.css`): los tres azules exactos del manual
+  (`#1C3042`, `#05141f`, `#003D66`), escala de superficies, texto blanco al
+  100/62/38 %, radios, y los alias de shadcn que antes no existían.
+- **Tipografía** (`src/app/layout.tsx`): Nunito Sans (titulares, sustituto de
+  Avenir) + Roboto (cuerpo) + Roboto Mono (cifras). Arregla de paso el bug de
+  `font-mono`, que nunca resolvía a la fuente cargada.
+- **Barrido de color:** ~1360 hex literales convertidos a tokens en 37 archivos.
+  Solo quedan los colores de serie de `chart-theme.ts`, documentados como
+  funcionales.
+- **Marca textual:** "Emporium Quality Funds", "EQF Quant" y "Dep. Coberturas"
+  → SynerGy en UI, metadata, prompts de LLM y generación DOCX. Slogan externo
+  *Find your Freedom* en auth, interno *When SynerGy Happens* en el dashboard.
+- **DOCX:** paleta a `1C3042` / `003D66` y tipografía Roboto.
+- **Patronaje** al 3 % (tope del manual) vía la utilidad `.bg-patronaje`,
+  aplicada en `DashboardShell` y en el layout de auth.
+- **`components.json`:** `baseColor` de `neutral` a `slate`.
+
 ### Navegación, marca y rutas
-- Marca: "EQF Terminal / Sistema de Análisis de Riesgos" → **"EQF QUANT /
-  Agentes y Estrategias Cuantitativas"** en TopBar, login y metadata.
+- Marca: "EQF Terminal / Sistema de Análisis de Riesgos" → "EQF QUANT /
+  Agentes y Estrategias Cuantitativas" → **SynerGy** (ver rebrand arriba).
 - Landing tras login movido de `/dashboard` a `/agentes`.
 - Menú reorganizado en cuatro entradas (ver *Mapa de navegación*). Dashboard y
   ERGOS QUANT salieron del menú conservando sus rutas.
@@ -235,6 +282,26 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ---
 
 ## Decisiones tomadas
+
+### Marca y diseño
+- **El manual de marca manda.** Ante cualquier duda de color, tipografía o uso
+  de logo, la fuente de verdad es el BrandBook de SynerGy en Drive. El sistema
+  derivado está en `DESIGN.md`.
+- **Solo los tres azules del manual como color de marca.** Se descartó añadir un
+  azul claro derivado para el acento interactivo, aun sabiendo que eso rebaja la
+  jerarquía visual respecto al ámbar anterior.
+- **El Alterno `#003D66` es relleno, nunca color de texto sobre fondo oscuro**
+  (contraste 1.66:1). Como relleno con texto blanco encima da 11.3:1. Lo que
+  antes destacaba con color ahora destaca con peso y familia tipográfica.
+- **Nunito Sans sustituye a Avenir**, que es de licencia paga y no está en
+  Google Fonts.
+- **Los colores de datos quedan fuera del manual.** Verde/rojo de P&L y la rueda
+  de 15 series de gráfico son funcionales, retonalizados en frío para convivir
+  con el azul. Es una excepción consciente, no un olvido.
+- **Nada de hex literales en componentes.** El color vive en los tokens de
+  `globals.css`. La única excepción permitida es `chart-theme.ts`, porque
+  Recharts recibe los colores como atributos SVG donde `var(--color-*)` no es
+  fiable.
 
 ### Flujo de trabajo
 - **Verificación por deploy, no por dev server.** No se usa `npm run dev`; los

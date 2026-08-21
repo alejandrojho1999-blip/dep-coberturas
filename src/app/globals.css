@@ -3,19 +3,68 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: #07070b;
-  --color-surface: #0f0f17;
-  --color-surface-raised: #161622;
-  --color-border: #1e2035;
-  --color-accent: #F59E0B;
-  --color-accent-hover: #D97706;
-  --color-accent-muted: rgba(245,158,11,0.08);
-  --color-positive: #22c55e;
-  --color-negative: #ef4444;
-  --color-neutral: #3b82f6;
-  --color-text-primary: #F0EFE8;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #374151;
+  /* ── Marca SynerGy (manual, valores exactos) ─────────────────────────── */
+  --color-brand-navy: #1c3042; /* Principal  */
+  --color-brand-deep: #05141f; /* Secundario */
+  --color-brand-blue: #003d66; /* Alterno    */
+
+  /* ── Superficies (escala 100/50/10 % del manual) ─────────────────────── */
+  --color-background: #05141f;
+  --color-surface: #0c1e2c;
+  --color-surface-raised: #1c3042;
+  --color-surface-hover: #24405a;
+  --color-border: #24405a;
+  --color-border-subtle: #16293a;
+
+  /* ── Acento: relleno, nunca texto sobre fondo oscuro ─────────────────── */
+  --color-accent: #003d66;
+  --color-accent-hover: #004f85;
+  --color-accent-muted: rgba(0, 61, 102, 0.18);
+  --color-accent-ring: rgba(0, 61, 102, 0.55);
+  --color-on-accent: #ffffff;
+
+  /* ── Texto ───────────────────────────────────────────────────────────── */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.62);
+  --color-text-muted: rgba(255, 255, 255, 0.38);
+  --color-foreground: #ffffff;
+  --color-muted-foreground: rgba(255, 255, 255, 0.62);
+
+  /* ── Funcionales (fuera del manual: datos, no marca) ─────────────────── */
+  --color-positive: #10b981;
+  --color-positive-soft: rgba(16, 185, 129, 0.14);
+  --color-negative: #f04438;
+  --color-negative-soft: rgba(240, 68, 56, 0.14);
+  --color-warning: #f5a524;
+  --color-warning-soft: rgba(245, 165, 36, 0.14);
+  --color-neutral: #4d95d0;
+  --color-info: #4d95d0;
+
+  /* ── Alias que consumen los componentes de shadcn/ui ─────────────────── */
+  --color-primary: #003d66;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1c3042;
+  --color-secondary-foreground: #ffffff;
+  --color-card: #0c1e2c;
+  --color-card-foreground: #ffffff;
+  --color-popover: #1c3042;
+  --color-popover-foreground: #ffffff;
+  --color-muted: #16293a;
+  --color-input: #24405a;
+  --color-ring: rgba(0, 61, 102, 0.55);
+  --color-destructive: #f04438;
+  --color-destructive-foreground: #ffffff;
+
+  /* ── Tipografía del manual ───────────────────────────────────────────── */
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-brand: var(--font-brand), system-ui, sans-serif;
+  --font-mono: var(--font-numeric), ui-monospace, monospace;
+
+  /* ── Radios ──────────────────────────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   --animate-gradient: gradient 8s linear infinite;
@@ -68,11 +117,29 @@
 }
 
 body {
-  background-color: #07070b;
-  color: #F0EFE8;
-  font-family: var(--font-geist-sans), sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
 }
 
 button, a, [role="button"] {
   cursor: pointer;
+}
+
+/* Patronaje de marca: el manual lo limita a un 3 % de opacidad */
+.bg-patronaje {
+  position: relative;
+  isolation: isolate;
+}
+
+.bg-patronaje::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/brand/patronaje-blanco.png");
+  background-size: 480px auto;
+  background-repeat: repeat;
+  opacity: 0.03;
 }

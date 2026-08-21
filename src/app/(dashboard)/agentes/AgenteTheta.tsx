@@ -74,26 +74,26 @@ function calcDTE(expiration: string): number {
 }
 
 function StepBadge({ phase }: { phase: Phase }) {
-  if (phase === 'idle')    return <span style={{ color: '#64748b', border: '1px solid #1e1e2e' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">EN ESPERA</span>
-  if (phase === 'running') return <span style={{ color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', background: 'rgba(251,191,36,0.1)' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded animate-pulse">● EJECUTANDO</span>
-  if (phase === 'done')    return <span style={{ color: '#4ade80', border: '1px solid rgba(74,222,128,0.4)', background: 'rgba(74,222,128,0.1)' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">✓ COMPLETADO</span>
-  return                          <span style={{ color: '#f87171', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(248,113,113,0.1)' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">✗ ERROR</span>
+  if (phase === 'idle')    return <span style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-subtle)' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">EN ESPERA</span>
+  if (phase === 'running') return <span style={{ color: 'var(--color-warning)', border: '1px solid rgba(245, 165, 36,0.4)', background: 'rgba(245, 165, 36,0.1)' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded animate-pulse">● EJECUTANDO</span>
+  if (phase === 'done')    return <span style={{ color: 'var(--color-positive)', border: '1px solid rgba(16, 185, 129,0.4)', background: 'rgba(16, 185, 129,0.1)' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">✓ COMPLETADO</span>
+  return                          <span style={{ color: 'var(--color-negative)', border: '1px solid rgba(240, 68, 56,0.4)', background: 'rgba(240, 68, 56,0.1)' }} className="text-[9px] font-mono px-1.5 py-0.5 rounded">✗ ERROR</span>
 }
 
 function TickerCard({ t }: { t: TickerStage }) {
   const stepColors = {
-    pass:    { color: '#4ade80', border: 'rgba(74,222,128,0.4)',  bg: 'rgba(74,222,128,0.08)' },
-    fail:    { color: '#f87171', border: 'rgba(248,113,113,0.4)', bg: 'rgba(248,113,113,0.08)' },
-    running: { color: '#fbbf24', border: 'rgba(251,191,36,0.4)',  bg: 'rgba(251,191,36,0.08)' },
-    pending: { color: '#475569', border: '#1e1e2e',               bg: 'transparent' },
+    pass:    { color: 'var(--color-positive)', border: 'rgba(16, 185, 129,0.4)',  bg: 'rgba(16, 185, 129,0.08)' },
+    fail:    { color: 'var(--color-negative)', border: 'rgba(240, 68, 56,0.4)', bg: 'rgba(240, 68, 56,0.08)' },
+    running: { color: 'var(--color-warning)', border: 'rgba(245, 165, 36,0.4)',  bg: 'rgba(245, 165, 36,0.08)' },
+    pending: { color: 'var(--color-text-muted)', border: 'var(--color-border-subtle)',               bg: 'transparent' },
   }
-  const stratColor = t.strategy === 'SELL_PUT' ? '#fb923c' : t.strategy === 'COVERED_CALL' ? '#38bdf8' : '#64748b'
+  const stratColor = t.strategy === 'SELL_PUT' ? '#e0a458' : t.strategy === 'COVERED_CALL' ? '#38bdf8' : 'var(--color-text-secondary)'
 
   return (
-    <div className="rounded-xl p-3 space-y-2" style={{ border: '1px solid #1e1e2e', background: '#12121a' }}>
+    <div className="rounded-xl p-3 space-y-2" style={{ border: '1px solid var(--color-border-subtle)', background: 'var(--color-surface)' }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-mono font-bold text-sm" style={{ color: '#00ff88' }}>{t.ticker}</span>
+          <span className="font-mono font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>{t.ticker}</span>
           {t.strategy && (
             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ color: stratColor, border: `1px solid ${stratColor}40`, background: `${stratColor}10` }}>
               {t.strategy === 'SELL_PUT' ? 'SP' : 'CC'}
@@ -516,12 +516,12 @@ export default function AgenteTheta() {
   ]
 
   const funnelStages = [
-    { label: 'Universo',  count: tickers.length,                                color: '#fbbf24' },
+    { label: 'Universo',  count: tickers.length,                                color: 'var(--color-warning)' },
     { label: 'Forecast',  count: tickers.filter(t => t.step2 === 'pass').length, color: '#38bdf8' },
-    { label: 'Cadena',    count: tickers.filter(t => t.step3 === 'pass').length, color: '#fb923c' },
-    { label: 'Calidad',   count: tickers.filter(t => t.step4 === 'pass').length, color: '#f472b6' },
-    { label: 'IA',        count: tickers.filter(t => t.step5 === 'pass').length, color: '#a78bfa' },
-    { label: 'Picks',     count: tickers.filter(t => t.step6 === 'done').length, color: '#4ade80' },
+    { label: 'Cadena',    count: tickers.filter(t => t.step3 === 'pass').length, color: '#e0a458' },
+    { label: 'Calidad',   count: tickers.filter(t => t.step4 === 'pass').length, color: '#c4b5fd' },
+    { label: 'IA',        count: tickers.filter(t => t.step5 === 'pass').length, color: '#8b8ff0' },
+    { label: 'Picks',     count: tickers.filter(t => t.step6 === 'done').length, color: 'var(--color-positive)' },
   ]
   const maxFunnel = funnelStages[0]?.count ?? 1
 
@@ -532,19 +532,19 @@ export default function AgenteTheta() {
         {steps.map((s, i) => {
           const Icon = s.icon
           return (
-            <div key={i} className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-3 relative overflow-hidden">
+            <div key={i} className="rounded-xl border border-border-subtle bg-surface p-3 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-0.5 h-full" style={{
-                background: s.phase === 'done' ? '#fb923c' : s.phase === 'running' ? '#fbbf24' : s.phase === 'error' ? '#f87171' : '#1e1e2e'
+                background: s.phase === 'done' ? '#e0a458' : s.phase === 'running' ? 'var(--color-warning)' : s.phase === 'error' ? 'var(--color-negative)' : 'var(--color-border-subtle)'
               }} />
               <div className="mb-2 flex items-center justify-between gap-1 pl-2">
-                <span className="text-[9px] font-bold font-mono text-[#475569]">{String(i + 1).padStart(2, '0')}</span>
+                <span className="text-[9px] font-bold font-mono text-text-muted">{String(i + 1).padStart(2, '0')}</span>
                 <StepBadge phase={s.phase} />
               </div>
               <div className="pl-2 flex items-start gap-1.5">
-                <Icon size={12} style={{ color: s.phase === 'done' ? '#fb923c' : s.phase === 'running' ? '#fbbf24' : '#475569' }} className="mt-0.5 shrink-0" />
+                <Icon size={12} style={{ color: s.phase === 'done' ? '#e0a458' : s.phase === 'running' ? 'var(--color-warning)' : 'var(--color-text-muted)' }} className="mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-[10px] font-bold font-mono text-[#e2e8f0] leading-tight">{s.label}</p>
-                  <p className="mt-0.5 text-[9px] text-[#475569] leading-tight">{s.desc}</p>
+                  <p className="text-[10px] font-bold font-mono text-text-primary leading-tight">{s.label}</p>
+                  <p className="mt-0.5 text-[9px] text-text-muted leading-tight">{s.desc}</p>
                 </div>
               </div>
             </div>
@@ -554,14 +554,14 @@ export default function AgenteTheta() {
 
       {/* Funnel */}
       {tickers.length > 0 && (
-        <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] p-4">
-          <p className="text-[9px] font-mono text-[#475569] mb-3">EMBUDO DE SELECCIÓN — VENTA DE PRIMAS</p>
+        <div className="rounded-xl border border-border-subtle bg-surface p-4">
+          <p className="text-[9px] font-mono text-text-muted mb-3">EMBUDO DE SELECCIÓN — VENTA DE PRIMAS</p>
           <div className="flex items-end gap-1 h-12 px-1">
             {funnelStages.map((s, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
                 <span className="text-[9px] font-mono font-bold" style={{ color: s.color }}>{s.count}</span>
                 <div className="w-full rounded-sm transition-all duration-500" style={{ height: `${Math.max(4, (s.count / maxFunnel) * 32)}px`, background: s.color, opacity: 0.7 }} />
-                <span className="text-[8px] font-mono text-[#475569] text-center leading-tight">{s.label}</span>
+                <span className="text-[8px] font-mono text-text-muted text-center leading-tight">{s.label}</span>
               </div>
             ))}
           </div>
@@ -574,7 +574,7 @@ export default function AgenteTheta() {
           <button
             onClick={() => void run()}
             className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.98]"
-            style={{ background: '#fb923c', color: '#0a0a0f' }}
+            style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)' }}
           >
             <Play size={13} />
             {phase === 'done' || phase === 'error' ? 'Ejecutar de nuevo' : 'Ejecutar AGENTE THETA'}
@@ -583,20 +583,20 @@ export default function AgenteTheta() {
           <button
             onClick={stop}
             className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all"
-            style={{ background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.3)' }}
+            style={{ background: 'rgba(240, 68, 56,0.15)', color: 'var(--color-negative)', border: '1px solid rgba(240, 68, 56,0.3)' }}
           >
             <Square size={13} />
             Detener
           </button>
         )}
         {(phase === 'done' || phase === 'error') && (
-          <button onClick={reset} className="flex items-center gap-2 rounded-lg border border-[#1e1e2e] px-3 py-2 text-xs text-[#64748b] hover:text-[#e2e8f0] transition-colors">
+          <button onClick={reset} className="flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-xs text-text-secondary hover:text-text-primary transition-colors">
             <RotateCcw size={13} />
             Reiniciar
           </button>
         )}
         {phase === 'running' && (
-          <span className="flex items-center gap-1.5 text-xs text-[#64748b]">
+          <span className="flex items-center gap-1.5 text-xs text-text-secondary">
             <Loader2 size={12} className="animate-spin" />
             Procesando… (36 tickers, puede tardar 5-10 min)
           </span>
@@ -607,21 +607,21 @@ export default function AgenteTheta() {
       {summary && summary.created > 0 && (() => {
         const approved = tickers.filter(t => t.step6 === 'done')
         return (
-          <div className="rounded-xl border p-4 space-y-3" style={{ background: 'rgba(251,146,60,0.06)', border: '1px solid rgba(251,146,60,0.25)' }}>
-            <p className="text-xs font-bold font-mono" style={{ color: '#fb923c' }}>
+          <div className="rounded-xl border p-4 space-y-3" style={{ background: 'rgba(224, 164, 88,0.06)', border: '1px solid rgba(224, 164, 88,0.25)' }}>
+            <p className="text-xs font-bold font-mono" style={{ color: '#e0a458' }}>
               ✅ {summary.created} prima(s) aprobaron los 5 filtros
             </p>
             <div className="space-y-1.5">
               {approved.map(t => {
-                const stratColor = t.strategy === 'SELL_PUT' ? '#fb923c' : '#38bdf8'
+                const stratColor = t.strategy === 'SELL_PUT' ? '#e0a458' : '#38bdf8'
                 return (
                   <div key={t.ticker} className="flex items-center gap-3 py-1.5 px-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <span className="font-mono font-bold text-sm w-14 shrink-0" style={{ color: '#00ff88' }}>{t.ticker}</span>
+                    <span className="font-mono font-bold text-sm w-14 shrink-0" style={{ color: 'var(--color-text-primary)' }}>{t.ticker}</span>
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ color: stratColor, border: `1px solid ${stratColor}40`, background: `${stratColor}10` }}>
                       {t.strategy === 'SELL_PUT' ? 'SELL-PUT' : 'COV-CALL'}
                     </span>
-                    <span className="text-xs text-[#94a3b8] flex-1">${t.strike} · {t.dte}d · IV{((t.iv ?? 0) * 100).toFixed(0)}%</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', background: 'rgba(74,222,128,0.08)' }}>
+                    <span className="text-xs text-text-secondary flex-1">${t.strike} · {t.dte}d · IV{((t.iv ?? 0) * 100).toFixed(0)}%</span>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0" style={{ color: 'var(--color-positive)', border: '1px solid rgba(16, 185, 129,0.3)', background: 'rgba(16, 185, 129,0.08)' }}>
                       ${t.premium?.toFixed(2)}
                     </span>
                   </div>
@@ -630,7 +630,7 @@ export default function AgenteTheta() {
             </div>
             <Link href="/recomendaciones"
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
-              style={{ background: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.3)' }}
+              style={{ background: 'rgba(224, 164, 88,0.15)', color: '#e0a458', border: '1px solid rgba(224, 164, 88,0.3)' }}
             >
               <ArrowRight size={13} />
               Ver en RECOMENDACIONES
@@ -639,7 +639,7 @@ export default function AgenteTheta() {
         )
       })()}
       {summary && summary.created === 0 && (
-        <div className="rounded-xl border p-4 text-sm font-medium" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
+        <div className="rounded-xl border p-4 text-sm font-medium" style={{ background: 'rgba(245, 165, 36,0.08)', border: '1px solid rgba(245, 165, 36,0.25)', color: 'var(--color-warning)' }}>
           ⚠ Ninguna prima aprobó los filtros de {summary.total} candidatos
         </div>
       )}
@@ -653,14 +653,14 @@ export default function AgenteTheta() {
 
       {/* Log console */}
       {log.length > 0 && (
-        <div ref={logRef} className="rounded-xl border border-[#1e1e2e] bg-[#0a0a0f] p-4 font-mono text-[11px] overflow-y-auto" style={{ maxHeight: '300px' }}>
+        <div ref={logRef} className="rounded-xl border border-border-subtle bg-background p-4 font-mono text-[11px] overflow-y-auto" style={{ maxHeight: '300px' }}>
           {log.map((line, i) => (
             <div key={i} className="py-0.5 leading-relaxed" style={{
-              color: line.startsWith('✓') ? '#4ade80'
-                : line.startsWith('✗') || line.startsWith('⛔') ? '#f87171'
-                : line.startsWith('⚠') ? '#fbbf24'
-                : line.startsWith('⟳') ? '#a78bfa'
-                : '#64748b'
+              color: line.startsWith('✓') ? 'var(--color-positive)'
+                : line.startsWith('✗') || line.startsWith('⛔') ? 'var(--color-negative)'
+                : line.startsWith('⚠') ? 'var(--color-warning)'
+                : line.startsWith('⟳') ? '#8b8ff0'
+                : 'var(--color-text-secondary)'
             }}>
               {line}
             </div>

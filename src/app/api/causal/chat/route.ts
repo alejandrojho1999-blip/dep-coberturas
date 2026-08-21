@@ -43,7 +43,7 @@ Responde de forma concisa y técnica. Usa términos del análisis causal cuando 
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://dep-coberturas.vercel.app',
-        'X-Title': 'Dep Coberturas — Causal Chat',
+        'X-Title': 'SynerGy — Causal Chat',
       },
       body: JSON.stringify({
         model: 'deepseek/deepseek-chat',

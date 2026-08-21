@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -75,14 +76,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         className={[
           'mx-2 my-0.5 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors relative',
           isActive
-            ? 'bg-[#161622] text-[#F59E0B] border-l-2 border-[#F59E0B] pl-[10px]'
-            : 'text-[#64748b] hover:bg-[#161622] hover:text-[#F0EFE8] border-l-2 border-transparent pl-[10px]',
+            ? 'bg-accent text-on-accent font-semibold border-l-2 border-white/70 pl-[10px]'
+            : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary border-l-2 border-transparent pl-[10px]',
         ].join(' ')}
       >
         <Icon size={18} className="shrink-0" />
         {showLabels && <span className="truncate">{label}</span>}
         {isActive && showLabels && (
-          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#F59E0B]" />
+          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white/70" />
         )}
       </Link>
     )
@@ -100,31 +101,43 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
       <aside
         className={[
-          'fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r border-[#1e2035] bg-[#0f0f17]',
+          'fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r border-border-subtle bg-surface',
           'transition-transform duration-200 ease-in-out',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
           'md:relative md:inset-auto md:z-auto md:h-screen md:translate-x-0',
           desktopWidth,
         ].join(' ')}
       >
-        {/* Header */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#1e2035] px-3">
-          {showLabels && (
-            <div className="flex items-center gap-2 truncate">
-              <span className="text-xs font-bold tracking-[0.15em] text-[#F59E0B] font-mono uppercase">
-                EQF
-              </span>
-              <span className="h-3 w-px bg-[#1e2035]" />
-              <span className="truncate text-xs font-medium tracking-wide text-[#64748b] uppercase">
-                Quant
-              </span>
-            </div>
+        {/* Header — logotipo de marca */}
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle px-3">
+          {showLabels ? (
+            <Link href="/portafolios" className="flex items-center" aria-label="SynerGy">
+              <Image
+                src="/brand/logo-hrz-blanco.png"
+                alt="SynerGy"
+                width={112}
+                height={36}
+                priority
+                className="h-7 w-auto"
+              />
+            </Link>
+          ) : (
+            <Link href="/portafolios" className="flex items-center" aria-label="SynerGy">
+              <Image
+                src="/brand/isotipo-blanco.png"
+                alt="SynerGy"
+                width={24}
+                height={24}
+                priority
+                className="h-6 w-6"
+              />
+            </Link>
           )}
 
           <button
             onClick={toggleCollapsed}
             aria-label={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
-            className="ml-auto hidden rounded p-1 text-[#64748b] transition-colors hover:bg-[#161622] hover:text-[#F0EFE8] md:flex"
+            className="ml-auto hidden rounded p-1 text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary md:flex"
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
@@ -132,7 +145,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           <button
             onClick={onMobileClose}
             aria-label="Cerrar menú"
-            className="ml-auto flex rounded p-1 text-[#64748b] transition-colors hover:bg-[#161622] hover:text-[#F0EFE8] md:hidden"
+            className="ml-auto flex rounded p-1 text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary md:hidden"
           >
             <X size={16} />
           </button>
@@ -141,7 +154,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3">
           {showLabels && (
-            <p className="mb-1 px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#374151]">
+            <p className="mb-1 px-4 font-brand text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
               Módulos
             </p>
           )}
@@ -149,7 +162,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         </nav>
 
         {/* Settings — pinned bottom */}
-        <div className="shrink-0 border-t border-[#1e2035] py-3 space-y-0.5">
+        <div className="shrink-0 border-t border-border-subtle py-3 space-y-0.5">
           {/* Toggle button */}
           <button
             onClick={() => setSettingsOpen(v => !v)}
@@ -157,8 +170,8 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             className={[
               'mx-2 flex w-[calc(100%-16px)] items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors border-l-2 pl-[10px]',
               settingsOpen
-                ? 'bg-[#161622] text-[#F59E0B] border-[#F59E0B]'
-                : 'text-[#64748b] hover:bg-[#161622] hover:text-[#F0EFE8] border-transparent',
+                ? 'bg-accent text-on-accent font-semibold border-white/70'
+                : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary border-transparent',
             ].join(' ')}
           >
             <Settings2 size={18} className="shrink-0" />
@@ -183,8 +196,8 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 className={[
                   'mx-2 flex items-center gap-3 rounded-md pl-[22px] pr-3 py-2 text-xs transition-colors border-l-2',
                   pathname === '/perfil'
-                    ? 'bg-[#161622] text-[#F59E0B] border-[#F59E0B]'
-                    : 'text-[#64748b] hover:bg-[#161622] hover:text-[#F0EFE8] border-transparent',
+                    ? 'bg-accent text-on-accent font-semibold border-white/70'
+                    : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary border-transparent',
                 ].join(' ')}
               >
                 <UserCircle size={15} className="shrink-0" />
@@ -200,8 +213,8 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 className={[
                   'mx-2 flex items-center gap-3 rounded-md pl-[22px] pr-3 py-2 text-xs transition-colors border-l-2',
                   pathname === '/fincept-terminal'
-                    ? 'bg-[#161622] text-[#F59E0B] border-[#F59E0B]'
-                    : 'text-[#64748b] hover:bg-[#161622] hover:text-[#F0EFE8] border-transparent',
+                    ? 'bg-accent text-on-accent font-semibold border-white/70'
+                    : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary border-transparent',
                 ].join(' ')}
               >
                 <Terminal size={15} className="shrink-0" />

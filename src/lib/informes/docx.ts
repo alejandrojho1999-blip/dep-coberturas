@@ -19,8 +19,8 @@ import {
 } from 'docx'
 import type { ReportContent, MarketData } from './types'
 
-const COLOR_DARK = '1F3964'
-const COLOR_MID  = '2E74B5'
+const COLOR_DARK = '1C3042'
+const COLOR_MID  = '003D66'
 const COLOR_WHITE = 'FFFFFF'
 const COLOR_LIGHT = 'F2F2F2'
 
@@ -29,21 +29,21 @@ function half(pt: number) { return pt * 2 } // half-points for font size
 function heading(text: string): Paragraph {
   return new Paragraph({
     spacing: { before: 200, after: 80 },
-    children: [new TextRun({ text, bold: true, size: half(13), color: COLOR_DARK, font: 'Calibri' })],
+    children: [new TextRun({ text, bold: true, size: half(13), color: COLOR_DARK, font: 'Roboto' })],
   })
 }
 
 function subheading(text: string): Paragraph {
   return new Paragraph({
     spacing: { before: 140, after: 60 },
-    children: [new TextRun({ text, bold: true, size: half(11), color: COLOR_MID, font: 'Calibri' })],
+    children: [new TextRun({ text, bold: true, size: half(11), color: COLOR_MID, font: 'Roboto' })],
   })
 }
 
 function body(text: string): Paragraph {
   return new Paragraph({
     spacing: { after: 80 },
-    children: [new TextRun({ text, size: half(10.5), font: 'Calibri' })],
+    children: [new TextRun({ text, size: half(10.5), font: 'Roboto' })],
   })
 }
 
@@ -63,7 +63,7 @@ function cellBg(color: string, text: string, bold = false, size = 18, align = Al
     children: [
       new Paragraph({
         alignment: align,
-        children: [new TextRun({ text, bold, size, color: COLOR_WHITE, font: 'Calibri' })],
+        children: [new TextRun({ text, bold, size, color: COLOR_WHITE, font: 'Roboto' })],
       }),
     ],
   })
@@ -74,7 +74,7 @@ function cellVal(text: string, bold = false, size = 20, align = AlignmentType.CE
     children: [
       new Paragraph({
         alignment: align,
-        children: [new TextRun({ text, bold, size, font: 'Calibri' })],
+        children: [new TextRun({ text, bold, size, font: 'Roboto' })],
       }),
     ],
   })
@@ -86,7 +86,7 @@ function stripedRow(cells: string[], isOdd: boolean): TableRow {
     children: cells.map((text) =>
       new TableCell({
         shading: { type: ShadingType.CLEAR, color: 'auto', fill: bg },
-        children: [new Paragraph({ children: [new TextRun({ text, size: half(10), font: 'Calibri' })] })],
+        children: [new Paragraph({ children: [new TextRun({ text, size: half(10), font: 'Roboto' })] })],
       })
     ),
   })
@@ -145,7 +145,7 @@ function buildChartSvg(prices: { fecha: string; cierre: number }[]): Buffer | nu
     const idx = Math.min(Math.round((li * (prices.length - 1)) / (nX - 1)), prices.length - 1)
     const d   = new Date(prices[idx].fecha + 'T12:00:00Z')
     const lbl = d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' })
-    return `<text x="${sx(idx).toFixed(1)}" y="${H - 8}" font-size="9" fill="#555" text-anchor="middle" font-family="Calibri,Arial,sans-serif">${lbl}</text>`
+    return `<text x="${sx(idx).toFixed(1)}" y="${H - 8}" font-size="9" fill="#555" text-anchor="middle" font-family="Roboto,Arial,sans-serif">${lbl}</text>`
   }).join('\n  ')
 
   // Y-axis: 4 levels
@@ -156,7 +156,7 @@ function buildChartSvg(prices: { fecha: string; cierre: number }[]): Buffer | nu
     const lbl = v >= 10000 ? `${(v / 1000).toFixed(0)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)
     yParts.push(
       `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#ececec" stroke-width="0.8"/>`,
-      `<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" font-size="9" fill="#555" text-anchor="end" font-family="Calibri,Arial,sans-serif">${lbl}</text>`,
+      `<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" font-size="9" fill="#555" text-anchor="end" font-family="Roboto,Arial,sans-serif">${lbl}</text>`,
     )
   }
 
@@ -164,13 +164,13 @@ function buildChartSvg(prices: { fecha: string; cierre: number }[]): Buffer | nu
   <rect width="${W}" height="${H}" fill="white"/>
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1F3964" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="#1F3964" stop-opacity="0.02"/>
+      <stop offset="0%" stop-color="#1C3042" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#1C3042" stop-opacity="0.02"/>
     </linearGradient>
   </defs>
   ${yParts.join('\n  ')}
   <polygon points="${fillPts}" fill="url(#g)"/>
-  <polyline points="${pts}" fill="none" stroke="#1F3964" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="${pts}" fill="none" stroke="#1C3042" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
   ${xLabels}
   <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + cH}" stroke="#ccc" stroke-width="1"/>
   <line x1="${padL}" y1="${padT + cH}" x2="${W - padR}" y2="${padT + cH}" stroke="#ccc" stroke-width="1"/>
@@ -185,7 +185,7 @@ export async function createDocxBuffer(
   solicitante?: string
 ): Promise<Buffer> {
   const today = new Date()
-  const firmante = solicitante?.trim() || 'Operador — Emporium Quality Funds'
+  const firmante = solicitante?.trim() || 'Operador — SynerGy'
   const currency = marketData.moneda ?? 'USD'
 
   // Load logo
@@ -390,7 +390,7 @@ export async function createDocxBuffer(
     styles: {
       default: {
         document: {
-          run: { font: 'Calibri', size: half(10.5) },
+          run: { font: 'Roboto', size: half(10.5) },
         },
       },
     },
@@ -420,7 +420,7 @@ export async function createDocxBuffer(
                 bold: true,
                 size: half(22),
                 color: COLOR_DARK,
-                font: 'Calibri',
+                font: 'Roboto',
               }),
             ],
           }),
@@ -433,14 +433,14 @@ export async function createDocxBuffer(
                 bold: true,
                 size: half(16),
                 color: COLOR_MID,
-                font: 'Calibri',
+                font: 'Roboto',
               }),
             ],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { after: 160 },
-            children: [new TextRun({ text: content.mes_año, size: half(12), font: 'Calibri' })],
+            children: [new TextRun({ text: content.mes_año, size: half(12), font: 'Roboto' })],
           }),
 
           separator(),
@@ -455,7 +455,7 @@ export async function createDocxBuffer(
                 text: `Fecha de elaboración: ${formatDate(today)}`,
                 italics: true,
                 size: half(9),
-                font: 'Calibri',
+                font: 'Roboto',
               }),
             ],
           }),
@@ -542,8 +542,8 @@ export async function createDocxBuffer(
                 spacing: { after: 60 },
                 bullet: { level: 0 },
                 children: [
-                  new TextRun({ text: `${f.titulo}: `, bold: true, size: half(10.5), font: 'Calibri' }),
-                  new TextRun({ text: f.desc, size: half(10.5), font: 'Calibri' }),
+                  new TextRun({ text: `${f.titulo}: `, bold: true, size: half(10.5), font: 'Roboto' }),
+                  new TextRun({ text: f.desc, size: half(10.5), font: 'Roboto' }),
                 ],
               })
           ),
@@ -557,8 +557,8 @@ export async function createDocxBuffer(
                 spacing: { after: 60 },
                 bullet: { level: 0 },
                 children: [
-                  new TextRun({ text: `${f.titulo}: `, bold: true, size: half(10.5), font: 'Calibri' }),
-                  new TextRun({ text: f.desc, size: half(10.5), font: 'Calibri' }),
+                  new TextRun({ text: `${f.titulo}: `, bold: true, size: half(10.5), font: 'Roboto' }),
+                  new TextRun({ text: f.desc, size: half(10.5), font: 'Roboto' }),
                 ],
               })
           ),
@@ -574,23 +574,23 @@ export async function createDocxBuffer(
           new Paragraph({
             alignment: AlignmentType.RIGHT,
             children: [
-              new TextRun({ text: 'Realizado por:', italics: true, size: half(10), font: 'Calibri' }),
+              new TextRun({ text: 'Realizado por:', italics: true, size: half(10), font: 'Roboto' }),
             ],
           }),
           new Paragraph({
             alignment: AlignmentType.RIGHT,
             children: [
-              new TextRun({ text: firmante, bold: true, size: half(11), color: COLOR_DARK, font: 'Calibri' }),
+              new TextRun({ text: firmante, bold: true, size: half(11), color: COLOR_DARK, font: 'Roboto' }),
             ],
           }),
           new Paragraph({
             alignment: AlignmentType.RIGHT,
             children: [
               new TextRun({
-                text: 'Operador Junior — Emporium Quality Funds',
+                text: 'Operador Junior — SynerGy',
                 italics: true,
                 size: half(10),
-                font: 'Calibri',
+                font: 'Roboto',
               }),
             ],
           }),

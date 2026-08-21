@@ -80,18 +80,18 @@ function PreviewModal({
       className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 md:p-8"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="relative my-auto w-full max-w-3xl rounded-xl border border-[#1e1e2e] bg-[#12121a] shadow-2xl">
+      <div className="relative my-auto w-full max-w-3xl rounded-xl border border-border-subtle bg-surface shadow-2xl">
 
         {/* Modal header */}
-        <div className="flex items-center justify-between border-b border-[#1e1e2e] px-6 py-4">
+        <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
           <div>
             <div className="flex items-center gap-2">
-              <FileText size={16} style={{ color: '#00ff88' }} />
-              <span className="font-semibold text-[#e2e8f0]">
+              <FileText size={16} style={{ color: 'var(--color-text-primary)' }} />
+              <span className="font-semibold text-text-primary">
                 {entry.empresa ?? entry.ticker} — Informe #{entry.informe_numero}
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-[#64748b]">
+            <p className="mt-0.5 text-xs text-text-secondary">
               {entry.bolsa ?? ''} · {formatDate(entry.fecha_generacion)}
               {entry.solicitante ? ` · ${entry.solicitante}` : ''}
             </p>
@@ -100,7 +100,7 @@ function PreviewModal({
             <button
               onClick={() => onDownload(entry)}
               disabled={downloadingId === entry.id}
-              className="flex items-center gap-1.5 rounded-lg border border-[#1e1e2e] px-3 py-1.5 text-xs font-medium text-[#00ff88] transition-colors hover:bg-[#1e1e2e] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-positive transition-colors hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-60"
             >
               {downloadingId === entry.id
                 ? <Loader2 size={13} className="animate-spin" />
@@ -109,7 +109,7 @@ function PreviewModal({
             </button>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-[#64748b] transition-colors hover:bg-[#1e1e2e] hover:text-[#e2e8f0]"
+              className="rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
               aria-label="Cerrar"
             >
               <X size={18} />
@@ -120,7 +120,7 @@ function PreviewModal({
         {/* Modal body */}
         <div className="overflow-y-auto p-6" style={{ maxHeight: '75vh' }}>
           {!content ? (
-            <p className="text-center text-sm text-[#475569] py-8">
+            <p className="text-center text-sm text-text-muted py-8">
               Preview no disponible para informes generados antes de esta actualización.
             </p>
           ) : (
@@ -134,69 +134,69 @@ function PreviewModal({
                   { label: 'Precio Actual', value: `$${fmtNum(content.precio_actual)}` },
                   { label: 'Precio Objetivo', value: `$${fmtNum(content.precio_objetivo)}` },
                 ].map(({ label, value }) => (
-                  <div key={label} className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-3">
-                    <p className="text-xs text-[#64748b]">{label}</p>
-                    <p className="mt-0.5 font-semibold text-[#e2e8f0]">{value}</p>
+                  <div key={label} className="rounded-lg border border-border-subtle bg-background p-3">
+                    <p className="text-xs text-text-secondary">{label}</p>
+                    <p className="mt-0.5 font-semibold text-text-primary">{value}</p>
                   </div>
                 ))}
               </div>
 
               {/* Resumen ejecutivo */}
               <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-positive">
                   Resumen Ejecutivo
                 </h3>
-                <p className="leading-relaxed text-[#94a3b8]">{content.resumen}</p>
+                <p className="leading-relaxed text-text-secondary">{content.resumen}</p>
               </section>
 
               {/* Modelo de negocio */}
               <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-positive">
                   Modelo de Negocio
                 </h3>
-                <p className="leading-relaxed text-[#94a3b8]">{content.negocio}</p>
+                <p className="leading-relaxed text-text-secondary">{content.negocio}</p>
               </section>
 
               {/* Financieros */}
               <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-positive">
                   Desempeño Financiero
                 </h3>
-                <p className="leading-relaxed text-[#94a3b8]">{content.financieros}</p>
+                <p className="leading-relaxed text-text-secondary">{content.financieros}</p>
               </section>
 
               {/* Valoración */}
               <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-positive">
                   Valoración
                 </h3>
-                <p className="leading-relaxed text-[#94a3b8]">{content.valoracion}</p>
+                <p className="leading-relaxed text-text-secondary">{content.valoracion}</p>
               </section>
 
               {/* Factores positivos / riesgo */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#4ade80' }}>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-positive)' }}>
                     Factores Positivos
                   </h3>
                   <ul className="space-y-2">
                     {content.factores_positivos.map((f, i) => (
-                      <li key={i} className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-3">
-                        <p className="font-medium text-[#e2e8f0]">{f.titulo}</p>
-                        <p className="mt-1 text-xs text-[#64748b]">{f.desc}</p>
+                      <li key={i} className="rounded-lg border border-border-subtle bg-background p-3">
+                        <p className="font-medium text-text-primary">{f.titulo}</p>
+                        <p className="mt-1 text-xs text-text-secondary">{f.desc}</p>
                       </li>
                     ))}
                   </ul>
                 </section>
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#f87171' }}>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-negative)' }}>
                     Factores de Riesgo
                   </h3>
                   <ul className="space-y-2">
                     {content.factores_riesgo.map((f, i) => (
-                      <li key={i} className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-3">
-                        <p className="font-medium text-[#e2e8f0]">{f.titulo}</p>
-                        <p className="mt-1 text-xs text-[#64748b]">{f.desc}</p>
+                      <li key={i} className="rounded-lg border border-border-subtle bg-background p-3">
+                        <p className="font-medium text-text-primary">{f.titulo}</p>
+                        <p className="mt-1 text-xs text-text-secondary">{f.desc}</p>
                       </li>
                     ))}
                   </ul>
@@ -204,11 +204,11 @@ function PreviewModal({
               </div>
 
               {/* Conclusión */}
-              <section className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] p-4">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#00ff88]">
+              <section className="rounded-lg border border-border-subtle bg-background p-4">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-positive">
                   Conclusión y Recomendación
                 </h3>
-                <p className="leading-relaxed text-[#e2e8f0]">{content.conclusion}</p>
+                <p className="leading-relaxed text-text-primary">{content.conclusion}</p>
               </section>
 
             </div>
@@ -618,10 +618,10 @@ export default function RecomendacionesPage() {
 
   function estadoBadge(estado: string | null) {
     switch (estado) {
-      case 'Comprar':  return { bg: 'rgba(74,222,128,0.15)',  border: 'rgba(74,222,128,0.35)',  text: '#4ade80' }
-      case 'Mantener': return { bg: 'rgba(251,191,36,0.15)',  border: 'rgba(251,191,36,0.35)',  text: '#fbbf24' }
-      case 'Vender':   return { bg: 'rgba(248,113,113,0.15)', border: 'rgba(248,113,113,0.35)', text: '#f87171' }
-      default:         return { bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.3)',  text: '#64748b' }
+      case 'Comprar':  return { bg: 'rgba(16, 185, 129,0.15)',  border: 'rgba(16, 185, 129,0.35)',  text: 'var(--color-positive)' }
+      case 'Mantener': return { bg: 'rgba(245, 165, 36,0.15)',  border: 'rgba(245, 165, 36,0.35)',  text: 'var(--color-warning)' }
+      case 'Vender':   return { bg: 'rgba(240, 68, 56,0.15)', border: 'rgba(240, 68, 56,0.35)', text: 'var(--color-negative)' }
+      default:         return { bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.3)',  text: 'var(--color-text-secondary)' }
     }
   }
 
@@ -683,22 +683,22 @@ export default function RecomendacionesPage() {
       {/* Duplicate confirmation dialog */}
       {pendingDuplicate && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-xl border border-[#1e1e2e] bg-[#12121a] p-6 space-y-4 shadow-2xl">
-            <p className="text-sm font-semibold text-[#e2e8f0]">Ya existe un informe reciente</p>
-            <p className="text-xs text-[#64748b]">
-              Generaste un informe de <span className="font-mono text-[#00ff88]">{pendingDuplicate}</span> en las últimas 24 horas. ¿Deseas regenerarlo de todas formas?
+          <div className="w-full max-w-sm rounded-xl border border-border-subtle bg-surface p-6 space-y-4 shadow-2xl">
+            <p className="text-sm font-semibold text-text-primary">Ya existe un informe reciente</p>
+            <p className="text-xs text-text-secondary">
+              Generaste un informe de <span className="font-mono text-positive">{pendingDuplicate}</span> en las últimas 24 horas. ¿Deseas regenerarlo de todas formas?
             </p>
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setPendingDuplicate(null)}
-                className="px-3 py-1.5 rounded-lg text-xs text-[#64748b] border border-[#1e1e2e] hover:bg-[#1e1e2e] transition-colors"
+                className="px-3 py-1.5 rounded-lg text-xs text-text-secondary border border-border-subtle hover:bg-surface-raised transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => void generateReport(pendingDuplicate, true)}
                 disabled={loading}
-                className="px-3 py-1.5 rounded-lg text-xs bg-[#00ff88] text-[#0a0a0f] font-semibold hover:bg-[#00ff88]/90 disabled:opacity-50 transition-colors"
+                className="px-3 py-1.5 rounded-lg text-xs bg-accent text-on-accent font-semibold hover:bg-accent-hover/90 disabled:opacity-50 transition-colors"
               >
                 {loading ? 'Generando...' : 'Regenerar de todas formas'}
               </button>
@@ -721,13 +721,13 @@ export default function RecomendacionesPage() {
       <div className="mb-6 flex items-center gap-3">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: 'rgba(0,255,136,0.1)', border: '1px solid rgba(0,255,136,0.2)' }}
+          style={{ background: 'rgba(0, 61, 102,0.1)', border: '1px solid rgba(0, 61, 102,0.2)' }}
         >
-          <BarChart2 size={20} style={{ color: '#00ff88' }} />
+          <BarChart2 size={20} style={{ color: 'var(--color-text-primary)' }} />
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-[#e2e8f0]">Recomendaciones</h1>
-          <p className="text-sm text-[#64748b]">Emporium Quality Funds — Panel de Recomendaciones</p>
+          <h1 className="text-lg font-semibold text-text-primary">Recomendaciones</h1>
+          <p className="text-sm text-text-secondary">SynerGy — Panel de Recomendaciones</p>
         </div>
       </div>
 
@@ -735,12 +735,12 @@ export default function RecomendacionesPage() {
       <div className="flex flex-col gap-5">
 
         {/* ── TOP: Generar informe (compact bar) ────────────────── */}
-        <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] px-5 py-4">
+        <div className="rounded-xl border border-border-subtle bg-surface px-5 py-4">
           <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
             {/* Ticker input */}
             <div className="relative min-w-[200px] flex-1 max-w-sm" ref={dropdownRef}>
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
                 <input
                   type="text"
                   value={ticker}
@@ -749,13 +749,13 @@ export default function RecomendacionesPage() {
                   onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
                   placeholder="Ej: AAPL, NVDA, Apple…"
                   autoComplete="off"
-                  className="w-full rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] py-2.5 pl-9 pr-3 text-sm text-[#e2e8f0] placeholder-[#475569] transition-colors focus:border-[#00ff88] focus:outline-none"
+                  className="w-full rounded-lg border border-border-subtle bg-background py-2.5 pl-9 pr-3 text-sm text-text-primary placeholder-text-muted transition-colors focus:border-accent focus:outline-none"
                   style={{ textTransform: 'uppercase' }}
                 />
               </div>
               {showDropdown && suggestions.length > 0 && (
                 <div
-                  className="absolute z-50 mt-1 w-full rounded-lg border border-[#1e1e2e] bg-[#12121a] py-1 shadow-xl"
+                  className="absolute z-50 mt-1 w-full rounded-lg border border-border-subtle bg-surface py-1 shadow-xl"
                   style={{ maxHeight: '220px', overflowY: 'auto' }}
                 >
                   {suggestions.map((s, idx) => (
@@ -763,17 +763,17 @@ export default function RecomendacionesPage() {
                       key={s.symbol}
                       type="button"
                       onMouseDown={() => selectSuggestion(s)}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${idx === selectedIdx ? 'bg-[#1e1e2e]' : 'hover:bg-[#1a1a28]'}`}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${idx === selectedIdx ? 'bg-surface-raised' : 'hover:bg-surface-raised'}`}
                     >
-                      <span className="font-semibold text-[#00ff88]">{s.symbol}</span>
-                      <span className="flex-1 truncate text-[#94a3b8]">{s.name}</span>
-                      <span className="shrink-0 text-[#475569]">{s.exchange}</span>
+                      <span className="font-semibold text-positive">{s.symbol}</span>
+                      <span className="flex-1 truncate text-text-secondary">{s.name}</span>
+                      <span className="shrink-0 text-text-muted">{s.exchange}</span>
                     </button>
                   ))}
                 </div>
               )}
               {selectedResult && (
-                <p className="mt-1 text-xs text-[#64748b]">{selectedResult.name} · {selectedResult.exchange}</p>
+                <p className="mt-1 text-xs text-text-secondary">{selectedResult.name} · {selectedResult.exchange}</p>
               )}
             </div>
             {/* Submit button */}
@@ -781,23 +781,23 @@ export default function RecomendacionesPage() {
               type="submit"
               disabled={!ticker.trim() || loading}
               className="flex shrink-0 items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:brightness-90 active:scale-[0.98]"
-              style={{ background: '#00ff88', color: '#0a0a0f' }}
+              style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)' }}
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
               {loading ? 'Generando…' : 'Generar Informe'}
             </button>
             {/* Inline loading indicator */}
             {loading && (
-              <span className="self-center text-xs text-[#94a3b8]">Generando con IA… 30–60s</span>
+              <span className="self-center text-xs text-text-secondary">Generando con IA… 30–60s</span>
             )}
           </form>
         </div>
 
         {/* ── BOTTOM: Historial (full width) ───────────────────── */}
-        <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+        <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-[#e2e8f0]">
+              <h2 className="text-sm font-semibold text-text-primary">
                 {(() => {
                   const activeUser = filterUserId
                     ? uniqueUsers.find((u) => u.user_id === filterUserId)
@@ -808,7 +808,7 @@ export default function RecomendacionesPage() {
               </h2>
               {history.length > 0 && (
                 <span className="rounded-full px-2 py-0.5 text-xs font-medium"
-                      style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
+                      style={{ background: 'rgba(0, 61, 102,0.1)', color: 'var(--color-text-primary)' }}>
                   {displayed.length}
                 </span>
               )}
@@ -817,14 +817,14 @@ export default function RecomendacionesPage() {
             <div className="flex flex-wrap items-center gap-3">
               {/* Commission % input + summary stats */}
               <div className="flex items-center gap-2">
-                <label className="text-xs text-[#64748b]">Comisión operador:</label>
+                <label className="text-xs text-text-secondary">Comisión operador:</label>
                 <input
                   type="number" min="0" max="100" step="0.1"
                   value={comisionPct}
                   onChange={(e) => setComisionPct(parseFloat(e.target.value) || 0)}
-                  className="w-14 rounded border border-[#1e1e2e] bg-[#0a0a0f] px-2 py-1 text-xs text-[#e2e8f0] text-right focus:border-[#00ff88] focus:outline-none"
+                  className="w-14 rounded border border-border-subtle bg-background px-2 py-1 text-xs text-text-primary text-right focus:border-accent focus:outline-none"
                 />
-                <span className="text-xs text-[#64748b]">%</span>
+                <span className="text-xs text-text-secondary">%</span>
                 {/* Summary: total commission and net company gain from closed positions */}
                 {(() => {
                   let totalGanancia = 0
@@ -841,24 +841,24 @@ export default function RecomendacionesPage() {
                     <>
                       <div
                         className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
-                        style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}
+                        style={{ background: 'rgba(245, 165, 36,0.08)', border: '1px solid rgba(245, 165, 36,0.2)' }}
                         title="Suma de comisiones cobradas (operaciones cerradas con precio de venta)"
                       >
-                        <span className="text-[10px] text-[#64748b]">Comisión total</span>
-                        <span className="text-xs font-semibold font-mono" style={{ color: '#fbbf24' }}>
+                        <span className="text-[10px] text-text-secondary">Comisión total</span>
+                        <span className="text-xs font-semibold font-mono" style={{ color: 'var(--color-warning)' }}>
                           ${fmtNum(totalComision)}
                         </span>
                       </div>
                       <div
                         className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
                         style={{
-                          background: netoEmpresa >= 0 ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)',
-                          border: netoEmpresa >= 0 ? '1px solid rgba(74,222,128,0.2)' : '1px solid rgba(248,113,113,0.2)',
+                          background: netoEmpresa >= 0 ? 'rgba(16, 185, 129,0.08)' : 'rgba(240, 68, 56,0.08)',
+                          border: netoEmpresa >= 0 ? '1px solid rgba(16, 185, 129,0.2)' : '1px solid rgba(240, 68, 56,0.2)',
                         }}
                         title="Ganancia neta de la empresa = suma total de operaciones cerradas − comisión del operador"
                       >
-                        <span className="text-[10px] text-[#64748b]">Neto empresa</span>
-                        <span className="text-xs font-semibold font-mono" style={{ color: netoEmpresa >= 0 ? '#4ade80' : '#f87171' }}>
+                        <span className="text-[10px] text-text-secondary">Neto empresa</span>
+                        <span className="text-xs font-semibold font-mono" style={{ color: netoEmpresa >= 0 ? 'var(--color-positive)' : 'var(--color-negative)' }}>
                           {netoEmpresa >= 0 ? '+' : ''}${fmtNum(netoEmpresa)}
                         </span>
                       </div>
@@ -872,7 +872,7 @@ export default function RecomendacionesPage() {
                 <select
                   value={filterUserId}
                   onChange={(e) => setFilterUserId(e.target.value)}
-                  className="rounded-lg border border-[#1e1e2e] bg-[#0a0a0f] px-2.5 py-1.5 text-xs text-[#e2e8f0] transition-colors focus:border-[#00ff88] focus:outline-none"
+                  className="rounded-lg border border-border-subtle bg-background px-2.5 py-1.5 text-xs text-text-primary transition-colors focus:border-accent focus:outline-none"
                 >
                   <option value="">Todos los operadores</option>
                   {uniqueUsers.map((u) => (
@@ -888,18 +888,18 @@ export default function RecomendacionesPage() {
 
           {historyLoading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 size={20} className="animate-spin text-[#475569]" />
+              <Loader2 size={20} className="animate-spin text-text-muted" />
             </div>
           ) : displayed.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: 'rgba(30,30,46,0.6)' }}>
-                <FileText size={22} className="text-[#475569]" />
+                <FileText size={22} className="text-text-muted" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#64748b]">
+                <p className="text-sm font-medium text-text-secondary">
                   {filterUserId ? 'Sin informes para este operador' : 'Sin informes generados'}
                 </p>
-                <p className="mt-1 text-xs text-[#475569]">
+                <p className="mt-1 text-xs text-text-muted">
                   {filterUserId ? 'Prueba otro filtro.' : 'Ingresa un ticker para comenzar.'}
                 </p>
               </div>
@@ -908,45 +908,45 @@ export default function RecomendacionesPage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[860px] text-xs">
                 <thead>
-                  <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
-                    <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                    <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
-                    <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
-                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Compra</th>
-                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
-                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
-                    <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">
+                  <tr className="border-b border-border-subtle" style={{ background: 'var(--color-background)' }}>
+                    <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Ticker</th>
+                    <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary md:table-cell">Empresa</th>
+                    <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary lg:table-cell">Fecha</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">P.Compra</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">P.Venta</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Cant.</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-text-secondary">
                       P.Actual
                       {pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}
                     </th>
-                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Obj.</th>
-                    <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
-                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
-                    <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
-                    <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
-                    <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">P.Obj.</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Rendim.</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">G/P ($)</th>
+                    <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Comisión</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Estado</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Acc.</th>
                   </tr>
                 </thead>
                 <tbody>
                   {displayed.map((entry, i) => (
                     <tr
                       key={entry.id}
-                      className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]"
-                      style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}
+                      className="border-b border-border-subtle transition-colors hover:bg-surface-raised"
+                      style={{ background: i % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface)' }}
                     >
                       <td className="px-3 py-2.5">
-                        <span className="font-semibold text-[#00ff88]">{entry.ticker}</span>
-                        <span className="ml-1 text-[#475569]">#{i + 1}</span>
+                        <span className="font-semibold text-positive">{entry.ticker}</span>
+                        <span className="ml-1 text-text-muted">#{i + 1}</span>
                         {entry.custom_docx_path && (
-                          <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-[#00ff88]" title="Tiene versión personalizada" />
+                          <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-accent" title="Tiene versión personalizada" />
                         )}
                       </td>
                       {/* Empresa */}
-                      <td className="hidden max-w-[130px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">
+                      <td className="hidden max-w-[130px] truncate px-3 py-2.5 text-text-secondary md:table-cell">
                         {entry.empresa ?? '—'}
                       </td>
                       {/* Fecha */}
-                      <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">
+                      <td className="hidden px-3 py-2.5 text-text-secondary lg:table-cell">
                         {formatDate(entry.fecha_generacion)}
                       </td>
                       {/* P. Compra — inline editable */}
@@ -961,7 +961,7 @@ export default function RecomendacionesPage() {
                             if (valid) void saveField(entry.id, { precio_compra: value })
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                          className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                          className="w-20 bg-transparent text-right text-xs text-text-primary outline-none placeholder-text-muted border-b border-transparent focus:border-accent transition-colors"
                         />
                       </td>
                       {/* P. Venta — inline editable */}
@@ -978,7 +978,7 @@ export default function RecomendacionesPage() {
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                           title="Vacía el campo para deshacer la venta y reanudar el seguimiento del rendimiento"
-                          className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                          className="w-20 bg-transparent text-right text-xs text-text-primary outline-none placeholder-text-muted border-b border-transparent focus:border-accent transition-colors"
                         />
                       </td>
                       {/* Cantidad */}
@@ -993,14 +993,14 @@ export default function RecomendacionesPage() {
                             if (valid) void saveField(entry.id, { cantidad_acciones: value })
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                          className="w-16 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                          className="w-16 bg-transparent text-right text-xs text-text-primary outline-none placeholder-text-muted border-b border-transparent focus:border-accent transition-colors"
                         />
                       </td>
                       {/* P. Actual — live */}
                       <td className="px-3 py-2.5 text-right font-mono text-xs">
                         {livePrices[entry.ticker] != null
-                          ? <span className="text-[#e2e8f0]">{livePrices[entry.ticker]!.toFixed(2)}</span>
-                          : <span className="text-[#475569]">—</span>}
+                          ? <span className="text-text-primary">{livePrices[entry.ticker]!.toFixed(2)}</span>
+                          : <span className="text-text-muted">—</span>}
                       </td>
                       {/* P. Objetivo — inline editable */}
                       <td className="hidden px-3 py-2.5 text-right lg:table-cell">
@@ -1014,7 +1014,7 @@ export default function RecomendacionesPage() {
                             if (valid) void saveField(entry.id, { precio_objetivo_personal: value })
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                          className="w-20 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                          className="w-20 bg-transparent text-right text-xs text-text-primary outline-none placeholder-text-muted border-b border-transparent focus:border-accent transition-colors"
                         />
                       </td>
                       {/* Rendimiento */}
@@ -1022,10 +1022,10 @@ export default function RecomendacionesPage() {
                         {(() => {
                           const r = calcRendimiento(entry)
                           const locked = entry.estado === 'Vender'
-                          if (r == null) return <span className="text-[#475569]">—</span>
+                          if (r == null) return <span className="text-text-muted">—</span>
                           const pos = r >= 0
                           return (
-                            <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? '#4ade80' : '#f87171' }}>
+                            <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? 'var(--color-positive)' : 'var(--color-negative)' }}>
                               {locked && <span title="Rendimiento final al vender" className="text-[10px]">🔒</span>}
                               {pos ? '+' : ''}{r.toFixed(2)}%
                             </span>
@@ -1036,18 +1036,18 @@ export default function RecomendacionesPage() {
                       <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
                         {(() => {
                           const g = calcGananciaUSD(entry)
-                          if (g == null) return <span className="text-[#475569]">—</span>
+                          if (g == null) return <span className="text-text-muted">—</span>
                           const pos = g >= 0
-                          return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}${fmtNum(g)}</span>
+                          return <span style={{ color: pos ? 'var(--color-positive)' : 'var(--color-negative)' }}>{pos ? '+' : ''}${fmtNum(g)}</span>
                         })()}
                       </td>
                       {/* Comisión */}
                       <td className="hidden px-3 py-2.5 text-right font-mono text-xs xl:table-cell">
                         {(() => {
                           const g = calcGananciaUSD(entry)
-                          if (g == null || g <= 0) return <span className="text-[#475569]">—</span>
+                          if (g == null || g <= 0) return <span className="text-text-muted">—</span>
                           const com = g * (comisionPct / 100)
-                          return <span style={{ color: '#fbbf24' }}>${fmtNum(com)}</span>
+                          return <span style={{ color: 'var(--color-warning)' }}>${fmtNum(com)}</span>
                         })()}
                       </td>
                       {/* Estado */}
@@ -1073,7 +1073,7 @@ export default function RecomendacionesPage() {
                       <td className="px-3 py-2.5">
                         {confirmDeleteId === entry.id ? (
                           <div className="flex items-center justify-end gap-1.5 text-xs">
-                            <span className="text-[#94a3b8]">¿Eliminar?</span>
+                            <span className="text-text-secondary">¿Eliminar?</span>
                             <button
                               onClick={() => { void deleteEntry(entry.id); setConfirmDeleteId(null) }}
                               className="rounded px-2 py-1 font-medium text-red-400 transition-colors hover:bg-red-400/10"
@@ -1082,7 +1082,7 @@ export default function RecomendacionesPage() {
                             </button>
                             <button
                               onClick={() => setConfirmDeleteId(null)}
-                              className="rounded px-2 py-1 text-[#64748b] transition-colors hover:bg-[#1e1e2e]"
+                              className="rounded px-2 py-1 text-text-secondary transition-colors hover:bg-surface-raised"
                             >
                               No
                             </button>
@@ -1092,7 +1092,7 @@ export default function RecomendacionesPage() {
                             <button
                               title="Ver informe"
                               onClick={() => setPreviewEntry(entry)}
-                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-[#64748b] transition-colors hover:bg-[#1e1e2e] hover:text-[#e2e8f0]"
+                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
                             >
                               <Eye size={13} />
                             </button>
@@ -1100,8 +1100,8 @@ export default function RecomendacionesPage() {
                               title={downloadingId === entry.id ? 'Descargando…' : entry.custom_docx_path ? 'Descargar versión personalizada' : 'Descargar .docx'}
                               onClick={() => redownload(entry)}
                               disabled={downloadingId !== null}
-                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:bg-[#1e1e2e] disabled:cursor-not-allowed disabled:opacity-50"
-                              style={{ color: downloadingId === entry.id ? '#94a3b8' : '#00ff88' }}
+                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50"
+                              style={{ color: downloadingId === entry.id ? 'var(--color-text-secondary)' : 'var(--color-text-primary)' }}
                             >
                               {downloadingId === entry.id
                                 ? <Loader2 size={13} className="animate-spin" />
@@ -1112,7 +1112,7 @@ export default function RecomendacionesPage() {
                               title={uploadingId === entry.id ? 'Subiendo…' : entry.custom_docx_path ? 'Reemplazar Word' : 'Subir Word editado'}
                               onClick={() => triggerUpload(entry)}
                               disabled={uploadingId !== null || downloadingId !== null}
-                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-[#64748b] transition-colors hover:bg-[#1e1e2e] hover:text-[#e2e8f0] disabled:cursor-not-allowed disabled:opacity-50"
+                              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {uploadingId === entry.id
                                 ? <Loader2 size={13} className="animate-spin" />
@@ -1121,7 +1121,7 @@ export default function RecomendacionesPage() {
                             <button
                               title="Eliminar"
                               onClick={() => setConfirmDeleteId(entry.id)}
-                              className="rounded-md p-1.5 text-[#475569] transition-colors hover:bg-[#1e1e2e] hover:text-red-400"
+                              className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-red-400"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -1141,25 +1141,25 @@ export default function RecomendacionesPage() {
           const peterRecs = agentRecs.filter(r => r.category === 'PETER_LYNCH')
           const dudosas = peterRecs.filter(hasFabricatedEntryPrice).length
           return (
-            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <Cpu size={14} style={{ color: '#00ff88' }} />
-                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE PETER</h2>
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
+                  <Cpu size={14} style={{ color: 'var(--color-text-primary)' }} />
+                  <h2 className="text-sm font-semibold text-text-primary">RECOMENDACIONES AGENTE PETER</h2>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(0, 61, 102,0.1)', color: 'var(--color-text-primary)' }}>
                     {peterRecs.length}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-[#475569]">Lynch score 6/6 · Tendencia alcista · IA confirmada</span>
+                <span className="text-[10px] font-mono text-text-muted">Lynch score 6/6 · Tendencia alcista · IA confirmada</span>
               </div>
               {dudosas > 0 && (
                 <div
-                  className="flex items-start gap-2 border-b border-[#1e1e2e] px-5 py-2.5"
-                  style={{ background: 'rgba(248,113,113,0.06)' }}
+                  className="flex items-start gap-2 border-b border-border-subtle px-5 py-2.5"
+                  style={{ background: 'rgba(240, 68, 56,0.06)' }}
                 >
-                  <span className="text-[11px] leading-relaxed" style={{ color: '#f87171' }}>
+                  <span className="text-[11px] leading-relaxed" style={{ color: 'var(--color-negative)' }}>
                     <strong>{dudosas} recomendación{dudosas > 1 ? 'es' : ''} con precio de entrada no fiable.</strong>{' '}
-                    <span className="text-[#94a3b8]">
+                    <span className="text-text-secondary">
                       Se generaron antes de corregir el cálculo y su entrada es un valor que nunca cotizó.
                       Elimínalas con la papelera y vuelve a ejecutar el Agente Peter: al existir una posición
                       activa del mismo ticker, el agente las omite en vez de rehacerlas.
@@ -1168,64 +1168,64 @@ export default function RecomendacionesPage() {
                 </div>
               )}
               {agentRecsLoading ? (
-                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
+                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-text-muted" /></div>
               ) : peterRecs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                  <Cpu size={20} className="text-[#475569]" />
-                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE PETER aún.</p>
-                  <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
+                  <Cpu size={20} className="text-text-muted" />
+                  <p className="text-xs text-text-secondary">Sin recomendaciones del AGENTE PETER aún.</p>
+                  <p className="text-[10px] text-text-muted">Ejecuta el agente en la sección Agentes.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] text-xs">
                     <thead>
-                      <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
-                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Entrada</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Obj.</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
-                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                      <tr className="border-b border-border-subtle" style={{ background: 'var(--color-background)' }}>
+                        <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Ticker</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary md:table-cell">Empresa</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary lg:table-cell">Fecha</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">P.Entrada</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">P.Venta</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Cant.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">P.Obj.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Rendim.</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">G/P ($)</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Comisión</th>
+                        <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Estado</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Acc.</th>
                       </tr>
                     </thead>
                     <tbody>
                       {peterRecs.map((rec, i) => {
                         const entradaDudosa = hasFabricatedEntryPrice(rec)
                         return (
-                        <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
+                        <tr key={rec.id} className="border-b border-border-subtle transition-colors hover:bg-surface-raised" style={{ background: i % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface)' }}>
                           <td className="px-3 py-2.5">
-                            <span className="font-semibold text-[#00ff88]">{rec.ticker}</span>
+                            <span className="font-semibold text-positive">{rec.ticker}</span>
                             <div className="mt-0.5 flex flex-wrap gap-1">
                               {entradaDudosa && (
                                 <span
                                   className="text-[9px] font-mono px-1 py-px rounded font-bold"
-                                  style={{ color: '#f87171', border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(248,113,113,0.1)' }}
+                                  style={{ color: 'var(--color-negative)', border: '1px solid rgba(240, 68, 56,0.4)', background: 'rgba(240, 68, 56,0.1)' }}
                                   title={FABRICATED_ENTRY_WARNING}
                                 >⚠ ENTRADA NO FIABLE</span>
                               )}
-                              {rec.score != null && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)' }}>Lynch {rec.score}/6</span>}
-                              {rec.riesgo && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24', background: rec.riesgo === 'BAJO' ? 'rgba(74,222,128,0.08)' : rec.riesgo === 'ALTO' ? 'rgba(248,113,113,0.08)' : 'rgba(251,191,36,0.08)' }}>{rec.riesgo}</span>}
-                              {rec.timeframe && <span className="text-[9px] font-mono text-[#475569]">{rec.timeframe}</span>}
+                              {rec.score != null && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: 'var(--color-warning)', background: 'rgba(0, 61, 102,0.1)' }}>Lynch {rec.score}/6</span>}
+                              {rec.riesgo && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: rec.riesgo === 'BAJO' ? 'var(--color-positive)' : rec.riesgo === 'ALTO' ? 'var(--color-negative)' : 'var(--color-warning)', background: rec.riesgo === 'BAJO' ? 'rgba(16, 185, 129,0.08)' : rec.riesgo === 'ALTO' ? 'rgba(240, 68, 56,0.08)' : 'rgba(245, 165, 36,0.08)' }}>{rec.riesgo}</span>}
+                              {rec.timeframe && <span className="text-[9px] font-mono text-text-muted">{rec.timeframe}</span>}
                             </div>
                           </td>
-                          <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
-                          <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
-                          <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
+                          <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-text-secondary md:table-cell">{rec.empresa ?? '—'}</td>
+                          <td className="hidden px-3 py-2.5 text-text-secondary lg:table-cell">{formatDate(rec.created_at)}</td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
                           {/* P.Venta — solo lectura: lo registra el agente al cerrar */}
                           <td
-                            className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell"
+                            className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell"
                             title={rec.precio_venta != null
                               ? 'Venta ejecutada por el agente al deteriorarse la tesis'
                               : 'Se rellena automáticamente cuando el agente cierre la posición'}
                           >
-                            {rec.precio_venta != null ? `$${fmtNum(rec.precio_venta)}` : <span className="text-[#475569]">—</span>}
+                            {rec.precio_venta != null ? `$${fmtNum(rec.precio_venta)}` : <span className="text-text-muted">—</span>}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right xl:table-cell">
                             <input type="number" min="0" step="1" placeholder="—"
@@ -1237,13 +1237,13 @@ export default function RecomendacionesPage() {
                                 if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { cantidad_acciones: val })
                               }}
                               onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                              className="w-16 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                              className="w-16 bg-transparent text-right text-xs text-text-primary outline-none placeholder-text-muted border-b border-transparent focus:border-accent transition-colors"
                             />
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs">
-                            {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                            {livePrices[rec.ticker] != null ? <span className="text-text-primary">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-text-muted">—</span>}
                           </td>
-                          <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary lg:table-cell">
                             {rec.precio_objetivo != null ? `$${fmtNum(rec.precio_objetivo)}` : '—'}
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
@@ -1253,11 +1253,11 @@ export default function RecomendacionesPage() {
                               // precio de salida en vez de seguir al mercado.
                               const cerrada = rec.precio_venta != null
                               const ref = cerrada ? rec.precio_venta! : livePrices[rec.ticker]
-                              if (ref == null || ep == null || ep === 0) return <span className="text-[#475569]">—</span>
+                              if (ref == null || ep == null || ep === 0) return <span className="text-text-muted">—</span>
                               const pct = ((ref - ep) / ep) * 100
                               const pos = pct >= 0
                               return (
-                                <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? '#4ade80' : '#f87171' }}>
+                                <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? 'var(--color-positive)' : 'var(--color-negative)' }}>
                                   {cerrada && <span title="Posición cerrada por el agente: rendimiento final" className="text-[10px]">🔒</span>}
                                   {pos ? '+' : ''}{pct.toFixed(2)}%
                                 </span>
@@ -1265,10 +1265,10 @@ export default function RecomendacionesPage() {
                             })()}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
-                            {(() => { const g = calcAgentGanancia(rec); if (g == null) return <span className="text-[#475569]">—</span>; const pos = g >= 0; return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}${fmtNum(g)}</span> })()}
+                            {(() => { const g = calcAgentGanancia(rec); if (g == null) return <span className="text-text-muted">—</span>; const pos = g >= 0; return <span style={{ color: pos ? 'var(--color-positive)' : 'var(--color-negative)' }}>{pos ? '+' : ''}${fmtNum(g)}</span> })()}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-xs xl:table-cell">
-                            {(() => { const g = calcAgentGanancia(rec); if (g == null || g <= 0) return <span className="text-[#475569]">—</span>; return <span style={{ color: '#fbbf24' }}>${fmtNum(g * (comisionPct / 100))}</span> })()}
+                            {(() => { const g = calcAgentGanancia(rec); if (g == null || g <= 0) return <span className="text-text-muted">—</span>; return <span style={{ color: 'var(--color-warning)' }}>${fmtNum(g * (comisionPct / 100))}</span> })()}
                           </td>
                           <td className="px-3 py-2.5">
                             {(() => { const badge = estadoBadge(rec.estado); return (
@@ -1285,12 +1285,12 @@ export default function RecomendacionesPage() {
                           <td className="px-3 py-2.5 text-right">
                             {confirmDeleteAgentId === rec.id ? (
                               <div className="flex items-center justify-end gap-1 text-xs">
-                                <span className="text-[#94a3b8]">¿Eliminar?</span>
+                                <span className="text-text-secondary">¿Eliminar?</span>
                                 <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
-                                <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-[#64748b] hover:bg-[#1e1e2e]">No</button>
+                                <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised">No</button>
                               </div>
                             ) : (
-                              <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-[#475569] hover:bg-[#1e1e2e] hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                              <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-text-muted hover:bg-surface-raised hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
                             )}
                           </td>
                         </tr>
@@ -1308,68 +1308,68 @@ export default function RecomendacionesPage() {
         {(() => {
           const smallRecs = agentRecs.filter(r => r.category === 'SMALL_CAPS')
           return (
-            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <Cpu size={14} style={{ color: '#00ff88' }} />
-                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE SMALL</h2>
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(0,255,136,0.1)', color: '#00ff88' }}>
+                  <Cpu size={14} style={{ color: 'var(--color-text-primary)' }} />
+                  <h2 className="text-sm font-semibold text-text-primary">RECOMENDACIONES AGENTE SMALL</h2>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(0, 61, 102,0.1)', color: 'var(--color-text-primary)' }}>
                     {smallRecs.length}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-[#475569]">Lynch score ≥5/6 · Market cap &lt; $2B · Tendencia alcista</span>
+                <span className="text-[10px] font-mono text-text-muted">Lynch score ≥5/6 · Market cap &lt; $2B · Tendencia alcista</span>
               </div>
               {agentRecsLoading ? (
-                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
+                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-text-muted" /></div>
               ) : smallRecs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                  <Cpu size={20} className="text-[#475569]" />
-                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE SMALL aún.</p>
-                  <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
+                  <Cpu size={20} className="text-text-muted" />
+                  <p className="text-xs text-text-secondary">Sin recomendaciones del AGENTE SMALL aún.</p>
+                  <p className="text-[10px] text-text-muted">Ejecuta el agente en la sección Agentes.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] text-xs">
                     <thead>
-                      <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
-                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] md:table-cell">Empresa</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Entrada</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">P.Venta</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Cant.</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Obj.</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Rendim.</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">G/P ($)</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Comisión</th>
-                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                      <tr className="border-b border-border-subtle" style={{ background: 'var(--color-background)' }}>
+                        <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Ticker</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary md:table-cell">Empresa</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary lg:table-cell">Fecha</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">P.Entrada</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">P.Venta</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Cant.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">P.Actual{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">P.Obj.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Rendim.</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">G/P ($)</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Comisión</th>
+                        <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Estado</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Acc.</th>
                       </tr>
                     </thead>
                     <tbody>
                       {smallRecs.map((rec, i) => (
-                        <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
+                        <tr key={rec.id} className="border-b border-border-subtle transition-colors hover:bg-surface-raised" style={{ background: i % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface)' }}>
                           <td className="px-3 py-2.5">
-                            <span className="font-semibold text-[#00ff88]">{rec.ticker}</span>
+                            <span className="font-semibold text-positive">{rec.ticker}</span>
                             <div className="mt-0.5 flex flex-wrap gap-1">
-                              {rec.score != null && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)' }}>Lynch {rec.score}/6</span>}
-                              {rec.market_cap_m != null && <span className="text-[9px] font-mono px-1 py-px rounded text-[#64748b]" style={{ background: 'rgba(100,116,139,0.1)' }}>${(rec.market_cap_m / 1000).toFixed(1)}B</span>}
-                              {rec.riesgo && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: rec.riesgo === 'BAJO' ? '#4ade80' : rec.riesgo === 'ALTO' ? '#f87171' : '#fbbf24', background: rec.riesgo === 'BAJO' ? 'rgba(74,222,128,0.08)' : rec.riesgo === 'ALTO' ? 'rgba(248,113,113,0.08)' : 'rgba(251,191,36,0.08)' }}>{rec.riesgo}</span>}
-                              {rec.timeframe && <span className="text-[9px] font-mono text-[#475569]">{rec.timeframe}</span>}
+                              {rec.score != null && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: 'var(--color-warning)', background: 'rgba(0, 61, 102,0.1)' }}>Lynch {rec.score}/6</span>}
+                              {rec.market_cap_m != null && <span className="text-[9px] font-mono px-1 py-px rounded text-text-secondary" style={{ background: 'rgba(100,116,139,0.1)' }}>${(rec.market_cap_m / 1000).toFixed(1)}B</span>}
+                              {rec.riesgo && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: rec.riesgo === 'BAJO' ? 'var(--color-positive)' : rec.riesgo === 'ALTO' ? 'var(--color-negative)' : 'var(--color-warning)', background: rec.riesgo === 'BAJO' ? 'rgba(16, 185, 129,0.08)' : rec.riesgo === 'ALTO' ? 'rgba(240, 68, 56,0.08)' : 'rgba(245, 165, 36,0.08)' }}>{rec.riesgo}</span>}
+                              {rec.timeframe && <span className="text-[9px] font-mono text-text-muted">{rec.timeframe}</span>}
                             </div>
                           </td>
-                          <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-[#94a3b8] md:table-cell">{rec.empresa ?? '—'}</td>
-                          <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
-                          <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
+                          <td className="hidden max-w-[120px] truncate px-3 py-2.5 text-text-secondary md:table-cell">{rec.empresa ?? '—'}</td>
+                          <td className="hidden px-3 py-2.5 text-text-secondary lg:table-cell">{formatDate(rec.created_at)}</td>
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</td>
                           {/* P.Venta — solo lectura: lo registra el agente al cerrar */}
                           <td
-                            className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell"
+                            className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell"
                             title={rec.precio_venta != null
                               ? 'Venta ejecutada por el agente al deteriorarse la tesis'
                               : 'Se rellena automáticamente cuando el agente cierre la posición'}
                           >
-                            {rec.precio_venta != null ? `$${fmtNum(rec.precio_venta)}` : <span className="text-[#475569]">—</span>}
+                            {rec.precio_venta != null ? `$${fmtNum(rec.precio_venta)}` : <span className="text-text-muted">—</span>}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right xl:table-cell">
                             <input type="number" min="0" step="1" placeholder="—"
@@ -1381,13 +1381,13 @@ export default function RecomendacionesPage() {
                                 if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { cantidad_acciones: val })
                               }}
                               onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                              className="w-16 bg-transparent text-right text-xs text-[#e2e8f0] outline-none placeholder-[#475569] border-b border-transparent focus:border-[#00ff88] transition-colors"
+                              className="w-16 bg-transparent text-right text-xs text-text-primary outline-none placeholder-text-muted border-b border-transparent focus:border-accent transition-colors"
                             />
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs">
-                            {livePrices[rec.ticker] != null ? <span className="text-[#e2e8f0]">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-[#475569]">—</span>}
+                            {livePrices[rec.ticker] != null ? <span className="text-text-primary">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-text-muted">—</span>}
                           </td>
-                          <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
+                          <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary lg:table-cell">
                             {rec.precio_objetivo != null ? `$${fmtNum(rec.precio_objetivo)}` : '—'}
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
@@ -1397,11 +1397,11 @@ export default function RecomendacionesPage() {
                               // precio de salida en vez de seguir al mercado.
                               const cerrada = rec.precio_venta != null
                               const ref = cerrada ? rec.precio_venta! : livePrices[rec.ticker]
-                              if (ref == null || ep == null || ep === 0) return <span className="text-[#475569]">—</span>
+                              if (ref == null || ep == null || ep === 0) return <span className="text-text-muted">—</span>
                               const pct = ((ref - ep) / ep) * 100
                               const pos = pct >= 0
                               return (
-                                <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? '#4ade80' : '#f87171' }}>
+                                <span className="flex items-center justify-end gap-0.5" style={{ color: pos ? 'var(--color-positive)' : 'var(--color-negative)' }}>
                                   {cerrada && <span title="Posición cerrada por el agente: rendimiento final" className="text-[10px]">🔒</span>}
                                   {pos ? '+' : ''}{pct.toFixed(2)}%
                                 </span>
@@ -1409,10 +1409,10 @@ export default function RecomendacionesPage() {
                             })()}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
-                            {(() => { const g = calcAgentGanancia(rec); if (g == null) return <span className="text-[#475569]">—</span>; const pos = g >= 0; return <span style={{ color: pos ? '#4ade80' : '#f87171' }}>{pos ? '+' : ''}${fmtNum(g)}</span> })()}
+                            {(() => { const g = calcAgentGanancia(rec); if (g == null) return <span className="text-text-muted">—</span>; const pos = g >= 0; return <span style={{ color: pos ? 'var(--color-positive)' : 'var(--color-negative)' }}>{pos ? '+' : ''}${fmtNum(g)}</span> })()}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-xs xl:table-cell">
-                            {(() => { const g = calcAgentGanancia(rec); if (g == null || g <= 0) return <span className="text-[#475569]">—</span>; return <span style={{ color: '#fbbf24' }}>${fmtNum(g * (comisionPct / 100))}</span> })()}
+                            {(() => { const g = calcAgentGanancia(rec); if (g == null || g <= 0) return <span className="text-text-muted">—</span>; return <span style={{ color: 'var(--color-warning)' }}>${fmtNum(g * (comisionPct / 100))}</span> })()}
                           </td>
                           <td className="px-3 py-2.5">
                             {(() => { const badge = estadoBadge(rec.estado); return (
@@ -1429,12 +1429,12 @@ export default function RecomendacionesPage() {
                           <td className="px-3 py-2.5 text-right">
                             {confirmDeleteAgentId === rec.id ? (
                               <div className="flex items-center justify-end gap-1 text-xs">
-                                <span className="text-[#94a3b8]">¿Eliminar?</span>
+                                <span className="text-text-secondary">¿Eliminar?</span>
                                 <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
-                                <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-[#64748b] hover:bg-[#1e1e2e]">No</button>
+                                <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised">No</button>
                               </div>
                             ) : (
-                              <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-[#475569] hover:bg-[#1e1e2e] hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                              <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-text-muted hover:bg-surface-raised hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
                             )}
                           </td>
                         </tr>
@@ -1451,54 +1451,54 @@ export default function RecomendacionesPage() {
         {(() => {
           const gammaRecs = agentRecs.filter(r => r.category === 'OPTIONS_GAMMA')
           return (
-            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <Cpu size={14} style={{ color: '#a78bfa' }} />
-                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE GAMMA</h2>
+                  <Cpu size={14} style={{ color: '#8b8ff0' }} />
+                  <h2 className="text-sm font-semibold text-text-primary">RECOMENDACIONES AGENTE GAMMA</h2>
                   <span
                     className="rounded px-1.5 py-0.5 text-[10px] font-mono font-bold"
-                    style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.35)' }}
+                    style={{ background: 'rgba(16, 185, 129,0.12)', color: 'var(--color-positive)', border: '1px solid rgba(16, 185, 129,0.35)' }}
                     title="Se paga la prima al abrir: la posición gana si el contrato vale más al cerrar o al vencer"
                   >COMPRA DE OPCIONES</span>
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(167,139,250,0.1)', color: '#a78bfa' }}>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(139, 143, 240,0.1)', color: '#8b8ff0' }}>
                     {gammaRecs.length}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-[#475569]">Opciones direccionales · CALL alcista / PUT bajista · TimesFM 30d</span>
+                <span className="text-[10px] font-mono text-text-muted">Opciones direccionales · CALL alcista / PUT bajista · TimesFM 30d</span>
               </div>
               {agentRecsLoading ? (
-                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
+                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-text-muted" /></div>
               ) : gammaRecs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                  <Cpu size={20} className="text-[#475569]" />
-                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE GAMMA aún.</p>
-                  <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
+                  <Cpu size={20} className="text-text-muted" />
+                  <p className="text-xs text-text-secondary">Sin recomendaciones del AGENTE GAMMA aún.</p>
+                  <p className="text-[10px] text-text-muted">Ejecuta el agente en la sección Agentes.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] text-xs">
                     <thead>
-                      <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
-                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Prima Act.</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Result. (%)</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Strike</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] xl:table-cell">Expiry</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Breakeven</th>
+                      <tr className="border-b border-border-subtle" style={{ background: 'var(--color-background)' }}>
+                        <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Ticker</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary lg:table-cell">Fecha</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Prima</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">Prima Act.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Result. (%)</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Strike</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary xl:table-cell">Expiry</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">Breakeven</th>
                         <th
                           className="hidden px-3 py-2.5 text-right font-medium xl:table-cell"
-                          style={{ color: '#a78bfa' }}
+                          style={{ color: '#8b8ff0' }}
                           title="Proyección TimesFM del subyacente a 30 días en el momento de recomendar. Es la señal de entrada, NO el resultado de la operación."
                         >Forecast ini.</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Delta</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">IV</th>
-                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Delta</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">IV</th>
+                        <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Estado</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Acc.</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1511,7 +1511,7 @@ export default function RecomendacionesPage() {
                         const iv = rpt.iv as number | undefined
                         const breakeven = rpt.breakeven as number | undefined
                         const forecastReturn = rpt.forecastReturn as number | undefined
-                        const typeColor = optionType === 'CALL' ? '#4ade80' : optionType === 'PUT' ? '#f87171' : '#64748b'
+                        const typeColor = optionType === 'CALL' ? 'var(--color-positive)' : optionType === 'PUT' ? 'var(--color-negative)' : 'var(--color-text-secondary)'
                         const ref = optionRefFromRec(rec)
                         const primaActual = ref ? optionPrices[contractKey(ref)] : undefined
                         // Gamma compra la prima: gana si sube.
@@ -1519,39 +1519,39 @@ export default function RecomendacionesPage() {
                         const dteActual = expiration ? daysToExpiration(expiration) : null
                         const vencido = expiration != null && dteActual === 0
                         return (
-                          <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
+                          <tr key={rec.id} className="border-b border-border-subtle transition-colors hover:bg-surface-raised" style={{ background: i % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface)' }}>
                             <td className="px-3 py-2.5">
                               <div className="flex items-center gap-1.5">
-                                <span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span>
+                                <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{rec.ticker}</span>
                                 {optionType && <span className="text-[9px] font-mono px-1 py-px rounded font-bold" style={{ color: typeColor, border: `1px solid ${typeColor}40`, background: `${typeColor}10` }}>{optionType}</span>}
-                                {vencido && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: '#64748b', border: '1px solid #1e2035' }} title={`Venció el ${expiration}`}>VENC.</span>}
+                                {vencido && <span className="text-[9px] font-mono px-1 py-px rounded" style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }} title={`Venció el ${expiration}`}>VENC.</span>}
                               </div>
                             </td>
-                            <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">
+                            <td className="hidden px-3 py-2.5 text-text-secondary lg:table-cell">{formatDate(rec.created_at)}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">
                               {rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
                               {outcome != null
-                                ? <span className="text-[#e2e8f0]">${fmtNum(outcome.valorActual)}</span>
-                                : <span className="text-[#475569]">—</span>}
+                                ? <span className="text-text-primary">${fmtNum(outcome.valorActual)}</span>
+                                : <span className="text-text-muted">—</span>}
                             </td>
                             {/* Resultado en dólares de 1 contrato = 100 acciones */}
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
                               {outcome != null ? (
-                                <span className="flex items-center justify-end gap-0.5" style={{ color: outcome.usd >= 0 ? '#4ade80' : '#f87171' }}>
+                                <span className="flex items-center justify-end gap-0.5" style={{ color: outcome.usd >= 0 ? 'var(--color-positive)' : 'var(--color-negative)' }}>
                                   {outcome.cerrada && <span title="Contrato vencido: resultado definitivo" className="text-[10px]">🔒</span>}
                                   {outcome.usd >= 0 ? '+' : '−'}${fmtNum(Math.abs(outcome.usd))}
                                 </span>
-                              ) : <span className="text-[#475569]">—</span>}
+                              ) : <span className="text-text-muted">—</span>}
                             </td>
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
                               {outcome?.pct != null ? (
-                                <span style={{ color: outcome.pct >= 0 ? '#4ade80' : '#f87171' }}>{outcome.pct >= 0 ? '+' : ''}{outcome.pct.toFixed(2)}%</span>
-                              ) : <span className="text-[#475569]">—</span>}
+                                <span style={{ color: outcome.pct >= 0 ? 'var(--color-positive)' : 'var(--color-negative)' }}>{outcome.pct >= 0 ? '+' : ''}{outcome.pct.toFixed(2)}%</span>
+                              ) : <span className="text-text-muted">—</span>}
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-[#64748b] xl:table-cell">{expiration ?? '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-text-secondary xl:table-cell">{expiration ?? '—'}</td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
                               {(() => {
                                 // En una posición cerrada el precio relevante es el
@@ -1559,27 +1559,27 @@ export default function RecomendacionesPage() {
                                 // el resultado de la operación.
                                 const alVencer = rpt.underlyingAtExpiry as number | undefined
                                 if (alVencer != null) return (
-                                  <span className="text-[#e2e8f0]" title={`Cierre del subyacente el ${expiration}, usado para liquidar el contrato`}>
+                                  <span className="text-text-primary" title={`Cierre del subyacente el ${expiration}, usado para liquidar el contrato`}>
                                     {alVencer.toFixed(2)}
-                                    <span className="ml-1 text-[9px] text-[#475569]">al vencer</span>
+                                    <span className="ml-1 text-[9px] text-text-muted">al vencer</span>
                                   </span>
                                 )
                                 const live = livePrices[rec.ticker]
                                 return live != null
-                                  ? <span className="text-[#e2e8f0]">{live.toFixed(2)}</span>
-                                  : <span className="text-[#475569]">—</span>
+                                  ? <span className="text-text-primary">{live.toFixed(2)}</span>
+                                  : <span className="text-text-muted">—</span>
                               })()}
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary lg:table-cell">
                               {breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-xs font-semibold xl:table-cell">
                               {forecastReturn != null ? (
-                                <span style={{ color: forecastReturn >= 0 ? '#4ade80' : '#f87171' }}>{forecastReturn >= 0 ? '+' : ''}{forecastReturn.toFixed(1)}%</span>
-                              ) : <span className="text-[#475569]">—</span>}
+                                <span style={{ color: forecastReturn >= 0 ? 'var(--color-positive)' : 'var(--color-negative)' }}>{forecastReturn >= 0 ? '+' : ''}{forecastReturn.toFixed(1)}%</span>
+                              ) : <span className="text-text-muted">—</span>}
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{delta != null ? delta.toFixed(2) : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{delta != null ? delta.toFixed(2) : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
                             <td className="px-3 py-2.5">
                               {(() => { const badge = estadoBadge(rec.estado); return (
                                 <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
@@ -1595,12 +1595,12 @@ export default function RecomendacionesPage() {
                             <td className="px-3 py-2.5 text-right">
                               {confirmDeleteAgentId === rec.id ? (
                                 <div className="flex items-center justify-end gap-1 text-xs">
-                                  <span className="text-[#94a3b8]">¿Eliminar?</span>
+                                  <span className="text-text-secondary">¿Eliminar?</span>
                                   <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
-                                  <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-[#64748b] hover:bg-[#1e1e2e]">No</button>
+                                  <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised">No</button>
                                 </div>
                               ) : (
-                                <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-[#475569] hover:bg-[#1e1e2e] hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                                <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-text-muted hover:bg-surface-raised hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
                               )}
                             </td>
                           </tr>
@@ -1618,50 +1618,50 @@ export default function RecomendacionesPage() {
         {(() => {
           const thetaRecs = agentRecs.filter(r => r.category === 'OPTIONS_THETA')
           return (
-            <div className="rounded-xl border border-[#1e1e2e] bg-[#12121a] overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1e1e2e] px-5 py-3.5">
+            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <Cpu size={14} style={{ color: '#fb923c' }} />
-                  <h2 className="text-sm font-semibold text-[#e2e8f0]">RECOMENDACIONES AGENTE THETA</h2>
+                  <Cpu size={14} style={{ color: '#e0a458' }} />
+                  <h2 className="text-sm font-semibold text-text-primary">RECOMENDACIONES AGENTE THETA</h2>
                   <span
                     className="rounded px-1.5 py-0.5 text-[10px] font-mono font-bold"
-                    style={{ background: 'rgba(251,146,60,0.12)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.35)' }}
+                    style={{ background: 'rgba(224, 164, 88,0.12)', color: '#e0a458', border: '1px solid rgba(224, 164, 88,0.35)' }}
                     title="Se cobra la prima al abrir: la posición gana si el contrato vale menos al cerrar o vence sin valor"
                   >VENTA DE OPCIONES</span>
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c' }}>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: 'rgba(224, 164, 88,0.1)', color: '#e0a458' }}>
                     {thetaRecs.length}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-[#475569]">Venta de primas · Sell-put / Covered-call · Income</span>
+                <span className="text-[10px] font-mono text-text-muted">Venta de primas · Sell-put / Covered-call · Income</span>
               </div>
               {agentRecsLoading ? (
-                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-[#475569]" /></div>
+                <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-text-muted" /></div>
               ) : thetaRecs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                  <Cpu size={20} className="text-[#475569]" />
-                  <p className="text-xs text-[#64748b]">Sin recomendaciones del AGENTE THETA aún.</p>
-                  <p className="text-[10px] text-[#475569]">Ejecuta el agente en la sección Agentes.</p>
+                  <Cpu size={20} className="text-text-muted" />
+                  <p className="text-xs text-text-secondary">Sin recomendaciones del AGENTE THETA aún.</p>
+                  <p className="text-[10px] text-text-muted">Ejecuta el agente en la sección Agentes.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] text-xs">
                     <thead>
-                      <tr className="border-b border-[#1e1e2e]" style={{ background: '#0d0d14' }}>
-                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Ticker</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] lg:table-cell">Fecha</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Prima</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Prima Act.</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Result. (%)</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">Strike</th>
-                        <th className="hidden px-3 py-2.5 text-left font-medium text-[#64748b] xl:table-cell">Expiry</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] lg:table-cell">Breakeven</th>
-                        <th className="px-3 py-2.5 text-right font-medium" style={{ color: '#fb923c' }}>DTE</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">|Delta|</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-[#64748b] xl:table-cell">IV</th>
-                        <th className="px-3 py-2.5 text-left font-medium text-[#64748b]">Estado</th>
-                        <th className="px-3 py-2.5 text-right font-medium text-[#64748b]">Acc.</th>
+                      <tr className="border-b border-border-subtle" style={{ background: 'var(--color-background)' }}>
+                        <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Ticker</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary lg:table-cell">Fecha</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Prima</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">Prima Act.</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Result. (%)</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Strike</th>
+                        <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary xl:table-cell">Expiry</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">P.Subyac.{pricesLoading && <Loader2 size={10} className="ml-1 inline animate-spin" />}</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">Breakeven</th>
+                        <th className="px-3 py-2.5 text-right font-medium" style={{ color: '#e0a458' }}>DTE</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">|Delta|</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">IV</th>
+                        <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Estado</th>
+                        <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Acc.</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1673,7 +1673,7 @@ export default function RecomendacionesPage() {
                         const delta = rpt.delta as number | undefined
                         const iv = rpt.iv as number | undefined
                         const breakeven = rpt.breakeven as number | undefined
-                        const stratColor = strategy === 'SELL_PUT' ? '#fb923c' : strategy === 'COVERED_CALL' ? '#38bdf8' : '#64748b'
+                        const stratColor = strategy === 'SELL_PUT' ? '#e0a458' : strategy === 'COVERED_CALL' ? '#38bdf8' : 'var(--color-text-secondary)'
                         const stratLabel = strategy === 'SELL_PUT' ? 'SELL-PUT' : strategy === 'COVERED_CALL' ? 'COV-CALL' : '—'
                         // DTE recalculado contra hoy: el valor de ai_report es del día en que corrió el agente.
                         const dteActual = expiration ? daysToExpiration(expiration) : null
@@ -1683,38 +1683,38 @@ export default function RecomendacionesPage() {
                         // Theta cobra la prima al abrir: gana si la prima cae.
                         const outcome = optionOutcome(rec, primaActual, 'short')
                         return (
-                          <tr key={rec.id} className="border-b border-[#1e1e2e] transition-colors hover:bg-[#1a1a28]" style={{ background: i % 2 === 0 ? '#12121a' : '#0f0f17' }}>
+                          <tr key={rec.id} className="border-b border-border-subtle transition-colors hover:bg-surface-raised" style={{ background: i % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface)' }}>
                             <td className="px-3 py-2.5">
                               <div className="flex items-center gap-1.5">
-                                <span className="font-semibold" style={{ color: '#00ff88' }}>{rec.ticker}</span>
+                                <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{rec.ticker}</span>
                                 {strategy && <span className="text-[9px] font-mono px-1 py-px rounded font-bold" style={{ color: stratColor, border: `1px solid ${stratColor}40`, background: `${stratColor}10` }}>{stratLabel}</span>}
                               </div>
                             </td>
-                            <td className="hidden px-3 py-2.5 text-[#64748b] lg:table-cell">{formatDate(rec.created_at)}</td>
+                            <td className="hidden px-3 py-2.5 text-text-secondary lg:table-cell">{formatDate(rec.created_at)}</td>
                             <td className="hidden px-3 py-2.5 text-right font-mono xl:table-cell">
-                              <span className="font-semibold" style={{ color: '#4ade80' }}>{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
+                              <span className="font-semibold" style={{ color: 'var(--color-positive)' }}>{rec.precio_entrada != null ? `$${fmtNum(rec.precio_entrada)}` : '—'}</span>
                             </td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
                               {outcome != null
-                                ? <span className="text-[#e2e8f0]">${fmtNum(outcome.valorActual)}</span>
-                                : <span className="text-[#475569]">—</span>}
+                                ? <span className="text-text-primary">${fmtNum(outcome.valorActual)}</span>
+                                : <span className="text-text-muted">—</span>}
                             </td>
                             {/* Resultado en dólares de 1 contrato = 100 acciones */}
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
                               {outcome != null ? (
-                                <span className="flex items-center justify-end gap-0.5" style={{ color: outcome.usd >= 0 ? '#4ade80' : '#f87171' }}>
+                                <span className="flex items-center justify-end gap-0.5" style={{ color: outcome.usd >= 0 ? 'var(--color-positive)' : 'var(--color-negative)' }}>
                                   {outcome.cerrada && <span title="Contrato vencido: resultado definitivo" className="text-[10px]">🔒</span>}
                                   {outcome.usd >= 0 ? '+' : '−'}${fmtNum(Math.abs(outcome.usd))}
                                 </span>
-                              ) : <span className="text-[#475569]">—</span>}
+                              ) : <span className="text-text-muted">—</span>}
                             </td>
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
                               {outcome?.pct != null ? (
-                                <span style={{ color: outcome.pct >= 0 ? '#4ade80' : '#f87171' }}>{outcome.pct >= 0 ? '+' : ''}{outcome.pct.toFixed(2)}%</span>
-                              ) : <span className="text-[#475569]">—</span>}
+                                <span style={{ color: outcome.pct >= 0 ? 'var(--color-positive)' : 'var(--color-negative)' }}>{outcome.pct >= 0 ? '+' : ''}{outcome.pct.toFixed(2)}%</span>
+                              ) : <span className="text-text-muted">—</span>}
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-[#64748b] xl:table-cell">{expiration ?? '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{strike != null ? `$${strike}` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-text-secondary xl:table-cell">{expiration ?? '—'}</td>
                             <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
                               {(() => {
                                 // En una posición cerrada el precio relevante es el
@@ -1722,29 +1722,29 @@ export default function RecomendacionesPage() {
                                 // el resultado de la operación.
                                 const alVencer = rpt.underlyingAtExpiry as number | undefined
                                 if (alVencer != null) return (
-                                  <span className="text-[#e2e8f0]" title={`Cierre del subyacente el ${expiration}, usado para liquidar el contrato`}>
+                                  <span className="text-text-primary" title={`Cierre del subyacente el ${expiration}, usado para liquidar el contrato`}>
                                     {alVencer.toFixed(2)}
-                                    <span className="ml-1 text-[9px] text-[#475569]">al vencer</span>
+                                    <span className="ml-1 text-[9px] text-text-muted">al vencer</span>
                                   </span>
                                 )
                                 const live = livePrices[rec.ticker]
                                 return live != null
-                                  ? <span className="text-[#e2e8f0]">{live.toFixed(2)}</span>
-                                  : <span className="text-[#475569]">—</span>
+                                  ? <span className="text-text-primary">{live.toFixed(2)}</span>
+                                  : <span className="text-text-muted">—</span>
                               })()}
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] lg:table-cell">
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary lg:table-cell">
                               {breakeven != null ? `$${breakeven.toFixed(2)}` : '—'}
                             </td>
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                               {vencido ? (
-                                <span style={{ color: '#64748b' }} title={`Venció el ${expiration}`}>VENC.</span>
+                                <span style={{ color: 'var(--color-text-secondary)' }} title={`Venció el ${expiration}`}>VENC.</span>
                               ) : dteActual != null ? (
-                                <span style={{ color: dteActual <= 7 ? '#f87171' : dteActual <= 21 ? '#fbbf24' : '#4ade80' }}>{dteActual}d</span>
-                              ) : <span className="text-[#475569]">—</span>}
+                                <span style={{ color: dteActual <= 7 ? 'var(--color-negative)' : dteActual <= 21 ? 'var(--color-warning)' : 'var(--color-positive)' }}>{dteActual}d</span>
+                              ) : <span className="text-text-muted">—</span>}
                             </td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{delta != null ? Math.abs(delta).toFixed(2) : '—'}</td>
-                            <td className="hidden px-3 py-2.5 text-right font-mono text-[#94a3b8] xl:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{delta != null ? Math.abs(delta).toFixed(2) : '—'}</td>
+                            <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
                             <td className="px-3 py-2.5">
                               {(() => { const badge = estadoBadge(rec.estado); return (
                                 <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
@@ -1760,12 +1760,12 @@ export default function RecomendacionesPage() {
                             <td className="px-3 py-2.5 text-right">
                               {confirmDeleteAgentId === rec.id ? (
                                 <div className="flex items-center justify-end gap-1 text-xs">
-                                  <span className="text-[#94a3b8]">¿Eliminar?</span>
+                                  <span className="text-text-secondary">¿Eliminar?</span>
                                   <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
-                                  <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-[#64748b] hover:bg-[#1e1e2e]">No</button>
+                                  <button onClick={() => setConfirmDeleteAgentId(null)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised">No</button>
                                 </div>
                               ) : (
-                                <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-[#475569] hover:bg-[#1e1e2e] hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
+                                <button onClick={() => setConfirmDeleteAgentId(rec.id)} className="rounded-md p-1.5 text-text-muted hover:bg-surface-raised hover:text-red-400 transition-colors"><Trash2 size={13} /></button>
                               )}
                             </td>
                           </tr>
@@ -1789,7 +1789,7 @@ export default function RecomendacionesPage() {
             style={{
               background: t.variant === 'success' ? 'rgba(22,163,74,0.15)' : 'rgba(220,38,38,0.15)',
               borderColor: t.variant === 'success' ? 'rgba(22,163,74,0.4)' : 'rgba(220,38,38,0.4)',
-              color: t.variant === 'success' ? '#4ade80' : '#f87171',
+              color: t.variant === 'success' ? 'var(--color-positive)' : 'var(--color-negative)',
               minWidth: '280px',
             }}
           >

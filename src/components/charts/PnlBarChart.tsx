@@ -26,7 +26,7 @@ export function PnlBarChart({ barras, altura }: Props) {
 
   if (data.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-[#1e2035] text-xs text-[#475569]">
+      <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-border text-xs text-text-muted">
         Sin resultados que representar
       </div>
     )

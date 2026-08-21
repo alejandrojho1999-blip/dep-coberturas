@@ -1,45 +1,49 @@
 /**
  * Paleta y formatos comunes a los gráficos.
  *
- * El dashboard no usa tokens de Tailwind sino hex literales, así que los
- * gráficos beben de las mismas constantes para no desentonar con el resto de
- * la interfaz.
+ * Las superficies (fondo, borde, texto, grid) replican los tokens de marca de
+ * `globals.css` en hex literal porque Recharts los recibe como atributos SVG,
+ * donde `var(--color-*)` no es fiable. Los colores de serie son funcionales,
+ * no de marca: el manual SynerGy no cubre visualización de datos, así que se
+ * eligen tonos fríos que conviven con el azul corporativo.
  */
 
 export const CHART_COLORS = {
-  fondo: '#0f0f17',
-  borde: '#1e2035',
-  texto: '#e2e8f0',
-  muted: '#64748b',
-  grid: '#1e1e2e',
-  ambar: '#F59E0B',
-  verde: '#00ff88',
-  morado: '#a78bfa',
-  naranja: '#fb923c',
+  fondo: '#0c1e2c',
+  borde: '#24405a',
+  texto: '#ffffff',
+  muted: '#8fa3b4',
+  grid: '#16293a',
+  marca: '#003d66',
+  azul: '#4d95d0',
+  verde: '#10b981',
+  morado: '#8b8ff0',
+  naranja: '#e0a458',
   cian: '#38bdf8',
-  positivo: '#22c55e',
-  negativo: '#ef4444',
+  positivo: '#10b981',
+  negativo: '#f04438',
   /** Porción del pastel que representa el capital sin desplegar. */
-  caja: '#334155',
+  caja: '#24405a',
 } as const
 
 /** Colores por agente, los mismos que usan sus pestañas en /agentes. */
 export const AGENT_COLORS: Record<string, string> = {
-  Peter: '#00ff88',
+  Peter: '#10b981',
   Small: '#38bdf8',
-  Gamma: '#a78bfa',
-  Theta: '#fb923c',
+  Gamma: '#8b8ff0',
+  Theta: '#e0a458',
 }
 
 /**
  * Rueda de colores para las porciones del pastel. Se recorre en orden para que
  * un mismo ticker conserve su color entre refrescos mientras no cambie la
- * composición de la cartera.
+ * composición de la cartera. Arranca en el azul corporativo y se abre a tonos
+ * fríos legibles sobre el fondo #05141f.
  */
 const RUEDA = [
-  '#F59E0B', '#38bdf8', '#a78bfa', '#00ff88', '#fb923c',
-  '#f472b6', '#facc15', '#2dd4bf', '#818cf8', '#fb7185',
-  '#4ade80', '#c084fc', '#60a5fa', '#fbbf24', '#34d399',
+  '#4d95d0', '#38bdf8', '#8b8ff0', '#10b981', '#2dd4bf',
+  '#7dd3fc', '#a5b4fc', '#5eead4', '#60a5fa', '#818cf8',
+  '#34d399', '#22d3ee', '#93c5fd', '#c4b5fd', '#6ee7b7',
 ]
 
 export function sliceColor(index: number): string {
@@ -76,7 +80,7 @@ export function fmtFechaEje(iso: string): string {
 
 /** Estilo compartido por los tooltips de todos los gráficos. */
 export const TOOLTIP_STYLE = {
-  backgroundColor: '#12121a',
+  backgroundColor: CHART_COLORS.fondo,
   border: `1px solid ${CHART_COLORS.borde}`,
   borderRadius: '8px',
   fontSize: '12px',

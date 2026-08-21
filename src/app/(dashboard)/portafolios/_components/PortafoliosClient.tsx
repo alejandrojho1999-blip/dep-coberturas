@@ -102,27 +102,27 @@ export default function PortafoliosClient() {
         <div className="flex items-center gap-3">
           <div
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}
+            style={{ background: 'rgba(0, 61, 102,0.1)', border: '1px solid rgba(0, 61, 102,0.2)' }}
           >
-            <Briefcase size={20} style={{ color: '#F59E0B' }} />
+            <Briefcase size={20} style={{ color: 'var(--color-text-primary)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-[#e2e8f0]">Portafolios</h1>
-            <p className="text-sm text-[#64748b]">
-              Emporium Quality Funds — Portafolios Algorítmicos de Acciones y Opciones
+            <h1 className="text-lg font-semibold text-text-primary">Portafolios</h1>
+            <p className="text-sm text-text-secondary">
+              SynerGy — Portafolios Algorítmicos de Acciones y Opciones
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {actualizado && (
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#475569]">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
               Actualizado {actualizado.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
           )}
           <button
             onClick={refrescar}
-            className="flex items-center gap-1.5 rounded-lg border border-[#1e2035] bg-[#12121a] px-3 py-1.5 text-xs text-[#94a3b8] transition-colors hover:border-[#F59E0B33] hover:text-[#F59E0B]"
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-accent-muted hover:text-text-primary"
           >
             {cargando ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
             Refrescar
@@ -131,15 +131,15 @@ export default function PortafoliosClient() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-[#ef444433] bg-[#ef44440d] px-4 py-3 text-xs text-[#f87171]">
+        <div className="rounded-lg border border-negative-soft bg-negative-soft px-4 py-3 text-xs text-negative">
           No se pudieron cargar las recomendaciones: {error}
         </div>
       )}
 
       {/* Consolidado */}
-      <section className="rounded-xl border border-[#1e2035] bg-[#1e2035] p-px">
-        <div className="rounded-t-xl bg-[#12121a] px-4 py-2">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#F59E0B]">
+      <section className="rounded-xl border border-border bg-surface-raised p-px">
+        <div className="rounded-t-xl bg-surface px-4 py-2">
+          <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-primary">
             Consolidado · ambos portafolios
           </h2>
         </div>
@@ -148,9 +148,9 @@ export default function PortafoliosClient() {
             label="Capital gestionado"
             value={fmtUsd(capitalTotal, 0)}
             sub={`${fmtUsd(CAPITAL_ACCIONES, 0)} acciones + ${fmtUsd(CAPITAL_OPCIONES, 0)} opciones`}
-            acento="#F59E0B"
+            acento="var(--color-text-primary)"
           />
-          <KpiCard label="Valor actual" value={fmtUsd(valorTotal, 0)} sub="capital + resultados" acento="#F59E0B" />
+          <KpiCard label="Valor actual" value={fmtUsd(valorTotal, 0)} sub="capital + resultados" acento="var(--color-text-primary)" />
           <KpiCard label="Resultado global" value={fmtUsd(pnlTotal, 0)} sub={fmtPct(rendimientoTotal)} signo={pnlTotal} />
           <KpiCard
             label={`vs ${BENCHMARK}`}
@@ -162,13 +162,13 @@ export default function PortafoliosClient() {
             label="Operaciones"
             value={`${abiertasTotal + cerradasTotal}`}
             sub={`${abiertasTotal} abiertas · ${cerradasTotal} cerradas`}
-            acento="#F59E0B"
+            acento="var(--color-text-primary)"
           />
         </KpiRow>
       </section>
 
       {cargando && recs.length === 0 ? (
-        <div className="flex items-center justify-center gap-2 rounded-xl border border-[#1e2035] bg-[#0f0f17] py-20 text-sm text-[#475569]">
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-20 text-sm text-text-muted">
           <Loader2 size={16} className="animate-spin" />
           Cargando recomendaciones de los agentes…
         </div>
@@ -178,7 +178,7 @@ export default function PortafoliosClient() {
             titulo="Portafolio algorítmico de acciones"
             subtitulo={`Agentes Peter y Small · ${fmtUsd(TICKET_ACCIONES, 0)} por recomendación`}
             icono={TrendingUp}
-            acento="#00ff88"
+            acento="var(--color-positive)"
             metrics={metricsAcciones}
             curva={curvaAcciones}
             serie={serieAcciones}
@@ -195,7 +195,7 @@ export default function PortafoliosClient() {
             titulo="Portafolio algorítmico de opciones"
             subtitulo="Agentes Gamma y Theta · 1 contrato por señal (100 acciones)"
             icono={Zap}
-            acento="#a78bfa"
+            acento="var(--color-info)"
             metrics={metricsOpciones}
             curva={curvaOpciones}
             serie={serieOpciones}
@@ -212,11 +212,11 @@ export default function PortafoliosClient() {
       )}
 
       {/* Supuestos: la cartera es derivada, conviene dejar las reglas a la vista */}
-      <section className="rounded-lg border border-[#1e2035] bg-[#0f0f17] px-4 py-3">
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#475569]">
+      <section className="rounded-lg border border-border bg-surface px-4 py-3">
+        <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
           Supuestos de los portafolios
         </h3>
-        <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-[#64748b]">
+        <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-text-secondary">
           <li>· Capital asignado: {fmtUsd(CAPITAL_ACCIONES, 0)} a acciones y {fmtUsd(CAPITAL_OPCIONES, 0)} a opciones.</li>
           <li>· Acciones: {fmtUsd(TICKET_ACCIONES, 0)} por recomendación, en cantidad fraccional al precio de entrada del agente.</li>
           <li>· Opciones: 1 contrato por señal, equivalente a 100 acciones del subyacente.</li>

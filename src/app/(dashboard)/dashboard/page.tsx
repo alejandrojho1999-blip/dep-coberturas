@@ -100,29 +100,29 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Activity size={12} className="text-[#F59E0B]" />
-            <span className="text-[10px] font-mono font-semibold tracking-[0.15em] text-[#F59E0B] uppercase">
+            <Activity size={12} className="text-text-primary" />
+            <span className="text-[10px] font-mono font-semibold tracking-[0.15em] text-text-primary uppercase">
               Sistema Activo
             </span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
             <AnimatedGradientText
-              colorFrom="#F59E0B"
-              colorTo="#F0EFE8"
+              colorFrom="#4d95d0"
+              colorTo="#ffffff"
               speed={0.5}
             >
               OVERVIEW
             </AnimatedGradientText>
           </h1>
-          <p className="mt-0.5 text-xs text-[#64748b] font-mono tracking-wide">
-            Departamento de Coberturas — Sistema de Análisis de Riesgos
+          <p className="mt-0.5 text-xs text-text-secondary font-mono tracking-wide">
+            SynerGy — Agentes, Estrategias y Portafolios Algorítmicos
           </p>
         </div>
         <Badge
           variant="outline"
-          className="hidden sm:flex items-center gap-1.5 border-[#1e2035] bg-[#0f0f17] text-[#64748b] text-[10px] font-mono"
+          className="hidden sm:flex items-center gap-1.5 border-border bg-surface text-text-secondary text-[10px] font-mono"
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+          <span className="h-1.5 w-1.5 rounded-full bg-positive animate-pulse" />
           LIVE
         </Badge>
       </div>
@@ -133,46 +133,46 @@ export default function DashboardPage() {
           <Link
             key={label}
             href={href}
-            className="group relative rounded-lg border border-[#1e2035] bg-[#0f0f17] p-4 overflow-hidden transition-colors hover:border-[#F59E0B]/30 hover:bg-[#161622]"
+            className="group relative rounded-lg border border-border bg-surface p-4 overflow-hidden transition-colors hover:border-accent/30 hover:bg-surface-raised"
           >
             {featured && (
               <BorderBeam
-                colorFrom="#F59E0B"
-                colorTo="#D97706"
+                colorFrom="#4d95d0"
+                colorTo="#003d66"
                 size={60}
                 duration={4}
               />
             )}
             {/* Panel header */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[9px] font-mono font-semibold tracking-[0.15em] text-[#374151] uppercase">
+              <span className="text-[9px] font-mono font-semibold tracking-[0.15em] text-text-muted uppercase">
                 {label}
               </span>
               <Icon
                 size={14}
-                className="text-[#374151] group-hover:text-[#F59E0B] transition-colors"
+                className="text-text-muted group-hover:text-text-primary transition-colors"
               />
             </div>
             {/* Value */}
-            <p className="text-3xl font-bold font-mono text-[#F0EFE8] tabular-nums">
+            <p className="text-3xl font-bold font-mono text-text-primary tabular-nums">
               {value}
             </p>
-            <p className="mt-1 text-[10px] text-[#374151] font-mono uppercase tracking-wide">
+            <p className="mt-1 text-[10px] text-text-muted font-mono uppercase tracking-wide">
               {unit}
             </p>
           </Link>
         ))}
       </div>
 
-      <Separator className="bg-[#1e2035]" />
+      <Separator className="bg-surface-raised" />
 
       {/* Modules section */}
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-[#374151]">
+          <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-text-muted">
             MÓDULOS DEL SISTEMA
           </span>
-          <div className="flex-1 h-px bg-[#1e2035]" />
+          <div className="flex-1 h-px bg-surface-raised" />
         </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -180,32 +180,32 @@ export default function DashboardPage() {
             <Link
               key={href}
               href={href}
-              className="group flex flex-col rounded-lg border border-[#1e2035] bg-[#0f0f17] p-4 transition-all hover:border-[#F59E0B]/30 hover:bg-[#161622]"
+              className="group flex flex-col rounded-lg border border-border bg-surface p-4 transition-all hover:border-accent/30 hover:bg-surface-raised"
             >
               {/* Panel header strip */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-6 h-6 rounded bg-[#161622] group-hover:bg-[#F59E0B]/10 transition-colors">
-                    <Icon size={12} className="text-[#64748b] group-hover:text-[#F59E0B] transition-colors" />
+                  <div className="flex items-center justify-center w-6 h-6 rounded bg-surface-raised group-hover:bg-accent/10 transition-colors">
+                    <Icon size={12} className="text-text-secondary group-hover:text-text-primary transition-colors" />
                   </div>
-                  <span className="text-[9px] font-mono font-semibold tracking-[0.15em] text-[#374151] uppercase">
+                  <span className="text-[9px] font-mono font-semibold tracking-[0.15em] text-text-muted uppercase">
                     {label}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="h-1 w-1 rounded-full bg-[#22c55e]" />
-                  <span className="text-[8px] font-mono text-[#374151]">{status}</span>
+                  <span className="h-1 w-1 rounded-full bg-positive" />
+                  <span className="text-[8px] font-mono text-text-muted">{status}</span>
                 </div>
               </div>
 
-              <p className="font-semibold text-sm text-[#F0EFE8] group-hover:text-white transition-colors">
+              <p className="font-semibold text-sm text-text-primary group-hover:text-white transition-colors">
                 {title}
               </p>
-              <p className="mt-1 text-xs text-[#64748b] leading-relaxed flex-1">
+              <p className="mt-1 text-xs text-text-secondary leading-relaxed flex-1">
                 {description}
               </p>
 
-              <div className="mt-3 flex items-center gap-1 text-[#374151] group-hover:text-[#F59E0B] transition-colors">
+              <div className="mt-3 flex items-center gap-1 text-text-muted group-hover:text-text-primary transition-colors">
                 <span className="text-[10px] font-mono uppercase tracking-wide">
                   Abrir
                 </span>

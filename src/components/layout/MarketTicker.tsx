@@ -18,19 +18,19 @@ function TickerItem({ symbol, value, change, up }: QuoteItem) {
   const isPlaceholder = value === '—'
   return (
     <span className="flex items-center gap-1.5 px-4">
-      <span className="text-[10px] font-semibold tracking-wide text-[#64748b] uppercase">
+      <span className="text-[10px] font-semibold tracking-wide text-text-secondary uppercase">
         {symbol}
       </span>
-      <span className={`text-[10px] font-mono ${isPlaceholder ? 'text-[#374151]' : 'text-[#F0EFE8]'}`}>
+      <span className={`text-[10px] font-mono ${isPlaceholder ? 'text-text-muted' : 'text-text-primary'}`}>
         {value}
       </span>
       {!isPlaceholder && (
-        <span className={`flex items-center gap-0.5 text-[10px] font-mono ${up ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+        <span className={`flex items-center gap-0.5 text-[10px] font-mono ${up ? 'text-positive' : 'text-negative'}`}>
           <Icon size={10} />
           {change}
         </span>
       )}
-      <span className="text-[#1e2035]">|</span>
+      <span className="text-border">|</span>
     </span>
   )
 }
@@ -60,7 +60,7 @@ export function MarketTicker() {
   }, [])
 
   return (
-    <div className="border-b border-[#1e2035] bg-[#0f0f17] overflow-hidden h-7 flex items-center">
+    <div className="border-b border-border bg-surface overflow-hidden h-7 flex items-center">
       <Marquee className="[--duration:40s]" pauseOnHover>
         {items.map((item) => (
           <TickerItem key={item.symbol} {...item} />

@@ -142,7 +142,7 @@ export async function POST(request: Request): Promise<Response> {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://dep-coberturas.vercel.app',
-          'X-Title': 'Dep Coberturas — Causal IR Extract',
+          'X-Title': 'SynerGy — Causal IR Extract',
         },
         body: JSON.stringify({
           model: 'deepseek/deepseek-chat',

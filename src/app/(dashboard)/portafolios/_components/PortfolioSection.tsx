@@ -64,13 +64,13 @@ export function PortfolioSection({
           <Icono size={17} style={{ color: acento }} />
         </div>
         <div>
-          <h2 className="font-mono text-sm font-semibold uppercase tracking-[0.12em] text-[#F0EFE8]">{titulo}</h2>
-          <p className="text-xs text-[#64748b]">{subtitulo}</p>
+          <h2 className="font-mono text-sm font-semibold uppercase tracking-[0.12em] text-text-primary">{titulo}</h2>
+          <p className="text-xs text-text-secondary">{subtitulo}</p>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="rounded-lg border border-[#1e2035] bg-[#1e2035] p-px">
+      <div className="rounded-lg border border-border bg-surface-raised p-px">
         <KpiRow>
           <KpiCard
             label="Valor del portafolio"
@@ -125,7 +125,7 @@ export function PortfolioSection({
             label="Max drawdown"
             value={`−${curva.maxDrawdown.toFixed(2)}%`}
             sub="peor caída desde máximos"
-            acento="#ef4444"
+            acento="var(--color-negative)"
             ayuda="La mayor pérdida que habría sufrido quien entrase en el peor momento."
           />
           <KpiCard
@@ -179,20 +179,20 @@ export function PortfolioSection({
 
       {/* Composición y curva */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="rounded-lg border border-[#1e2035] bg-[#0f0f17] p-4">
+        <div className="rounded-lg border border-border bg-surface p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#475569]">
+            <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
               Composición del portafolio
             </h3>
             {/* Con el capital libre dentro, unas pocas posiciones de tamaño fijo
                 dejan el pastel casi entero en gris. Por defecto se reparte solo
                 lo desplegado, y el interruptor devuelve la vista sobre el total. */}
-            <label className="flex cursor-pointer select-none items-center gap-1.5 text-[10px] text-[#64748b]">
+            <label className="flex cursor-pointer select-none items-center gap-1.5 text-[10px] text-text-secondary">
               <input
                 type="checkbox"
                 checked={conCaja}
                 onChange={e => setConCaja(e.target.checked)}
-                className="h-3 w-3 accent-[#F59E0B]"
+                className="h-3 w-3 accent-accent"
               />
               Incluir capital libre
             </label>
@@ -203,11 +203,11 @@ export function PortfolioSection({
             centro={fmtUsd(metrics.invertido, 0)}
             centroSub="DESPLEGADO"
           />
-          {notaPastel && <p className="mt-3 text-[10px] leading-relaxed text-[#475569]">{notaPastel}</p>}
+          {notaPastel && <p className="mt-3 text-[10px] leading-relaxed text-text-muted">{notaPastel}</p>}
         </div>
 
-        <div className="rounded-lg border border-[#1e2035] bg-[#0f0f17] p-4">
-          <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.15em] text-[#475569]">
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
             Curva de resultados vs {BENCHMARK}
           </h3>
           <EquityChart
@@ -221,8 +221,8 @@ export function PortfolioSection({
       </div>
 
       {/* Resultado por posición */}
-      <div className="rounded-lg border border-[#1e2035] bg-[#0f0f17] p-4">
-        <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.15em] text-[#475569]">
+      <div className="rounded-lg border border-border bg-surface p-4">
+        <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
           Resultado por posición
         </h3>
         <PnlBarChart barras={barras} />
@@ -230,10 +230,10 @@ export function PortfolioSection({
 
       {/* Exclusiones */}
       {excluidas.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-[#F59E0B33] bg-[#F59E0B0d] px-3 py-2">
-          <AlertTriangle size={13} className="mt-0.5 shrink-0 text-[#F59E0B]" />
-          <p className="text-[11px] leading-relaxed text-[#94a3b8]">
-            <span className="font-semibold text-[#F59E0B]">
+        <div className="flex items-start gap-2 rounded-lg border border-accent-muted bg-accent-muted px-3 py-2">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0 text-text-primary" />
+          <p className="text-[11px] leading-relaxed text-text-secondary">
+            <span className="font-semibold text-text-primary">
               {excluidas.length} recomendación(es) fuera del portafolio.
             </span>{' '}
             No se pueden valorar con datos fiables y contarlas distorsionaría el track record:{' '}
@@ -244,14 +244,14 @@ export function PortfolioSection({
 
       {/* Tablas */}
       <div className="space-y-2">
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#475569]">
+        <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
           Posiciones abiertas
         </h3>
         <PositionsTable positions={positions} total={metrics.invertido + metrics.pnlNoRealizado} />
       </div>
 
       <div className="space-y-2">
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#475569]">
+        <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
           Track record · operaciones cerradas
         </h3>
         <TrackRecordTable trades={trades} etiquetaPrecio={etiquetaPrecio} />

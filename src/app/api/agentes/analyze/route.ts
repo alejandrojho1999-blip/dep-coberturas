@@ -83,7 +83,7 @@ export async function POST(request: Request): Promise<Response> {
     ? `Momentum Score: ${momentumScore}/3 | RSI-14: ${rsi?.toFixed(0) ?? 'N/D'} | MACD: ${(macd ?? 0) > (macdSignal ?? 0) ? 'ALCISTA' : 'BAJISTA'}`
     : ''
 
-  const prompt = `Eres el Chief Investment Officer de Emporium Quality Funds coordinando 3 agentes especializados para analizar ${ticker}.
+  const prompt = `Eres el Chief Investment Officer de SynerGy coordinando 3 agentes especializados para analizar ${ticker}.
 
 DATOS CUANTITATIVOS:
 ${fundamentals}
@@ -124,7 +124,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicación):
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': siteUrl,
-      'X-Title': `EQF ${agentName}`,
+      'X-Title': `SynerGy ${agentName}`,
     },
     body: JSON.stringify({
       model,

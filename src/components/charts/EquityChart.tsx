@@ -25,11 +25,11 @@ interface Props {
  * entre líneas es directamente el dinero de más (o de menos) que habría dado
  * la estrategia frente a comprar el índice.
  */
-export function EquityChart({ serie, benchmark, color = CHART_COLORS.ambar, altura = 300, nota, escalonada }: Props) {
+export function EquityChart({ serie, benchmark, color = CHART_COLORS.azul, altura = 300, nota, escalonada }: Props) {
   if (serie.length < 2) {
     return (
       <div
-        className="flex items-center justify-center rounded-lg border border-dashed border-[#1e2035] text-xs text-[#475569]"
+        className="flex items-center justify-center rounded-lg border border-dashed border-border text-xs text-text-muted"
         style={{ height: altura }}
       >
         Aún no hay historia suficiente para dibujar la curva
@@ -98,7 +98,7 @@ export function EquityChart({ serie, benchmark, color = CHART_COLORS.ambar, altu
           </LineChart>
         </ResponsiveContainer>
       </div>
-      {nota && <p className="text-[10px] leading-relaxed text-[#475569]">{nota}</p>}
+      {nota && <p className="text-[10px] leading-relaxed text-text-muted">{nota}</p>}
     </div>
   )
 }

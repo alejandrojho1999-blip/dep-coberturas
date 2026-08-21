@@ -1,20 +1,32 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Nunito_Sans, Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Tipografía primaria del manual de marca (sustituto de Avenir): titulares y logotipo
+const brandSans = Nunito_Sans({
+  variable: "--font-brand",
   subsets: ["latin"],
+  weight: ["400", "600", "700", "800", "900"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Tipografía secundaria del manual: cuerpo, informes y documentos
+const bodySans = Roboto({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
+});
+
+// Variante monoespaciada de la familia Roboto para columnas numéricas
+const bodyMono = Roboto_Mono({
+  variable: "--font-numeric",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "EQF Quant — Agentes y Estrategias Cuantitativas",
-  description: "Plataforma de agentes y estrategias cuantitativas para el análisis y seguimiento de recomendaciones de inversión",
+  title: "SynerGy — Plataforma Quant",
+  description:
+    "Tecnología propietaria de análisis y gobernanza financiera: agentes, estrategias y portafolios algorítmicos para preservar el capital y maximizar retornos ajustados al riesgo",
 };
 
 export default function RootLayout({
@@ -25,9 +37,9 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${brandSans.variable} ${bodySans.variable} ${bodyMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#0a0a0f]">{children}</body>
+      <body className="min-h-full flex flex-col bg-background">{children}</body>
     </html>
   );
 }

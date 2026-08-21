@@ -146,7 +146,7 @@ export async function POST(request: Request): Promise<Response> {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://dep-coberturas.vercel.app',
-        'X-Title': 'Dep Coberturas — Causal Doc Analysis',
+        'X-Title': 'SynerGy — Causal Doc Analysis',
       },
       body: JSON.stringify({
         model: process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat-v3-0324',
