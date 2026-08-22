@@ -246,9 +246,9 @@ export default function AgenteGamma() {
       setStep1Phase('done')
       if (signal.aborted) { setPhase('idle'); return }
 
-      // ── PASO 2: TimesFM Forecast 30d ──────────────────────────────
+      // ── PASO 2: Proyección 30d (regresión lineal + EWMA) ─────────
       setStep2Phase('running')
-      addLog(`📊 TimesFM: proyectando 30 días para ${candidateTickers.length} ticker(s)...`)
+      addLog(`📊 Proyección 30d: estimando precio para ${candidateTickers.length} ticker(s)...`)
       const forecastRes = await fetch(
         `/api/agentes/forecast?tickers=${candidateTickers.join(',')}`, { signal }
       )

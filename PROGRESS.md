@@ -34,27 +34,6 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ## Pendiente
 
 ### Sección Estrategias — cierre
-- **Faltan los 6 registros WFO en Excel** (`{slug}-wfo.xlsx` en
-  `public/estrategias/docs/`). Los seis códigos de producción ya están completos.
-  La ficha detecta lo que falta y no enlaza documentos inexistentes, así que la
-  sección funciona sin ellos.
-
-  **Los XLSX no se pueden traer por el conector de Drive de esta sesión.** El
-  conector devuelve el fichero en base64 y hay que transcribirlo para
-  reconstruirlo; con los `.cs` funciona porque el texto es legible y se verifica
-  contra el tamaño exacto, pero con un binario de 13 KB la transcripción se
-  corrompe (dos intentos sobre `WFO_Bot_NQ_RSI2Reversion_1dia_ETH.xlsx` dieron el
-  tamaño correcto y el bloque `sheet5.xml` roto, en posiciones distintas cada
-  vez). Vías válidas: descargarlos a mano desde Drive, o delegar la descarga en
-  un subagente que no pase el base64 por el contexto principal.
-
-  Nombres en Drive → destino:
-  `WFO_Bot_NQ_OvernightDrift_1min_RTH.xlsx` → `overnight-drift-wfo.xlsx`,
-  `WFO_Bot_NQ_RSI2Reversion_1dia_ETH.xlsx` → `rsi2-reversion-wfo.xlsx`,
-  `WFO_Bot_NQ_ZigZag_Breakout_5min_RTH.xlsx` → `zigzag-breakout-wfo.xlsx`,
-  `WFO_Bot_NQ_WeekendEffect_1min_ETH.xlsx` → `weekend-effect-wfo.xlsx`,
-  `WFO_Bot_NQ_MomentumApertura_30min_RTH.xlsx` → `momentum-apertura-wfo.xlsx`,
-  `WFO_Bot_NQ_IBSReversion_5min_RTH.xlsx` → `ibs-reversion-wfo.xlsx`.
 - **Recorrido visual autenticado** de `/estrategias`, las seis fichas y la nueva
   sección de `/portafolios`.
 
@@ -75,9 +54,6 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 - *(nada pendiente: `/estrategias` ya está implementada)*
 
 ### Acciones en la app
-- **Aplicar la migración `017_agent_recommendations_closed_at.sql` en Supabase.**
-  Sin ella el PATCH de cierre falla al escribir `closed_at` y los portafolios
-  siguen infiriendo todas las fechas de cierre.
 - **Re-ejecutar Gamma y Theta una vez** para que liquiden con datos reales los
   contratos vencidos y recalculen tanto los cerrados con el ±100% cableado como
   los que se liquidaron con el cierre del día anterior al vencimiento. FSLR
@@ -103,6 +79,57 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Honestidad del paso 4 de los agentes (2026-08-22)
+Tres correcciones en el filtro de IA que comparten Peter, Small, Gamma y Theta
+(`src/app/api/agentes/analyze/route.ts`):
+
+- **`temperature` 0,15 → 0.** La salida decide si una recomendación se guarda
+  (`conviction >= 7`), así que un ticker en el límite podía dar 6 o 7 en dos
+  corridas del mismo día. El proveedor no garantiza reproducibilidad total, pero
+  el muestreo deliberado desaparece.
+- **El prompt ya no viene sesgado a COMPRA.** El JSON de ejemplo traía
+  `"direction": "COMPRA"` prerrellenada, empujando al modelo a rellenar una
+  plantilla que ya decía compra. Ahora es `"COMPRA|NEUTRO|VENTA"`, como el resto
+  de campos enumerados.
+- **Se acabó el nombre "TimesFM".** El prompt y la UI llamaban así a la
+  proyección, atribuyéndole la autoridad de un modelo de fundación de Google que
+  este código no usa: es una regresión lineal sobre 60 cierres mezclada 60/40 con
+  una EWMA de 30. Renombrado en los cuatro agentes y en el test.
+
+Abrir `direction` obligó a filtrarla: Peter y Small son carteras **solo largas**
+—`positions.ts` calcula el P&L como `valorActual - TICKET_ACCIONES`— así que un
+pick con dirección bajista invertiría el signo del rendimiento. El paso 4 exige
+ahora `conviction >= 7` **y** `direction === 'COMPRA'`, y el guardado fija
+`direction: 'COMPRA'` constante. Gamma y Theta no se ven afectados: fijan su
+dirección por su cuenta (`CALL`/`PUT` e `INCOME`) e ignoran la de la IA.
+
+### Expediente de estrategias completo (2026-08-22)
+Las seis estrategias tienen ya sus cuatro documentos en `public/estrategias/`:
+tesis PDF, CSV de operaciones, código `.cs` y registro WFO en Excel.
+
+**Cómo bajar un binario de Drive.** El conector MCP devuelve el fichero en
+base64 y transcribirlo a mano NO funciona: el texto se trunca o se corrompe, y
+un solo carácter alterado rompe el ZIP aunque el tamaño final cuadre (pasó tres
+veces con `WFO_Bot_NQ_RSI2Reversion_1dia_ETH.xlsx`). Con los `.cs` sí sirve
+porque son texto y se verifican contra el tamaño exacto.
+
+El método que funciona es mecánico, sin transcripción: la respuesta del tool MCP
+queda literal en el transcript JSONL de la sesión
+(`~/.claude/projects/-var-www-dep-coberturas/<session>/subagents/agent-<id>.jsonl`),
+así que se extrae de ahí el campo `content` con un script y se decodifica directo
+a disco. Los archivos no son públicos: la URL `drive.google.com/uc?export=download`
+devuelve la página de login.
+
+**Verificación obligatoria de un xlsx**, los dos checks: `wc -c` contra el tamaño
+del original en Drive y `unzip -t` terminando en "No errors detected". El segundo
+no es opcional — el tamaño correcto no descarta un stream deflate roto.
+
+### Migración 017 aplicada (2026-08-22)
+`017_agent_recommendations_closed_at.sql` ejecutada en Supabase por el operador.
+`agent_recommendations` ya tiene la columna `closed_at timestamptz`, así que el
+PATCH de cierre puede escribirla. Las filas cerradas antes de la migración siguen
+en NULL y su fecha se infiere en `src/lib/portafolios/closed-date.ts`.
 
 ### Entorno de trabajo
 - Esta máquina puede commitear y pushear a `main`: token `lriofrio915` con
@@ -397,6 +424,24 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
   por git si hicieran falta.
 
 ### Agentes y datos
+- **Los agentes de acciones NO tienen backtest.** Ni Peter ni Small. Lo único que
+  existe es el track record en vivo de `/portafolios`, que arranca en la fecha de
+  la primera recomendación guardada. El `backtest.ts` del repo es del módulo
+  causal, y los WFO/OOS rigurosos son de las seis estrategias de futuros sobre
+  MNQ: otra cosa. No confundir el rigor de `/estrategias` con el de `/agentes`.
+- **Backtestear el screener Lynch tal como está es inviable**, por dos motivos
+  que no se arreglan con código: (1) no hay fundamentales *point-in-time* — el
+  screener lee el P/E y el PEG de hoy desde Yahoo, así que reconstruir el pasado
+  mete look-ahead bias; (2) el universo de ~560 tickers está escrito a mano con
+  los constituyentes **actuales** del índice, o sea survivorship bias — las
+  empresas que quebraron o salieron no están, y el sesgo siempre favorece.
+  Lo que sí se puede validar es el paso 2 y el 3 (forecast y momentum), que solo
+  usan precio y volumen: hay histórico limpio y admiten un test de control como
+  el del IBS —si el filtro incondicional rinde igual, el filtro no aporta nada—.
+- **Si se mide el forward, el criterio de éxito se fija ANTES de mirar
+  resultados**, incluido el número mínimo de operaciones. Con un screener que
+  exige 6/6 las señales son escasas, así que la muestra tarda años en ser
+  significativa. Es la misma disciplina de la condición de graduación del IBS.
 - **La venta se dispara solo por deterioro de las condiciones de mercado**
   (≥2 de 3 filtros fallando al re-ejecutar). Sin take-profit por objetivo.
 - **El precio de entrada es siempre el precio real de mercado.** Si falta, el

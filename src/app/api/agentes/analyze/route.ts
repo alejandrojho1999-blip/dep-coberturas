@@ -76,8 +76,12 @@ export async function POST(request: Request): Promise<Response> {
   const model = process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat-v3-0324'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
+  // El nombre importa: la proyección es una regresión lineal sobre 60 cierres
+  // mezclada 60/40 con una EWMA de 30 (ver `api/agentes/forecast`). Llamarla
+  // "TimesFM" —un modelo de fundación que este código no usa— le atribuía al
+  // dato una autoridad que no tiene, y el modelo lee esta línea literalmente.
   const forecastLine = forecastReturn != null
-    ? `TimesFM Forecast 30d: ${forecastReturn >= 0 ? '+' : ''}${forecastReturn.toFixed(1)}%`
+    ? `Proyección 30d (regresión lineal + EWMA): ${forecastReturn >= 0 ? '+' : ''}${forecastReturn.toFixed(1)}%`
     : ''
   const momentumLine = momentumScore != null
     ? `Momentum Score: ${momentumScore}/3 | RSI-14: ${rsi?.toFixed(0) ?? 'N/D'} | MACD: ${(macd ?? 0) > (macdSignal ?? 0) ? 'ALCISTA' : 'BAJISTA'}`
@@ -102,12 +106,13 @@ Recomendación fundamental: COMPRA / NEUTRO / VENTA con confianza 1-10.
 
 === AGENTE 3 — PORTFOLIO MANAGER (SÍNTESIS) ===
 Considera ambos agentes y genera la recomendación final. Solo aprueba si hay consenso alcista.
+Si los dos agentes no coinciden en COMPRA, la dirección debe ser NEUTRO o VENTA: no fuerces una compra.
 conviction = promedio ponderado de ambas confianzas (técnica 40% + fundamental 60%), redondeado a entero.
 
 Responde SOLO con JSON válido (sin markdown, sin explicación):
 {
   "empresa": "${empresa}",
-  "direction": "COMPRA",
+  "direction": "COMPRA|NEUTRO|VENTA",
   "riesgo": "BAJO|MEDIO|ALTO",
   "timeframe": "CORTO|MEDIANO|LARGO",
   "precio_objetivo": <número, objetivo 12 meses>,
@@ -129,7 +134,11 @@ Responde SOLO con JSON válido (sin markdown, sin explicación):
     body: JSON.stringify({
       model,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.15,
+      // Cero, no 0,15: la salida decide si una recomendación se guarda o se
+      // descarta (`conviction >= 7`), así que un ticker en el límite podía dar
+      // 6 o 7 en dos corridas del mismo día. No garantiza reproducibilidad
+      // total —el proveedor no la ofrece— pero elimina el muestreo deliberado.
+      temperature: 0,
       max_tokens: 600,
     }),
   })

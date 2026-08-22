@@ -142,7 +142,7 @@ describe('ewma', () => {
 
 // ── Forecast integration tests ──────────────────────────────────────────────
 
-describe('forecast filter (TimesFM-inspired)', () => {
+describe('forecast filter (regresión lineal + EWMA)', () => {
   it('BEARISH stock fails (forecastReturn < 0.02)', () => {
     const { forecastReturn, pass } = forecastResult(bearish60)
     expect(forecastReturn).toBeLessThan(0.02)

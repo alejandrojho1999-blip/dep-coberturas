@@ -13,7 +13,7 @@ interface TickerStage {
   score: number
   marketCapM?: number
   step1: 'pass'
-  // Paso 2 — TimesFM
+  // Paso 2 — proyección 30d (regresión lineal + EWMA)
   lastPrice?: number
   forecastPrice?: number
   forecastReturn?: number
@@ -77,7 +77,7 @@ function TickerCard({ t }: { t: TickerStage }) {
 
       {/* Filter badges row */}
       <div className="flex flex-wrap gap-1">
-        {/* TimesFM */}
+        {/* Proyección 30d */}
         {t.step2 !== 'pending' && (() => {
           const s = stepColors[t.step2 === 'pass' ? 'pass' : 'fail']
           return (
@@ -274,9 +274,9 @@ export default function AgenteSmall() {
       }
       if (signal.aborted) { setPhase('idle'); return }
 
-      // ── PASO 2: TimesFM Forecast 30d ──────────────────────────────
+      // ── PASO 2: Proyección 30d (regresión lineal + EWMA) ─────────
       setStep2Phase('running')
-      addLog(`📊 TimesFM: proyectando precio 30 días para ${small.length} ticker(s)...`)
+      addLog(`📊 Proyección 30d: estimando precio para ${small.length} ticker(s)...`)
       const forecastRes = await fetch(
         `/api/agentes/forecast?tickers=${small.map(r => r.ticker).join(',')}`, { signal }
       )
@@ -380,9 +380,18 @@ export default function AgenteSmall() {
           if (!aRes.ok) throw new Error(`IA HTTP ${aRes.status}`)
           const result = await aRes.json() as Record<string, unknown>
           const conviction = (result.conviction as number) ?? 5
-          const pass = conviction >= 7
+          // Mismo criterio que el Agente Peter: comparten `/api/agentes/analyze`
+          // y esta cartera también es solo larga, así que una dirección que no
+          // sea COMPRA no puede guardarse aunque la convicción sea alta.
+          const direction = ((result.direction as string) ?? 'COMPRA').toUpperCase()
+          const convictionOk = conviction >= 7
+          const directionOk = direction === 'COMPRA'
+          const pass = convictionOk && directionOk
 
-          addLog(`${pass ? '✓' : '✗'} ${t.ticker}: conviction ${conviction}/10 · ${result.consensus ?? 'N/D'} · riesgo ${result.riesgo ?? '?'}${!pass ? ' → conviction insuficiente (<7)' : ''}`)
+          const motivo = !convictionOk
+            ? ' → conviction insuficiente (<7)'
+            : !directionOk ? ` → dirección ${direction}, no es compra` : ''
+          addLog(`${pass ? '✓' : '✗'} ${t.ticker}: conviction ${conviction}/10 · ${direction} · ${result.consensus ?? 'N/D'} · riesgo ${result.riesgo ?? '?'}${motivo}`)
 
           if (idx !== -1) paso4[idx] = {
             ...paso4[idx],
@@ -433,7 +442,9 @@ export default function AgenteSmall() {
               precio_entrada: parseFloat(entryPrice.toFixed(2)),
               precio_objetivo: ai.precio_objetivo,
               stop_loss: ai.stop_loss,
-              direction: ai.direction ?? 'COMPRA',
+              // Constante a propósito: el paso 4 solo deja pasar COMPRA, y así
+              // no se cuela un 'compra' en minúsculas del modelo.
+              direction: 'COMPRA',
               riesgo: ai.riesgo,
               timeframe: ai.timeframe,
               resumen: ai.resumen,

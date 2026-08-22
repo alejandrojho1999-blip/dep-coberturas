@@ -227,9 +227,9 @@ export default function AgenteTheta() {
       setStep1Phase('done')
       if (signal.aborted) { setPhase('idle'); return }
 
-      // ── PASO 2: TimesFM Forecast — filtro de seguridad ───────────
+      // ── PASO 2: Proyección 30d — filtro de seguridad ─────────────
       setStep2Phase('running')
-      addLog(`📊 TimesFM: evaluando seguridad de primas en ${THETA_UNIVERSE.length} tickers...`)
+      addLog(`📊 Proyección 30d: evaluando seguridad de primas en ${THETA_UNIVERSE.length} tickers...`)
 
       const BATCH_SIZE = 8
       const forecastMap: Record<string, number> = {}
