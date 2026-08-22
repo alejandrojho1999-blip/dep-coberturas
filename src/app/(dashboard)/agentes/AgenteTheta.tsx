@@ -8,6 +8,8 @@ import {
   RefreshCw, BarChart2, Filter, Layers,
 } from 'lucide-react'
 import { settleExpiredPicks } from '@/lib/options/settle-picks'
+import FichaTecnicaAgente from './FichaTecnicaAgente'
+import { FICHA_THETA } from './fichas/theta'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
 
@@ -19,6 +21,8 @@ interface TickerStage {
   strike?: number
   expiration?: string
   premium?: number
+  /** Precio del subyacente al analizar la cadena. */
+  underlyingPrice?: number
   delta?: number
   theta?: number
   iv?: number
@@ -321,13 +325,23 @@ export default function AgenteTheta() {
           }
 
           const c = best.contract
-          const premium = c.mid ?? c.lastPrice ?? 0
+          // La prima cobrada es el precio de entrada de esta posición: si el
+          // mercado no publica ni horquilla ni cruce reciente, se descarta el
+          // contrato en vez de guardarlo con prima 0. Con prima 0 la
+          // rentabilidad al liquidar ni siquiera se puede calcular.
+          const premium = c.mid ?? c.lastPrice ?? null
+          if (premium == null || premium <= 0) {
+            addLog(`✗ ${t.ticker}: contrato sin prima fiable (sin horquilla ni cruce) — descartado`)
+            if (idx !== -1) paso3[idx] = { ...paso3[idx], step3: 'fail' }
+            continue
+          }
           const dte = calcDTE(c.expiration)
           addLog(`✓ ${t.ticker}: ${strategy} $${c.strike} exp ${c.expiration} · prima $${premium.toFixed(2)} · score ${best.score}`)
           if (idx !== -1) {
             paso3[idx] = {
               ...paso3[idx], step3: 'pass', strategy,
               strike: c.strike, expiration: c.expiration, premium,
+              underlyingPrice: oData.underlying?.underlyingPrice,
               delta: c.delta ?? undefined, theta: c.theta ?? undefined,
               iv: c.impliedVolatility ?? undefined,
               contractScore: best.score, dte,
@@ -397,7 +411,10 @@ export default function AgenteTheta() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ticker: t.ticker,
-              lastPrice: t.premium ?? 0,
+              // El precio del SUBYACENTE, no la prima: pasar la prima aquí hacía
+              // que el modelo valorase un activo de $3 cuando la acción cotiza
+              // a $180, y todo su análisis partía de esa cifra falsa.
+              lastPrice: t.underlyingPrice ?? 0,
               category: 'OPTIONS_THETA',
               strategy: t.strategy,
               strike: t.strike,
@@ -506,11 +523,11 @@ export default function AgenteTheta() {
   }
 
   const steps = [
-    { label: 'RE-EVALUACIÓN',   desc: 'Auto-close expiradas o pérdida 2×',       phase: step0Phase, icon: RefreshCw },
+    { label: 'RE-EVALUACIÓN',   desc: 'Auto-close solo al vencimiento',       phase: step0Phase, icon: RefreshCw },
     { label: 'UNIVERSO THETA',  desc: '~36 acciones opcionales líquidas',         phase: step1Phase, icon: Layers },
-    { label: 'PROYECCIÓN 30d',  desc: 'Sin caídas >-5% para sell-put',            phase: step2Phase, icon: TrendingDown },
+    { label: 'PROYECCIÓN 30d',  desc: 'Elige lado: put ≥-5% · call ≤+8%',            phase: step2Phase, icon: TrendingDown },
     { label: 'CADENA OPCIONES', desc: 'Sell-put / Covered-call mayor score',       phase: step3Phase, icon: BarChart2 },
-    { label: 'CALIDAD PRIMA',   desc: 'IV>30% · DTE 21-45 · |Δ| 0.15-0.35',     phase: step4Phase, icon: Filter },
+    { label: 'CALIDAD PRIMA',   desc: 'IV>30% · DTE 21-45 · |Δ| .15-.35 · ≥60',     phase: step4Phase, icon: Filter },
     { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7',               phase: step5Phase, icon: Brain },
     { label: 'PICKS & INFORME', desc: 'Sin duplicados, crédito registrado',        phase: step6Phase, icon: CheckCircle2 },
   ]
@@ -527,6 +544,9 @@ export default function AgenteTheta() {
 
   return (
     <div className="space-y-4">
+      {/* Ficha técnica — cómo funciona el agente y qué respaldo tiene */}
+      <FichaTecnicaAgente ficha={FICHA_THETA} />
+
       {/* Step cards */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
         {steps.map((s, i) => {

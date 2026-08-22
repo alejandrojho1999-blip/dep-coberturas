@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRef, useState } from 'react'
 import { Loader2, Play, Square, RotateCcw, TrendingUp, BarChart2, Brain, BookOpen, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react'
 import type { ScreenerResult } from '@/lib/peter-lynch/screener'
+import FichaTecnicaAgente from './FichaTecnicaAgente'
+import { FICHA_SMALL } from './fichas/small'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
 
@@ -218,9 +220,9 @@ export default function AgenteSmall() {
       setStep0Phase('done')
       if (signal.aborted) { setPhase('idle'); return }
 
-      // ── PASO 1: Lynch Small-Cap (score ≥5, market cap < $2B) ──────
+      // ── PASO 1: Lynch Small-Cap (score ≥4/6, criterios adaptados) ─
       setStep1Phase('running')
-      addLog('🔍 Ejecutando screener Lynch Small-Cap (score ≥5/6, market cap < $2B)...')
+      addLog('🔍 Ejecutando screener Lynch Small-Cap (score ≥4/6, criterios adaptados)...')
       const lynchRes = await fetch('/api/peter-lynch/screen?universe=small_cap', { signal })
       if (!lynchRes.ok) throw new Error(`Screener HTTP ${lynchRes.status}`)
       const all = await lynchRes.json() as ScreenerResult[]
@@ -486,7 +488,7 @@ export default function AgenteSmall() {
 
   const steps = [
     { label: 'RE-EVALUACIÓN', desc: 'Auto-sell si ≥2/3 filtros fallan', phase: step0Phase, icon: RefreshCw },
-    { label: 'SMALL-CAP LYNCH', desc: 'Score ≥5/6 · Market Cap < $2B', phase: step1Phase, icon: BookOpen },
+    { label: 'SMALL-CAP LYNCH', desc: 'Score ≥4/6 · S&P 600 + Russell 2000', phase: step1Phase, icon: BookOpen },
     { label: 'PROYECCIÓN 30d', desc: 'Regresión + EWMA ≥2%', phase: step2Phase, icon: TrendingUp },
     { label: 'MOMENTUM SCANNER', desc: 'RSI · MACD · Volumen ≥2/3', phase: step3Phase, icon: BarChart2 },
     { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7', phase: step4Phase, icon: Brain },
@@ -503,6 +505,9 @@ export default function AgenteSmall() {
 
   return (
     <div className="space-y-4">
+      {/* Ficha técnica — cómo funciona el agente y qué respaldo tiene */}
+      <FichaTecnicaAgente ficha={FICHA_SMALL} />
+
       {/* Step cards */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {steps.map((s, i) => {

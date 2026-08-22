@@ -50,6 +50,27 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
   (`recomendaciones`, `fincept-terminal`): sin acento cálido, la jerarquía
   depende de peso y relleno y puede necesitar retoques al verla en uso.
 
+### Deudas conocidas en los agentes de opciones
+Detectadas al escribir las fichas técnicas. Ninguna se tocó: son cambios de
+comportamiento con dinero real detrás y merecen su propia sesión.
+
+- **Gamma no tiene stop ni toma de beneficios.** Guarda `precio_objetivo`
+  (prima × 2,5) y `stop_loss` (prima × 0,5) que **ningún proceso consulta**: la
+  posición vive hasta el vencimiento pase lo que pase. Lo mismo en Theta con
+  `stop_loss = prima × 2`, que no tiene un solo lector en `src/`. O se
+  implementan o se dejan de escribir, pero guardar cifras que nadie usa invita a
+  creer que hay una protección que no existe. La ficha de cada agente lo dice.
+- **Todo covered-call se valora con `strike × 100`.** `positions.ts` lee el
+  precio del subyacente de `ai_report.underlying`, campo que Theta nunca guarda.
+  Ahora los agentes sí capturan `underlyingPrice` de la cadena para el análisis
+  de IA, así que persistirlo en `ai_report` cerraría el hueco casi gratis.
+- **Los rangos de delta no coinciden entre el score y los filtros.**
+  `strategy-scoring.ts` premia 0,20–0,35 (venta) y 0,45–0,65 (compra), pero los
+  agentes aceptan 0,15–0,35 y 0,30–0,65: un contrato puede pasar el filtro
+  arrastrando la penalización de −10 que le impuso el score.
+- **Nadie comprueba que se posean las acciones de un covered-call.** La
+  estrategia solo está «cubierta» por convención; el sistema no lo verifica.
+
 ### Funcionalidad por definir
 - *(nada pendiente: `/estrategias` ya está implementada)*
 
@@ -79,6 +100,49 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Fichas técnicas de los cuatro agentes (2026-08-23)
+La ficha de Peter se generalizó a un marco reutilizable y Small, Gamma y Theta
+recibieron la suya. `FichaTecnicaAgente.tsx` tiene toda la presentación y
+`fichas/<agente>.tsx` solo el contenido, así que un cambio de diseño se hace en
+un único sitio y las cuatro fichas no pueden divergir.
+
+Gamma y Theta llevan además una sección **«Cómo se pierde dinero aquí»** que las
+de acciones no necesitan: una call comprada puede expirar sin valor y perder el
+100 % de la prima; un put vendido puede acabar en asignación obligando a comprar
+100 acciones por contrato al strike; y la call cubierta **da por supuesto que se
+poseen las acciones, cosa que el sistema nunca comprueba**.
+
+Escribir las fichas obligó a leer el código real y destapó etiquetas que
+anunciaban umbrales que no se aplican. Corregidas:
+
+- **La ficha de Peter decía «unas 560 empresas»**; `SP500_NASDAQ100_TICKERS`
+  tiene 443 únicas. Los comentarios «~560» y «~310» del screener también estaban
+  mal (443 y 307).
+- **La tarjeta de Small anunciaba `Score ≥5/6 · Market Cap < $2B`** mientras el
+  filtro es `score >= 4`, y el market cap no es un filtro sino uno de los seis
+  criterios puntuados: un pick con 4/6 puede tener capitalización fuera de rango.
+- **Theta prometía `Auto-close expiradas o pérdida 2×`**: la pérdida 2× no existe
+  en el código, solo se cierra al vencimiento.
+- **Theta decía `Sin caídas >-5% para sell-put`**: como `sellPutOk || covCallOk`
+  es siempre cierto, ese paso solo descarta tickers sin datos de proyección.
+- **El filtro de calidad de Theta omitía el corte `score ≥ 60`** que sí aplica.
+
+### Dos defectos de fondo en los agentes de opciones (2026-08-23)
+- **Prima de entrada 0.** Gamma y Theta hacían `c.mid ?? c.lastPrice ?? 0`: sin
+  horquilla ni cruce reciente la posición se guardaba con entrada 0, y al
+  liquidar `pnlPct` salía `null`. Ahora se descarta el contrato con log
+  explícito, igual que Peter y Small cuando falta el precio de la acción.
+- **La IA analizaba el activo equivocado.** Ambos pasaban la **prima** en
+  `lastPrice`, así que el modelo valoraba un activo de $3,40 cuando el subyacente
+  cotizaba a $180; `AnalyzeBody` ni siquiera declaraba los campos del contrato,
+  el prompt era el cuestionario de Lynch, `Score Lynch: undefined/6` se imprimía
+  literal y `agentName` devolvía «AGENTE SMALL» para los dos. Ahora se envía el
+  precio del subyacente (capturado de la cadena), el endpoint declara los campos
+  de opción y hay un prompt propio para contratos —strike, plazo, prima, delta,
+  IV— que advierte al modelo del reparto de riesgo de comprar frente a vender
+  primas. `analyze` rechaza con 400 si falta el precio del subyacente en vez de
+  analizar sobre un 0.
 
 ### Ficha técnica del Agente Peter (2026-08-22)
 Panel desplegable al inicio de la pestaña AGENTE PETER

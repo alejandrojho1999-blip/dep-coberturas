@@ -239,3 +239,39 @@ describe('calcMACD', () => {
     expect(pass).toBe(true)
   })
 })
+
+// ── Guarda de prima de los agentes de opciones ──────────────────────────────
+// (refleja el paso de cadena de AgenteGamma.tsx y AgenteTheta.tsx)
+
+/**
+ * La prima es el precio de entrada de una posición en opciones. Sin horquilla
+ * ni cruce reciente el contrato se descarta: guardarlo con prima 0 falsearía el
+ * rendimiento e impediría calcular la rentabilidad al liquidar.
+ */
+function primaDeEntrada(c: { mid: number | null; lastPrice: number | null }): number | null {
+  const premium = c.mid ?? c.lastPrice ?? null
+  return premium == null || premium <= 0 ? null : premium
+}
+
+describe('guarda de prima (agentes de opciones)', () => {
+  it('usa el punto medio de la horquilla cuando existe', () => {
+    expect(primaDeEntrada({ mid: 3.4, lastPrice: 9.9 })).toBe(3.4)
+  })
+
+  it('cae al último cruce cuando no hay horquilla', () => {
+    expect(primaDeEntrada({ mid: null, lastPrice: 2.15 })).toBe(2.15)
+  })
+
+  it('descarta el contrato sin horquilla ni cruce', () => {
+    expect(primaDeEntrada({ mid: null, lastPrice: null })).toBeNull()
+  })
+
+  it('descarta la prima cero en lugar de guardarla como entrada', () => {
+    expect(primaDeEntrada({ mid: 0, lastPrice: null })).toBeNull()
+    expect(primaDeEntrada({ mid: null, lastPrice: 0 })).toBeNull()
+  })
+
+  it('descarta una prima negativa', () => {
+    expect(primaDeEntrada({ mid: -1, lastPrice: null })).toBeNull()
+  })
+})

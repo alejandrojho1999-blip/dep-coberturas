@@ -22,7 +22,7 @@ export interface ScreenerResult {
   score: number
 }
 
-// S&P 500 + NASDAQ 100 — universo large-cap (~560 tickers únicos)
+// S&P 500 + NASDAQ 100 — universo large-cap (443 tickers únicos)
 const SP500_NASDAQ100_TICKERS = [
   // Mega-cap tech / NASDAQ 100 core
   'AAPL','MSFT','NVDA','GOOGL','GOOG','AMZN','META','TSLA','AVGO','ORCL',
@@ -87,7 +87,7 @@ const SP500_NASDAQ100_TICKERS = [
   'DDOG','ZS','SNOW','SE','MELI',
 ]
 
-// S&P 600 + Russell 2000 — universo small/mid-cap (~310 tickers)
+// S&P 600 + Russell 2000 — universo small/mid-cap (307 tickers)
 const SMALL_CAP_TICKERS = [
   // ── S&P 600 · Technology ─────────────────────────────────────────
   'QLYS','TNET','BL','SPSC','CEVA','DIOD','POWI','SMTC','SLAB','OSIS',

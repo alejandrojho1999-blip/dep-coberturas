@@ -8,6 +8,8 @@ import {
   RefreshCw, Activity, Filter, Layers,
 } from 'lucide-react'
 import { settleExpiredPicks } from '@/lib/options/settle-picks'
+import FichaTecnicaAgente from './FichaTecnicaAgente'
+import { FICHA_GAMMA } from './fichas/gamma'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
 
@@ -19,6 +21,8 @@ interface TickerStage {
   strike?: number
   expiration?: string
   premium?: number
+  /** Precio del subyacente al analizar la cadena. */
+  underlyingPrice?: number
   delta?: number
   theta?: number
   iv?: number
@@ -309,13 +313,24 @@ export default function AgenteGamma() {
             continue
           }
           const c = best.contract
-          const premium = c.mid ?? c.lastPrice ?? 0
+          // La prima es el precio de entrada de esta posición: si el mercado no
+          // publica ni horquilla ni cruce reciente, se descarta el contrato en
+          // vez de guardarlo con prima 0. Una entrada inventada falsearía el
+          // rendimiento durante toda la vida de la posición, y con prima 0 la
+          // rentabilidad al liquidar ni siquiera se puede calcular.
+          const premium = c.mid ?? c.lastPrice ?? null
+          if (premium == null || premium <= 0) {
+            addLog(`✗ ${t.ticker}: contrato sin prima fiable (sin horquilla ni cruce) — descartado`)
+            if (idx !== -1) paso3[idx] = { ...paso3[idx], step3: 'fail' }
+            continue
+          }
           const dte = calcDTE(c.expiration)
           addLog(`✓ ${t.ticker}: ${t.optionType} $${c.strike} exp ${c.expiration} · prima $${premium.toFixed(2)} · score ${best.score}`)
           if (idx !== -1) {
             paso3[idx] = {
               ...paso3[idx], step3: 'pass',
               strike: c.strike, expiration: c.expiration, premium,
+              underlyingPrice: oData.underlying?.underlyingPrice,
               delta: c.delta ?? undefined, theta: c.theta ?? undefined,
               iv: c.impliedVolatility ?? undefined,
               contractScore: best.score, dte,
@@ -382,7 +397,10 @@ export default function AgenteGamma() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ticker: t.ticker,
-              lastPrice: t.premium ?? 0,
+              // El precio del SUBYACENTE, no la prima: pasar la prima aquí hacía
+              // que el modelo valorase un activo de $3 cuando la acción cotiza
+              // a $180, y todo su análisis partía de esa cifra falsa.
+              lastPrice: t.underlyingPrice ?? 0,
               category: 'OPTIONS_GAMMA',
               forecastReturn: t.forecastReturn,
               optionType: t.optionType,
@@ -391,6 +409,7 @@ export default function AgenteGamma() {
               premium: t.premium,
               delta: t.delta,
               impliedVolatility: t.iv,
+              dte: t.dte,
             }),
             signal,
           })
@@ -510,6 +529,9 @@ export default function AgenteGamma() {
 
   return (
     <div className="space-y-4">
+      {/* Ficha técnica — cómo funciona el agente y qué respaldo tiene */}
+      <FichaTecnicaAgente ficha={FICHA_GAMMA} />
+
       {/* Step cards */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
         {steps.map((s, i) => {

@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useRef, useState } from 'react'
 import { Loader2, Play, Square, RotateCcw, TrendingUp, BarChart2, Brain, BookOpen, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react'
 import type { ScreenerResult } from '@/lib/peter-lynch/screener'
-import FichaTecnicaPeter from './FichaTecnicaPeter'
+import FichaTecnicaAgente from './FichaTecnicaAgente'
+import { FICHA_PETER } from './fichas/peter'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
 
@@ -502,7 +503,7 @@ export default function AgentePeter() {
   return (
     <div className="space-y-4">
       {/* Ficha técnica — cómo funciona el agente y qué respaldo tiene */}
-      <FichaTecnicaPeter />
+      <FichaTecnicaAgente ficha={FICHA_PETER} />
 
       {/* Step cards */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-6">

@@ -7,15 +7,25 @@ export const maxDuration = 120
 
 interface AnalyzeBody {
   ticker: string
+  /** Precio del SUBYACENTE, no la prima del contrato. */
   lastPrice: number
   category: string
-  score: number
+  score?: number
   marketCapM?: number
   forecastReturn?: number
   momentumScore?: number
   rsi?: number
   macd?: number
   macdSignal?: number
+  // Campos de opción (Gamma y Theta). Sin ellos el análisis es el de acciones.
+  optionType?: 'CALL' | 'PUT'
+  strategy?: 'SELL_PUT' | 'COVERED_CALL'
+  strike?: number
+  expiration?: string
+  premium?: number
+  delta?: number
+  impliedVolatility?: number
+  dte?: number
 }
 
 interface AnalysisResult {
@@ -43,10 +53,26 @@ export async function POST(request: Request): Promise<Response> {
   if (!apiKey) return Response.json({ error: 'OPENROUTER_API_KEY no configurada' }, { status: 500 })
 
   const body = await request.json() as AnalyzeBody
-  const { ticker, lastPrice, category, score, marketCapM, forecastReturn, momentumScore, rsi, macd, macdSignal } = body
+  const {
+    ticker, lastPrice, category, score, marketCapM, forecastReturn, momentumScore, rsi, macd, macdSignal,
+    optionType, strategy, strike, expiration, premium, delta, impliedVolatility, dte,
+  } = body
+
+  // Todo el análisis parte del precio del subyacente. Sin él no hay nada que
+  // valorar, y dejarlo caer a 0 produciría un dictamen construido sobre una
+  // cifra inventada, que es justo lo que este endpoint no debe hacer.
+  if (!Number.isFinite(lastPrice) || lastPrice <= 0)
+    return Response.json({ error: 'lastPrice (precio del subyacente) ausente o no válido' }, { status: 400 })
+
+  // Gamma y Theta operan contratos, no acciones. El análisis es otro: importa el
+  // contrato (strike, plazo, prima, delta) tanto como el subyacente, y pedirles
+  // el cuestionario de Lynch no tenía sentido.
+  const esOpcion = category === 'OPTIONS_GAMMA' || category === 'OPTIONS_THETA'
+  const scoreLine = score != null ? `Score Lynch: ${score}/6` : ''
 
   let empresa = ticker
-  let fundamentals = `Ticker: ${ticker}\nPrecio: $${lastPrice.toFixed(2)}\nScore Lynch: ${score}/6`
+  let fundamentals = [`Ticker: ${ticker}`, `Precio: $${lastPrice.toFixed(2)}`, scoreLine]
+    .filter(Boolean).join('\n')
   // Objetivo del consenso de analistas de Yahoo. Es un dato verificable, a
   // diferencia de la cifra que propone la IA, así que tiene prioridad.
   let targetMeanPrice: number | null = null
@@ -63,16 +89,19 @@ export async function POST(request: Request): Promise<Response> {
     fundamentals = [
       `Empresa: ${empresa}`,
       `Sector: ${(p.sector ?? 'N/D') as string} | Industria: ${(p.industry ?? 'N/D') as string}`,
-      `Precio actual: $${lastPrice.toFixed(2)}`,
-      `Score Lynch: ${score}/6`,
+      `Precio actual del subyacente: $${lastPrice.toFixed(2)}`,
+      scoreLine,
       `Market Cap: ${marketCapM != null ? `$${(marketCapM / 1000).toFixed(1)}B` : 'N/D'}`,
       `P/E Forward: ${s.forwardPE ?? 'N/D'} | PEG: ${s.pegRatio ?? 'N/D'}`,
       `Margen bruto: ${f.grossMargins != null ? `${(f.grossMargins * 100).toFixed(1)}%` : 'N/D'}`,
       `ROE: ${f.returnOnEquity != null ? `${(f.returnOnEquity * 100).toFixed(1)}%` : 'N/D'}`,
-    ].join('\n')
+    ].filter(Boolean).join('\n')
   } catch { /* use minimal data */ }
 
-  const agentName = category === 'PETER_LYNCH' ? 'AGENTE PETER' : 'AGENTE SMALL'
+  const agentName = category === 'PETER_LYNCH' ? 'AGENTE PETER'
+    : category === 'OPTIONS_GAMMA' ? 'AGENTE GAMMA'
+    : category === 'OPTIONS_THETA' ? 'AGENTE THETA'
+    : 'AGENTE SMALL'
   const model = process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat-v3-0324'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
@@ -87,7 +116,52 @@ export async function POST(request: Request): Promise<Response> {
     ? `Momentum Score: ${momentumScore}/3 | RSI-14: ${rsi?.toFixed(0) ?? 'N/D'} | MACD: ${(macd ?? 0) > (macdSignal ?? 0) ? 'ALCISTA' : 'BAJISTA'}`
     : ''
 
-  const prompt = `Eres el Chief Investment Officer de SynerGy coordinando 3 agentes especializados para analizar ${ticker}.
+  const contratoLine = esOpcion
+    ? [
+        strategy === 'SELL_PUT' ? 'Operación: VENTA de PUT (se cobra la prima; obliga a comprar 100 acciones al strike si acaba dentro de dinero)'
+          : strategy === 'COVERED_CALL' ? 'Operación: VENTA de CALL CUBIERTA (se cobra la prima; obliga a entregar 100 acciones al strike si acaba dentro de dinero)'
+          : optionType === 'CALL' ? 'Operación: COMPRA de CALL (se paga la prima; pérdida máxima = prima)'
+          : 'Operación: COMPRA de PUT (se paga la prima; pérdida máxima = prima)',
+        strike != null ? `Strike: $${strike}` : '',
+        expiration ? `Vencimiento: ${expiration}${dte != null ? ` (${dte} días)` : ''}` : '',
+        premium != null ? `Prima del contrato: $${premium.toFixed(2)} por acción ($${(premium * 100).toFixed(0)} por contrato)` : '',
+        delta != null ? `Delta: ${delta.toFixed(2)}` : '',
+        impliedVolatility != null ? `Volatilidad implícita: ${(impliedVolatility * 100).toFixed(1)}%` : '',
+      ].filter(Boolean).join('\n')
+    : ''
+
+  const promptOpcion = `Eres el Chief Investment Officer de SynerGy evaluando un contrato de opciones sobre ${ticker}.
+
+DATOS DEL SUBYACENTE:
+${fundamentals}
+${forecastLine}
+
+DATOS DEL CONTRATO:
+${contratoLine}
+
+=== AGENTE 1 — ANALISTA DEL SUBYACENTE ===
+Evalúa si el movimiento que necesita esta operación es plausible en el plazo del contrato,
+usando la proyección a 30 días y la situación de la empresa. Sé conciso (1 oración).
+
+=== AGENTE 2 — ANALISTA DEL CONTRATO ===
+Evalúa el contrato en sí: si la prima compensa el riesgo asumido dada la volatilidad implícita,
+si el plazo es suficiente y si la distancia del strike al precio actual es razonable. Sé conciso (1 oración).
+
+=== AGENTE 3 — GESTOR DE RIESGO (SÍNTESIS) ===
+Decide si la operación merece capital. ${strategy ? 'Al VENDER primas el beneficio está limitado a la prima y la pérdida puede ser mucho mayor: sé exigente.' : 'Al COMPRAR opciones la pérdida máxima es el 100% de la prima y el tiempo corre en contra: sé exigente.'}
+conviction = 1-10, donde 10 = máxima convicción en que esta operación concreta merece el riesgo.
+Si el subyacente o el contrato no convencen, conviction debe ser baja: no fuerces la aprobación.
+
+Responde SOLO con JSON válido (sin markdown, sin explicación):
+{
+  "empresa": "${empresa}",
+  "riesgo": "BAJO|MEDIO|ALTO",
+  "conviction": <entero 1-10>,
+  "consensus": "ALCISTA|NEUTRAL|BAJISTA",
+  "resumen": "2-3 oraciones: tesis de la operación, integrando subyacente y contrato"
+}`
+
+  const promptAccion = `Eres el Chief Investment Officer de SynerGy coordinando 3 agentes especializados para analizar ${ticker}.
 
 DATOS CUANTITATIVOS:
 ${fundamentals}
@@ -121,6 +195,8 @@ Responde SOLO con JSON válido (sin markdown, sin explicación):
   "consensus": "ALCISTA|NEUTRAL|BAJISTA",
   "resumen": "2-3 oraciones: tesis de inversión integrando Lynch, forecast y momentum"
 }`
+
+  const prompt = esOpcion ? promptOpcion : promptAccion
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -158,6 +234,10 @@ Responde SOLO con JSON válido (sin markdown, sin explicación):
   } catch {
     return Response.json({ error: 'AI JSON inválido', raw }, { status: 500 })
   }
+
+  // Gamma y Theta derivan su objetivo y su stop de la prima del contrato, no del
+  // subyacente, así que calcularlos aquí sería una cifra que nadie lee.
+  if (esOpcion) return Response.json(parsed)
 
   if (!parsed.stop_loss || parsed.stop_loss >= lastPrice)
     parsed.stop_loss = parseFloat((lastPrice * 0.92).toFixed(2))
