@@ -34,11 +34,27 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ## Pendiente
 
 ### Sección Estrategias — cierre
-- **Completar el expediente en el repo.** Faltan por copiar de Drive 3 códigos de
-  producción (`weekend-effect`, `momentum-apertura`, `ibs-reversion`) y los 6
-  registros WFO en Excel. `rsi2-reversion.cs` ya está en
-  `public/estrategias/code/`. La ficha detecta lo que falta y no enlaza
-  documentos inexistentes, así que la sección funciona sin ellos.
+- **Faltan los 6 registros WFO en Excel** (`{slug}-wfo.xlsx` en
+  `public/estrategias/docs/`). Los seis códigos de producción ya están completos.
+  La ficha detecta lo que falta y no enlaza documentos inexistentes, así que la
+  sección funciona sin ellos.
+
+  **Los XLSX no se pueden traer por el conector de Drive de esta sesión.** El
+  conector devuelve el fichero en base64 y hay que transcribirlo para
+  reconstruirlo; con los `.cs` funciona porque el texto es legible y se verifica
+  contra el tamaño exacto, pero con un binario de 13 KB la transcripción se
+  corrompe (dos intentos sobre `WFO_Bot_NQ_RSI2Reversion_1dia_ETH.xlsx` dieron el
+  tamaño correcto y el bloque `sheet5.xml` roto, en posiciones distintas cada
+  vez). Vías válidas: descargarlos a mano desde Drive, o delegar la descarga en
+  un subagente que no pase el base64 por el contexto principal.
+
+  Nombres en Drive → destino:
+  `WFO_Bot_NQ_OvernightDrift_1min_RTH.xlsx` → `overnight-drift-wfo.xlsx`,
+  `WFO_Bot_NQ_RSI2Reversion_1dia_ETH.xlsx` → `rsi2-reversion-wfo.xlsx`,
+  `WFO_Bot_NQ_ZigZag_Breakout_5min_RTH.xlsx` → `zigzag-breakout-wfo.xlsx`,
+  `WFO_Bot_NQ_WeekendEffect_1min_ETH.xlsx` → `weekend-effect-wfo.xlsx`,
+  `WFO_Bot_NQ_MomentumApertura_30min_RTH.xlsx` → `momentum-apertura-wfo.xlsx`,
+  `WFO_Bot_NQ_IBSReversion_5min_RTH.xlsx` → `ibs-reversion-wfo.xlsx`.
 - **Recorrido visual autenticado** de `/estrategias`, las seis fichas y la nueva
   sección de `/portafolios`.
 
@@ -126,8 +142,11 @@ backtest completo, más la vista de cartera conjunta en `/portafolios`.
   `KpiCard`.
 - **14 tests** del parser: formato de importe, fecha con día primero, atribución
   por fecha de salida, corte de régimen y drawdown medido sobre la curva.
-- **Código de producción**: `overnight-drift.cs`, `zigzag-breakout.cs` y
-  `rsi2-reversion.cs` en `public/estrategias/code/`, servidos por `VisorCodigo`.
+- **Código de producción**: las seis estrategias en `public/estrategias/code/`,
+  servidas por `VisorCodigo`. Copiadas de Drive y verificadas por tamaño exacto
+  contra el original: `overnight-drift.cs`, `zigzag-breakout.cs`,
+  `rsi2-reversion.cs`, `ibs-reversion.cs` (15 645 B), `weekend-effect.cs`
+  (17 987 B) y `momentum-apertura.cs` (29 603 B).
 
 ### Legibilidad de los tooltips de Recharts (2026-08-22)
 `contentStyle` solo tiñe el contenedor y la etiqueta: cada ítem lo pinta Recharts
