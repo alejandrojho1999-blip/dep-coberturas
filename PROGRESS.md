@@ -7,14 +7,15 @@
 
 ## Estado actual
 
-**Último commit:** `e2b586b` · **Sin commitear: el rebrand a SynerGy** (45 archivos)
+**Último commit:** `73df0c5` (rebrand a SynerGy) · **Sin commitear: la sección Estrategias**
 
 | Check | Resultado |
 |---|---|
-| `npm run lint` | **0 problemas** (baseline era 37) |
+| `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **343/343** |
+| `npm run test:run` | **357/357** |
 | `npm run build` | exit 0 |
+| `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
 ### Mapa de navegación
 
@@ -22,7 +23,7 @@
 |---|---|---|---|
 | 1 | Portafolios | `/portafolios` | Portafolios Algorítmicos de Acciones y Opciones |
 | 2 | Agentes | `/agentes` | Agentes IA para Acciones y Opciones |
-| 3 | Estrategias | `/estrategias` | Estrategias para Trading de Futuros |
+| 3 | Estrategias | `/estrategias` | Seis sistemas algorítmicos de futuros sobre el Nasdaq |
 | 4 | Recomendaciones | `/recomendaciones` | Panel de Recomendaciones |
 
 Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
@@ -31,6 +32,14 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ---
 
 ## Pendiente
+
+### Sección Estrategias — cierre
+- **Completar el expediente en el repo.** Faltan por copiar de Drive 4 códigos de
+  producción (`rsi2-reversion`, `weekend-effect`, `momentum-apertura`,
+  `ibs-reversion`) y los 6 registros WFO en Excel. La ficha detecta lo que falta
+  y no enlaza documentos inexistentes, así que la sección funciona sin ellos.
+- **Recorrido visual autenticado** de `/estrategias`, las seis fichas y la nueva
+  sección de `/portafolios`.
 
 ### Rebrand SynerGy — cierre
 - **Commitear y pushear.** El rebrand está completo y verificado pero sigue en
@@ -46,11 +55,7 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
   depende de peso y relleno y puede necesitar retoques al verla en uso.
 
 ### Funcionalidad por definir
-- **Estrategias** (`/estrategias`) — placeholder a la espera de las estrategias
-  de trading de futuros. En Drive existe
-  `Emporium/Trading Algoritmico/` con dos subcarpetas, **Estrategias
-  individuales** y **Portafolio conjunto**, que serían la fuente de contenido.
-  Su contenido no se ha podido listar todavía (ver más abajo).
+- *(nada pendiente: `/estrategias` ya está implementada)*
 
 ### Acciones en la app
 - **Aplicar la migración `017_agent_recommendations_closed_at.sql` en Supabase.**
@@ -92,6 +97,34 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 - `.env.local` repoblado con `NEXT_PUBLIC_SUPABASE_URL` y
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` (proyecto Supabase `replbokusvrqdbzuhulm`).
   Sigue gitignored.
+
+### Sección Estrategias (2026-08-22)
+Las seis estrategias de futuros sobre MNQ del expediente de Drive, con su
+backtest completo, más la vista de cartera conjunta en `/portafolios`.
+
+- **Motor de datos** (`scripts/build-estrategias.mjs`): convierte los seis CSV de
+  operaciones del Strategy Analyzer en JSON con curva de equity, drawdown
+  underwater, resultado anual, distribución, concentración y corte de régimen.
+  Escala NQ→MNQ dividiendo por 10 y atribuye cada operación a su fecha de salida.
+- **Verificación cruzada**: el script contrasta cada resultado contra las cifras
+  publicadas en su tesis. **Las seis cuadran exactamente**, y la cartera combinada
+  reproduce el expediente al decimal: 3.838 operaciones, $89.341 de neto,
+  -$4.099 de drawdown, Net/DD 21,79 y un 74 % de reducción del drawdown. La
+  cartera sin el RSI2 da 12,29, idéntico a lo que publica el documento.
+- **`/estrategias`**: índice con tabla comparativa y seis tarjetas con sparkline.
+- **`/estrategias/[slug]`**: ficha por estrategia con KPIs, mecánica, curva con
+  el corte de régimen marcado, drawdown, P&L anual, dependencia de régimen,
+  distribución, concentración, aporte a la cartera, **lo que no cumple**,
+  configuración de producción, código de NinjaTrader e infografía.
+- **`/portafolios`**: tercera sección con el conjunto — la diversificación
+  medida, curva combinada sobre las seis individuales, y el aporte de cada una en
+  cuatro lecturas (contribución directa, aporte marginal, correlación en peores
+  días y dependencia de régimen), dimensionamiento y descartes.
+- **Gráficos nuevos**: `StrategyEquityChart`, `DrawdownChart`,
+  `DistributionChart`. Se reutilizan `PnlBarChart`, `PortfolioPieChart` y
+  `KpiCard`.
+- **14 tests** del parser: formato de importe, fecha con día primero, atribución
+  por fecha de salida, corte de régimen y drawdown medido sobre la curva.
 
 ### Rebrand a SynerGy (2026-08-21)
 Aplicación completa del manual de marca oficial
@@ -282,6 +315,24 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
 ---
 
 ## Decisiones tomadas
+
+### Estrategias
+- **Los datos se calculan, no se transcriben.** Las cifras de la sección salen de
+  las 3.838 operaciones reales; las publicadas en las tesis solo sirven para
+  contrastar. Si un número no cuadrara, el script lo dice en voz alta.
+- **La sección «lo que no cumple» es obligatoria en cada ficha.** Las tesis
+  documentan sus propios incumplimientos y esa honestidad es lo que da
+  credibilidad al resto; ocultarla dejaría un folleto en vez de un expediente.
+- **La cartera cuantitativa no se suma a los portafolios en vivo.** Son
+  instrumentos, capital y naturaleza distintos: aquellos se derivan de
+  recomendaciones con precios de mercado, ésta es un backtest en simulado. Va con
+  su propio chip y franja de contexto.
+- **Los datos de cartera viajan por props, no por fetch.** `public/estrategias/`
+  cae dentro del guard de rutas protegidas del proxy, así que una petición desde
+  el cliente acabaría redirigida a `/login`.
+- **Ante discrepancias entre documentos manda la tesis individual.** El ZigZag
+  aparece con t 1,90 / 532 ops en la suya y 1,82 / 531 en el documento de
+  cartera; el CSV confirma 532. Las diferencias se anotan en la ficha.
 
 ### Marca y diseño
 - **El manual de marca manda.** Ante cualquier duda de color, tipografía o uso

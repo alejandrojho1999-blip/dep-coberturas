@@ -13,6 +13,8 @@ import { buildClosedTrades, computeCurveMetrics, computeMetrics } from '@/lib/po
 import type { PortfolioPosition } from '@/lib/portafolios/types'
 import { KpiCard, KpiRow } from './KpiCard'
 import { PortfolioSection } from './PortfolioSection'
+import { QuantPortfolioSection } from './QuantPortfolioSection'
+import type { BacktestCartera } from '@/lib/estrategias/types'
 import { useLivePortfolio } from './useLivePortfolio'
 
 const NOTA_CURVA_ACCIONES =
@@ -33,7 +35,7 @@ const NOTA_PASTEL_OPCIONES =
   'y el colateral que respalda la obligación en las ventas de Theta (efectivo del strike en un put ' +
   'asegurado, valor de las acciones en una call cubierta).'
 
-export default function PortafoliosClient() {
+export default function PortafoliosClient({ cartera }: { cartera: BacktestCartera | null }) {
   const { recs, livePrices, primas, closes, cargando, error, actualizado, refrescar } = useLivePortfolio()
 
   const acciones = useMemo(
@@ -210,6 +212,11 @@ export default function PortafoliosClient() {
           />
         </>
       )}
+
+      {/* Tercera sección: el backtest de las seis estrategias cuantitativas.
+          Es estática y no depende de useLivePortfolio, así que se muestra
+          aunque falle la carga de recomendaciones. */}
+      <QuantPortfolioSection datos={cartera} />
 
       {/* Supuestos: la cartera es derivada, conviene dejar las reglas a la vista */}
       <section className="rounded-lg border border-border bg-surface px-4 py-3">
