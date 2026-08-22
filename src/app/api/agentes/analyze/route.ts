@@ -161,7 +161,7 @@ Responde SOLO con JSON válido (sin markdown, sin explicación):
   "resumen": "2-3 oraciones: tesis de la operación, integrando subyacente y contrato"
 }`
 
-  const promptAccion = `Eres el Chief Investment Officer de SynerGy coordinando 3 agentes especializados para analizar ${ticker}.
+  const promptAccion = `Eres el Chief Investment Officer de SynerGy y analizas ${ticker} desde tres ángulos sucesivos.
 
 DATOS CUANTITATIVOS:
 ${fundamentals}

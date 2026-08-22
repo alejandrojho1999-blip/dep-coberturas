@@ -101,6 +101,32 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Etiquetas que no correspondían al código (2026-08-23)
+Barrido posterior a las fichas técnicas, buscando lo mismo que ya se corrigió
+con "TimesFM": sitios donde la interfaz afirma algo que el código no hace.
+
+- **"TradingAgents" fuera.** Las cuatro tarjetas del paso de IA y sus logs
+  hablaban de "TradingAgents" y de "3 agentes IA". No existe tal framework:
+  es **una sola llamada** a OpenRouter cuyo prompt pide al mismo modelo que
+  razone desde tres ángulos sucesivos. Un tercero entendía tres sistemas
+  independientes votando. Ahora la tarjeta dice `Convicción del modelo ≥7` y el
+  log, `Revisión por IA`. Los encabezados `AGENTE 1/2/3` **dentro** del prompt se
+  mantienen: son instrucciones de razonamiento al modelo, no afirmaciones al
+  usuario.
+- **`/recomendaciones` repetía el corte falso de Small** (`Lynch score ≥5/6 ·
+  Market cap < $2B`), el mismo que ya se había corregido en la pestaña del
+  agente. La app se contradecía a sí misma entre dos páginas.
+- **El universo de Theta decía "~36"** y son exactamente 36, escritos a mano. La
+  aproximación sugería una lista que fluctúa.
+- **El techo de DTE de Gamma era decorativo:** la tarjeta prometía 21-90 días
+  pero la cadena solo trae vencimientos de 21 a 75 (`yahoo-options.ts:143`), así
+  que el 90 nunca actuaba.
+- **Listas de tickers sin duplicados.** `SP500_NASDAQ100_TICKERS` repetía 6
+  (MCK, IDXX, DDOG, ZS, SNOW, MELI) y `SMALL_CAP_TICKERS` otros 5 (BCPC, NKTR,
+  TMDX, GPRE, LBRT). Sin efecto sobre el comportamiento —`screener.ts:253` ya
+  deduplicaba antes de consultar— pero ahora los conteos del archivo (443 y 307)
+  coinciden con lo que se consulta y con lo que dicen las fichas.
+
 ### Fichas técnicas de los cuatro agentes (2026-08-23)
 La ficha de Peter se generalizó a un marco reutilizable y Small, Gamma y Theta
 recibieron la suya. `FichaTecnicaAgente.tsx` tiene toda la presentación y

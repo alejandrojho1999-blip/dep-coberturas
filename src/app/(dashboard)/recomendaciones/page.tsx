@@ -1317,7 +1317,7 @@ export default function RecomendacionesPage() {
                     {smallRecs.length}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-text-muted">Lynch score ≥5/6 · Market cap &lt; $2B · Tendencia alcista</span>
+                <span className="text-[10px] font-mono text-text-muted">Lynch adaptado ≥4/6 · S&amp;P 600 + Russell 2000 · Tendencia alcista</span>
               </div>
               {agentRecsLoading ? (
                 <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-text-muted" /></div>

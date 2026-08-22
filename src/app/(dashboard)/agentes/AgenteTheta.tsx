@@ -394,7 +394,7 @@ export default function AgenteTheta() {
 
       // ── PASO 5: Confirmación IA ───────────────────────────────────
       setStep5Phase('running')
-      addLog(`🤖 TradingAgents: confirmando ${paso4Pass.length} contrato(s) de venta de prima...`)
+      addLog(`🤖 Revisión por IA: confirmando ${paso4Pass.length} contrato(s) de venta de prima...`)
       const paso5: TickerStage[] = [...paso4]
       const analyzed: TickerStage[] = []
 
@@ -524,11 +524,11 @@ export default function AgenteTheta() {
 
   const steps = [
     { label: 'RE-EVALUACIÓN',   desc: 'Auto-close solo al vencimiento',       phase: step0Phase, icon: RefreshCw },
-    { label: 'UNIVERSO THETA',  desc: '~36 acciones opcionales líquidas',         phase: step1Phase, icon: Layers },
+    { label: 'UNIVERSO THETA',  desc: 'Lista fija de 36 subyacentes',         phase: step1Phase, icon: Layers },
     { label: 'PROYECCIÓN 30d',  desc: 'Elige lado: put ≥-5% · call ≤+8%',            phase: step2Phase, icon: TrendingDown },
     { label: 'CADENA OPCIONES', desc: 'Sell-put / Covered-call mayor score',       phase: step3Phase, icon: BarChart2 },
     { label: 'CALIDAD PRIMA',   desc: 'IV>30% · DTE 21-45 · |Δ| .15-.35 · ≥60',     phase: step4Phase, icon: Filter },
-    { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7',               phase: step5Phase, icon: Brain },
+    { label: 'CONFIRMACIÓN IA', desc: 'Convicción del modelo ≥7',                  phase: step5Phase, icon: Brain },
     { label: 'PICKS & INFORME', desc: 'Sin duplicados, crédito registrado',        phase: step6Phase, icon: CheckCircle2 },
   ]
 

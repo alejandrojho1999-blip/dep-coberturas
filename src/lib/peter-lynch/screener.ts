@@ -22,7 +22,7 @@ export interface ScreenerResult {
   score: number
 }
 
-// S&P 500 + NASDAQ 100 — universo large-cap (443 tickers únicos)
+// S&P 500 + NASDAQ 100 — universo large-cap (443 tickers)
 const SP500_NASDAQ100_TICKERS = [
   // Mega-cap tech / NASDAQ 100 core
   'AAPL','MSFT','NVDA','GOOGL','GOOG','AMZN','META','TSLA','AVGO','ORCL',
@@ -51,7 +51,7 @@ const SP500_NASDAQ100_TICKERS = [
   'BAX','BDX','BSX','SYK','MDT','HOLX','ALGN','RMD','ISRG','DXCM',
   'PODD','CI','HUM','CNC','MOH','HCA','UHS','INCY','ALNY','BMRN',
   'EXAS','ILMN','IQV','CRL','TECH','HSIC','LH','DGX','RVTY','GEHC',
-  'EHC','MCK','ELV',
+  'EHC','ELV',
   // Financials
   'BRK-B','JPM','BAC','WFC','C','GS','MS','BLK','SCHW','AXP',
   'V','MA','COF','DFS','SYF','AIG','PRU','MET','AFL','ALL',
@@ -83,8 +83,8 @@ const SP500_NASDAQ100_TICKERS = [
   'MLM','PPG','RPM','CE','DD','DOW','LYB','EMN','ALB','FMC',
   'IFF','PKG','IP','WRK','CF','MOS','NTR','SEE',
   // NASDAQ 100 adicionales
-  'MELI','PDD','ASML','IDXX','FAST','MNST','KDP','MSTR','COIN',
-  'DDOG','ZS','SNOW','SE','MELI',
+  'MELI','PDD','ASML','FAST','MNST','KDP','MSTR','COIN',
+  'SE',
 ]
 
 // S&P 600 + Russell 2000 — universo small/mid-cap (307 tickers)
@@ -117,7 +117,7 @@ const SMALL_CAP_TICKERS = [
   'MGY','MTDR','REX','SM','TALO','VAALCO','SBOW','STNG','CIVI','NOG',
   'OII','RES','WHD','DINO','NGL','BATL','SND',
   // ── S&P 600 · Materials ──────────────────────────────────────────
-  'BCPC','HWKN','IOSP','KOP','NGVT','PRLB','TROX','MTUS','ASIX',
+  'HWKN','IOSP','KOP','NGVT','PRLB','TROX','MTUS','ASIX',
   'RYAM','SLCA','SXT','TREC','WOR','SUL',
   // ── S&P 600 · Consumer Staples ───────────────────────────────────
   'JJSF','MGPI','POST','SMPL','TWNK','UNFI','CHEF','OLLI','LANC','BGS',
@@ -133,14 +133,14 @@ const SMALL_CAP_TICKERS = [
   'ORN','OTTR','HTLD','HAYN','DLTH',
   // ── Russell 2000 · Healthcare ────────────────────────────────────
   'CORT','DVAX','EYE','HRMY','IART','MNKD','HCAT','HROW','KRYS',
-  'MRUS','NKTR','RXRX','TMDX',
+  'MRUS','RXRX',
   // ── Russell 2000 · Financials ────────────────────────────────────
   'CASS','CCRN','EIG','EZPW','GHLD','GLP','GPRE','GSBC','HASI',
   'HOPE','HRTG','JRVR','KFY','MLKN','ESSA','NRIM','FSBC','FBIZ',
   // ── Russell 2000 · Consumer ──────────────────────────────────────
   'CENT','FIZZ','FELE','GDEN','JBSS','LOVE','HOFT','LNDC',
   // ── Russell 2000 · Energy / Materials ────────────────────────────
-  'CENX','GPRE','LBRT',
+  'CENX',
 ]
 
 interface ScreenerOptions {

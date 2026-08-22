@@ -380,7 +380,7 @@ export default function AgenteGamma() {
 
       // ── PASO 5: Confirmación IA ───────────────────────────────────
       setStep5Phase('running')
-      addLog(`🤖 TradingAgents: confirmando ${paso4Pass.length} contrato(s)...`)
+      addLog(`🤖 Revisión por IA: confirmando ${paso4Pass.length} contrato(s)...`)
       const paso5: TickerStage[] = [...paso4]
       const analyzed: TickerStage[] = []
 
@@ -512,8 +512,8 @@ export default function AgenteGamma() {
     { label: 'CANDIDATOS',      desc: 'Picks Peter + Small + fallback',         phase: step1Phase, icon: Layers },
     { label: 'PROYECCIÓN 30d',  desc: 'Alcista=CALL ≥+2% · Bajista=PUT ≤-3%', phase: step2Phase, icon: TrendingUp },
     { label: 'CADENA OPCIONES', desc: 'Mejor buy-call o buy-put por score',     phase: step3Phase, icon: Activity },
-    { label: 'CALIDAD',         desc: 'Δ 0.30-0.65 · DTE 21-90 · score ≥50',  phase: step4Phase, icon: Filter },
-    { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7',            phase: step5Phase, icon: Brain },
+    { label: 'CALIDAD',         desc: 'Δ 0.30-0.65 · DTE 21-75 · score ≥50',  phase: step4Phase, icon: Filter },
+    { label: 'CONFIRMACIÓN IA', desc: 'Convicción del modelo ≥7',               phase: step5Phase, icon: Brain },
     { label: 'PICKS & INFORME', desc: 'Sin duplicados, solo aprobados',         phase: step6Phase, icon: CheckCircle2 },
   ]
 

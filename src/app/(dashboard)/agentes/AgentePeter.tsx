@@ -24,7 +24,7 @@ interface TickerStage {
   macdSignal?: number
   momentumScore?: number
   step3: 'pending' | 'pass' | 'fail'
-  // Paso 4 — AI TradingAgents
+  // Paso 4 — revisión por modelo de lenguaje
   lastPrice?: number
   empresa?: string
   conviction?: number
@@ -332,9 +332,9 @@ export default function AgentePeter() {
         setPhase('done'); setSummary({ created: 0, total: six.length }); return
       }
 
-      // ── PASO 4: AI Confirmation (TradingAgents) ───────────────────
+      // ── PASO 4: Revisión por IA ───────────────────────────────────
       setStep4Phase('running')
-      addLog(`🤖 TradingAgents: analizando ${paso3Pass.length} ticker(s) con 3 agentes IA...`)
+      addLog(`🤖 Revisión por IA: analizando ${paso3Pass.length} ticker(s)...`)
       const paso4: TickerStage[] = [...paso3]
       const analyzed: TickerStage[] = []
 
@@ -487,7 +487,7 @@ export default function AgentePeter() {
     { label: 'LYNCH 6/6', desc: 'Screener S&P500+NASDAQ100', phase: step1Phase, icon: BookOpen },
     { label: 'PROYECCIÓN 30d', desc: 'Regresión + EWMA ≥2%', phase: step2Phase, icon: TrendingUp },
     { label: 'MOMENTUM SCANNER', desc: 'RSI · MACD · Volumen ≥2/3', phase: step3Phase, icon: BarChart2 },
-    { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7', phase: step4Phase, icon: Brain },
+    { label: 'CONFIRMACIÓN IA', desc: 'Convicción del modelo ≥7', phase: step4Phase, icon: Brain },
     { label: 'PICKS & INFORME', desc: 'Sin duplicados, solo aprobados', phase: step5Phase, icon: CheckCircle2 },
   ]
 
