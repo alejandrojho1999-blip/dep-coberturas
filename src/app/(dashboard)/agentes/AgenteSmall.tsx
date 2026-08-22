@@ -487,7 +487,7 @@ export default function AgenteSmall() {
   const steps = [
     { label: 'RE-EVALUACIÓN', desc: 'Auto-sell si ≥2/3 filtros fallan', phase: step0Phase, icon: RefreshCw },
     { label: 'SMALL-CAP LYNCH', desc: 'Score ≥5/6 · Market Cap < $2B', phase: step1Phase, icon: BookOpen },
-    { label: 'TIMESFM FORECAST', desc: 'Proyección 30 días ≥2%', phase: step2Phase, icon: TrendingUp },
+    { label: 'PROYECCIÓN 30d', desc: 'Regresión + EWMA ≥2%', phase: step2Phase, icon: TrendingUp },
     { label: 'MOMENTUM SCANNER', desc: 'RSI · MACD · Volumen ≥2/3', phase: step3Phase, icon: BarChart2 },
     { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7', phase: step4Phase, icon: Brain },
     { label: 'PICKS & INFORME', desc: 'Sin duplicados, solo aprobados', phase: step5Phase, icon: CheckCircle2 },

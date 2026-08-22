@@ -508,7 +508,7 @@ export default function AgenteTheta() {
   const steps = [
     { label: 'RE-EVALUACIÓN',   desc: 'Auto-close expiradas o pérdida 2×',       phase: step0Phase, icon: RefreshCw },
     { label: 'UNIVERSO THETA',  desc: '~36 acciones opcionales líquidas',         phase: step1Phase, icon: Layers },
-    { label: 'TIMESFM SAFETY',  desc: 'Sin caídas >-5% para sell-put',            phase: step2Phase, icon: TrendingDown },
+    { label: 'PROYECCIÓN 30d',  desc: 'Sin caídas >-5% para sell-put',            phase: step2Phase, icon: TrendingDown },
     { label: 'CADENA OPCIONES', desc: 'Sell-put / Covered-call mayor score',       phase: step3Phase, icon: BarChart2 },
     { label: 'CALIDAD PRIMA',   desc: 'IV>30% · DTE 21-45 · |Δ| 0.15-0.35',     phase: step4Phase, icon: Filter },
     { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7',               phase: step5Phase, icon: Brain },

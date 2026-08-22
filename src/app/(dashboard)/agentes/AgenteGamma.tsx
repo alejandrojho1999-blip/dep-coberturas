@@ -491,7 +491,7 @@ export default function AgenteGamma() {
   const steps = [
     { label: 'RE-EVALUACIÓN',   desc: 'Auto-sell opciones expiradas',          phase: step0Phase, icon: RefreshCw },
     { label: 'CANDIDATOS',      desc: 'Picks Peter + Small + fallback',         phase: step1Phase, icon: Layers },
-    { label: 'TIMESFM 30d',     desc: 'Alcista=CALL ≥+2% · Bajista=PUT ≤-3%', phase: step2Phase, icon: TrendingUp },
+    { label: 'PROYECCIÓN 30d',  desc: 'Alcista=CALL ≥+2% · Bajista=PUT ≤-3%', phase: step2Phase, icon: TrendingUp },
     { label: 'CADENA OPCIONES', desc: 'Mejor buy-call o buy-put por score',     phase: step3Phase, icon: Activity },
     { label: 'CALIDAD',         desc: 'Δ 0.30-0.65 · DTE 21-90 · score ≥50',  phase: step4Phase, icon: Filter },
     { label: 'CONFIRMACIÓN IA', desc: 'TradingAgents conviction ≥7',            phase: step5Phase, icon: Brain },

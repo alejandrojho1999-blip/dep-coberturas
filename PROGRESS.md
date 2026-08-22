@@ -80,6 +80,30 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Ficha técnica del Agente Peter (2026-08-22)
+Panel desplegable al inicio de la pestaña AGENTE PETER
+(`src/app/(dashboard)/agentes/FichaTecnicaPeter.tsx`), pensado para que alguien
+que no ha visto el código pueda decidir si le asigna capital. Cuatro bloques:
+
+- **El embudo.** Los cuatro filtros en cascada con su fuente de datos, qué mide
+  cada uno y el corte exacto (6/6, ≥ +2 %, ≥ 2/3, ≥ 7/10 y COMPRA).
+- **Cuándo vende.** Re-evaluación contra los tres filtros objetivos y venta si
+  fallan dos de los tres. Sin toma de beneficios automática.
+- **Garantías sobre los datos.** Precio de entrada siempre real, objetivo por
+  consenso de analistas, umbrales fijados en código y recomendaciones que no se
+  sobrescriben.
+- **Estado de validación.** Dice sin rodeos que **no hay backtest** y por qué el
+  primer filtro no se puede backtestear con datos gratuitos (fundamentales
+  revisados + sesgo de supervivencia del índice), y que los filtros 2 y 3 sí son
+  validables.
+
+Los umbrales están escritos a mano en el componente y deben seguir a su fuente
+si esta cambia; el encabezado del archivo lista qué archivo manda en cada paso.
+
+También se terminó el renombrado de "TimesFM" en la parte visible que quedaba:
+las tarjetas de paso de los cuatro agentes y el encabezado y tooltip de Gamma en
+`/recomendaciones`.
+
 ### Honestidad del paso 4 de los agentes (2026-08-22)
 Tres correcciones en el filtro de IA que comparten Peter, Small, Gamma y Theta
 (`src/app/api/agentes/analyze/route.ts`):

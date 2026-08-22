@@ -1465,7 +1465,7 @@ export default function RecomendacionesPage() {
                     {gammaRecs.length}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-text-muted">Opciones direccionales · CALL alcista / PUT bajista · TimesFM 30d</span>
+                <span className="text-[10px] font-mono text-text-muted">Opciones direccionales · CALL alcista / PUT bajista · Proyección 30d</span>
               </div>
               {agentRecsLoading ? (
                 <div className="flex items-center justify-center py-10"><Loader2 size={18} className="animate-spin text-text-muted" /></div>
@@ -1493,7 +1493,7 @@ export default function RecomendacionesPage() {
                         <th
                           className="hidden px-3 py-2.5 text-right font-medium xl:table-cell"
                           style={{ color: '#8b8ff0' }}
-                          title="Proyección TimesFM del subyacente a 30 días en el momento de recomendar. Es la señal de entrada, NO el resultado de la operación."
+                          title="Proyección del subyacente a 30 días (regresión lineal + EWMA) en el momento de recomendar. Es la señal de entrada, NO el resultado de la operación."
                         >Forecast ini.</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Delta</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">IV</th>
