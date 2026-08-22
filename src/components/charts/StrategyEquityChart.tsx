@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 import type { PuntoCurva } from '@/lib/estrategias/types'
-import { CHART_COLORS, fmtFechaEje, fmtUsd, fmtUsdCorto, TOOLTIP_STYLE } from './chart-theme'
+import { CHART_COLORS, fmtFechaEje, fmtUsd, fmtUsdCorto, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from './chart-theme'
 
 interface SerieSecundaria {
   slug: string
@@ -119,6 +119,8 @@ export function StrategyEquityChart({
           />
           <Tooltip
             contentStyle={TOOLTIP_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
             labelFormatter={f => fmtFechaEje(String(f))}
             formatter={(value, name) => {
               const clave = String(name)

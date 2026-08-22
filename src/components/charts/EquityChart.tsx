@@ -4,7 +4,7 @@ import {
   CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import type { EquitySeriesPoint } from '@/lib/portafolios/types'
-import { CHART_COLORS, fmtFechaEje, fmtUsd, fmtUsdCorto, TOOLTIP_STYLE } from './chart-theme'
+import { CHART_COLORS, fmtFechaEje, fmtUsd, fmtUsdCorto, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from './chart-theme'
 
 interface Props {
   serie: EquitySeriesPoint[]
@@ -68,6 +68,8 @@ export function EquityChart({ serie, benchmark, color = CHART_COLORS.azul, altur
             />
             <Tooltip
               contentStyle={TOOLTIP_STYLE}
+              itemStyle={TOOLTIP_ITEM_STYLE}
+              labelStyle={TOOLTIP_LABEL_STYLE}
               labelFormatter={label => String(label)}
               formatter={(value, name) => [fmtUsd(Number(value)), String(name)]}
             />

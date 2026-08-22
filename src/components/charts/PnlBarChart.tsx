@@ -1,7 +1,7 @@
 'use client'
 
 import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { CHART_COLORS, fmtUsd, fmtUsdCorto, TOOLTIP_STYLE } from './chart-theme'
+import { CHART_COLORS, fmtUsd, fmtUsdCorto, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from './chart-theme'
 
 export interface PnlBar {
   nombre: string
@@ -51,6 +51,8 @@ export function PnlBarChart({ barras, altura }: Props) {
           <Tooltip
             cursor={{ fill: 'rgba(148,163,184,0.06)' }}
             contentStyle={TOOLTIP_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
             formatter={(value, _name, item) => {
               const d = item?.payload as PnlBar | undefined
               const v = Number(value)

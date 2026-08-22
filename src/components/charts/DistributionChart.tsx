@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { CuboDistribucion } from '@/lib/estrategias/types'
-import { CHART_COLORS, fmtUsd, fmtUsdCorto, TOOLTIP_STYLE } from './chart-theme'
+import { CHART_COLORS, fmtUsd, fmtUsdCorto, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from './chart-theme'
 
 interface Props {
   cubos: CuboDistribucion[]
@@ -69,6 +69,8 @@ export function DistributionChart({ cubos, altura = 220 }: Props) {
           <Tooltip
             cursor={{ fill: 'rgba(255,255,255,0.04)' }}
             contentStyle={TOOLTIP_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
             formatter={value => [`${Number(value)} operaciones`, '']}
             labelFormatter={(_, payload) => {
               const c = payload?.[0]?.payload as CuboDistribucion | undefined

@@ -86,3 +86,23 @@ export const TOOLTIP_STYLE = {
   fontSize: '12px',
   color: CHART_COLORS.texto,
 } as const
+
+/**
+ * Color de cada línea de detalle del tooltip.
+ *
+ * Hace falta pasarlo aparte: `contentStyle` solo tiñe el contenedor y la
+ * etiqueta, mientras que Recharts pinta cada ítem con el color de su serie y,
+ * cuando la serie no tiene color propio —los gráficos que colorean barra a
+ * barra con `<Cell>`—, cae a negro. Sobre el fondo oscuro de la tarjeta eso
+ * queda ilegible.
+ */
+export const TOOLTIP_ITEM_STYLE = {
+  color: CHART_COLORS.texto,
+} as const
+
+/** Estilo de la primera línea del tooltip (el año, la fecha, el ticker…). */
+export const TOOLTIP_LABEL_STYLE = {
+  color: CHART_COLORS.texto,
+  fontWeight: 600,
+  marginBottom: '2px',
+} as const

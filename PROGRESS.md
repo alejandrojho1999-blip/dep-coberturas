@@ -34,10 +34,11 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ## Pendiente
 
 ### Sección Estrategias — cierre
-- **Completar el expediente en el repo.** Faltan por copiar de Drive 4 códigos de
-  producción (`rsi2-reversion`, `weekend-effect`, `momentum-apertura`,
-  `ibs-reversion`) y los 6 registros WFO en Excel. La ficha detecta lo que falta
-  y no enlaza documentos inexistentes, así que la sección funciona sin ellos.
+- **Completar el expediente en el repo.** Faltan por copiar de Drive 3 códigos de
+  producción (`weekend-effect`, `momentum-apertura`, `ibs-reversion`) y los 6
+  registros WFO en Excel. `rsi2-reversion.cs` ya está en
+  `public/estrategias/code/`. La ficha detecta lo que falta y no enlaza
+  documentos inexistentes, así que la sección funciona sin ellos.
 - **Recorrido visual autenticado** de `/estrategias`, las seis fichas y la nueva
   sección de `/portafolios`.
 
@@ -125,6 +126,19 @@ backtest completo, más la vista de cartera conjunta en `/portafolios`.
   `KpiCard`.
 - **14 tests** del parser: formato de importe, fecha con día primero, atribución
   por fecha de salida, corte de régimen y drawdown medido sobre la curva.
+- **Código de producción**: `overnight-drift.cs`, `zigzag-breakout.cs` y
+  `rsi2-reversion.cs` en `public/estrategias/code/`, servidos por `VisorCodigo`.
+
+### Legibilidad de los tooltips de Recharts (2026-08-22)
+`contentStyle` solo tiñe el contenedor y la etiqueta: cada ítem lo pinta Recharts
+con el color de su serie y, cuando la serie no tiene color propio —los gráficos
+que colorean barra a barra con `<Cell>`: `PortfolioPieChart`, `PnlBarChart`,
+`DistributionChart`—, cae a negro sobre el fondo oscuro de la tarjeta.
+
+`chart-theme.ts` expone ahora `TOOLTIP_ITEM_STYLE` y `TOOLTIP_LABEL_STYLE`, y los
+seis gráficos los pasan como `itemStyle` y `labelStyle` junto a
+`contentStyle={TOOLTIP_STYLE}`. Verificado con lint, `tsc --noEmit`, los 357
+tests y build de producción.
 
 ### Rebrand a SynerGy (2026-08-21)
 Aplicación completa del manual de marca oficial

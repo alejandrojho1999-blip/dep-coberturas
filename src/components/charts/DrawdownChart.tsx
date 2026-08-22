@@ -11,7 +11,7 @@ import {
   YAxis,
 } from 'recharts'
 import type { PuntoCurva } from '@/lib/estrategias/types'
-import { CHART_COLORS, fmtFechaEje, fmtUsd, fmtUsdCorto, TOOLTIP_STYLE } from './chart-theme'
+import { CHART_COLORS, fmtFechaEje, fmtUsd, fmtUsdCorto, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from './chart-theme'
 
 interface Props {
   serie: PuntoCurva[]
@@ -86,6 +86,8 @@ export function DrawdownChart({ serie, maximo, fechaMaximo, altura = 200 }: Prop
           />
           <Tooltip
             contentStyle={TOOLTIP_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
             labelFormatter={f => fmtFechaEje(String(f))}
             formatter={value => [fmtUsd(Number(value), 0), 'Bajo el máximo previo']}
           />

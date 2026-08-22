@@ -1,7 +1,7 @@
 'use client'
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { CHART_COLORS, fmtUsd, sliceColor, TOOLTIP_STYLE } from './chart-theme'
+import { CHART_COLORS, fmtUsd, sliceColor, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from './chart-theme'
 
 export interface PieSlice {
   /** Etiqueta de la porción: normalmente el ticker. */
@@ -77,6 +77,8 @@ export function PortfolioPieChart({ slices, caja = 0, centro, centroSub, altura 
             </Pie>
             <Tooltip
               contentStyle={TOOLTIP_STYLE}
+              itemStyle={TOOLTIP_ITEM_STYLE}
+              labelStyle={TOOLTIP_LABEL_STYLE}
               formatter={(value, _name, item) => {
                 const d = item?.payload as SliceDatum | undefined
                 const v = Number(value)
