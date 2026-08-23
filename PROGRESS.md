@@ -7,13 +7,13 @@
 
 ## Estado actual
 
-**Último commit:** `444773f` (niveles de salida de Gamma y Theta)
+**Último commit:** `a6ec1a3` (cartera única del admin y cron por GitHub Actions)
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **378/378** |
+| `npm run test:run` | **415/415** |
 | `npm run build` | exit 0 |
 | `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
@@ -33,29 +33,81 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ## Pendiente
 
-### Puesta en marcha del cron y la cartera única — ACCIÓN REQUERIDA
-Nada de esto funciona hasta que se haga a mano:
+### DEUDA ABIERTA — activar el cron y la cartera única
+> Estado a 2026-08-23: **el código está desplegado y en producción, pero
+> inactivo a propósito**. Falta configuración manual que solo puede hacer el
+> dueño de las cuentas. Retomar cuando estén a mano las credenciales.
+>
+> Nada de lo pendiente rompe la app mientras tanto: sin la migración sigue
+> vigente `own_data` (cada usuario ve lo suyo, como siempre) y sin las
+> variables el endpoint del cron responde 503 sin tocar nada.
 
-1. **Aplicar la migración 018** en Supabase (SQL Editor). Hasta entonces sigue
-   vigente `own_data` de la 014 y cada usuario ve solo lo suyo: el despliegue
-   no rompe nada, simplemente no cambia el reparto todavía.
-2. **Variables en Vercel** (Production): `CRON_SECRET`,
-   `SUPABASE_SERVICE_ROLE_KEY` y `CRON_USER_ID` — este último es el UID de
-   `lriofrio915@gmail.com`, no otro. Sin las tres el endpoint responde 503.
-3. **En GitHub**: el secreto `CRON_SECRET` con el mismo valor y la variable
-   `APP_URL` con la URL de producción.
-4. **Comprobar el 403 con una segunda cuenta**: que un usuario no admin vea la
-   cartera y no pueda editarla. No se ha podido verificar desde aquí.
+Commits que dejaron esto listo: `85dc8de`, `58f164c`, `a6ec1a3`.
+
+#### Paso 1 — Variables en Vercel (Settings → Environment Variables, Production)
+
+| Variable | De dónde sale |
+|---|---|
+| `CRON_SECRET` | generar con `openssl rand -base64 32` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role` |
+| `CRON_USER_ID` | Supabase → Authentication → Users → UID de `lriofrio915@gmail.com` |
+
+⚠️ `CRON_USER_ID` tiene que ser el UID **del admin y de nadie más**: la clave de
+servicio se salta RLS, así que ese uuid es la única frontera entre cuentas.
+⚠️ `SUPABASE_SERVICE_ROLE_KEY` nunca lleva el prefijo `NEXT_PUBLIC_`. Con él
+acabaría en el JavaScript que descarga cualquier visitante.
+
+Redesplegar después de añadirlas: las variables se leen en el arranque.
+
+#### Paso 2 — GitHub (Settings del repositorio)
+- *Secrets and variables → Actions → Secrets*: `CRON_SECRET`, **mismo valor**
+  que en Vercel. Si difieren, el workflow recibe 401.
+- *Variables*: `APP_URL` con la URL de producción, **sin barra final**.
+
+#### Paso 3 — Aplicar la migración 018
+`supabase/migrations/018_agent_recommendations_admin_only.sql` en el SQL Editor
+de Supabase. Es el paso que convierte la cartera en compartida.
+
+Para volver atrás si algo sale mal:
+```sql
+DROP POLICY IF EXISTS "todos_leen_la_cartera_del_admin" ON agent_recommendations;
+DROP POLICY IF EXISTS "solo_el_admin_crea"      ON agent_recommendations;
+DROP POLICY IF EXISTS "solo_el_admin_actualiza" ON agent_recommendations;
+DROP POLICY IF EXISTS "solo_el_admin_borra"     ON agent_recommendations;
+CREATE POLICY "own_data" ON agent_recommendations FOR ALL USING (auth.uid() = user_id);
+```
+
+#### Paso 4 — Verificar (nada de esto se ha podido comprobar desde la sesión)
+1. **Cron a mano:** GitHub → Actions → «Revisión de niveles de salida» → *Run
+   workflow*. Con el mercado cerrado la respuesta correcta es
+   `{"ejecutado": false, "motivo": "fin-de-semana" | "fuera-de-horario"}` y el
+   job en verde. Un 401 significa que los dos `CRON_SECRET` no coinciden; un
+   503, que falta alguna variable en Vercel.
+2. **Cron en vivo:** repetir en horario de sesión (10:00–15:45 ET) y confirmar
+   que devuelve `ejecutado: true` con el detalle por categoría.
+3. **Cartera compartida:** entrar con una segunda cuenta que no sea el admin y
+   comprobar que ve las recomendaciones del admin en `/recomendaciones` y
+   `/portafolios`, que en `/agentes` aparece el aviso de solo lectura en vez
+   del botón, y que la API responde 403 a un `PATCH`.
+4. **El admin sigue pudiendo todo:** ejecutar un agente y editar una fila.
+
+#### Riesgo conocido que conviene mirar en esa sesión
+Al aplicar la 018, las recomendaciones que hubiera creado **cualquier otro
+usuario** dejan de ser visibles para su dueño (la lectura pasa a limitarse a
+las del admin). No se han borrado y siguen en la tabla; si hubiera filas así,
+decidir si migrarlas al admin o dejarlas ocultas.
 
 ### Niveles de salida — lo que queda
-- **Recorrido visual autenticado** de la columna «Salida» en las dos tablas de
-  opciones de `/recomendaciones`. El servidor efímero solo confirma que la ruta
-  responde: `/recomendaciones` y `/agentes` devuelven 307 al login, así que el
-  render de la tabla no se ha visto con datos reales.
-- **Extraer el pipeline de los agentes a una API route.** Es la condición previa
-  a cualquier automatización: mientras `run()` viva en un `onClick`, los niveles
-  solo se revisan cuando alguien entra. `exit-levels.ts` ya está escrito para que
-  un cron lo use sin tocarlo.
+- ~~Recorrido visual de la columna «Salida»~~ — **confirmado en producción por
+  el usuario** el 2026-08-23: se ven objetivo y stop en las tablas de opciones.
+- ~~Extraer el pipeline a una API route~~ — hecho para la revisión de niveles
+  (`/api/agentes/review-exits`, commit `85dc8de`).
+- **Lo que sigue en el navegador:** los pasos 1-6 de los cuatro agentes, o sea
+  la *generación* de señales nuevas. Sacarlos al servidor es más trabajo que la
+  revisión —una llamada de IA por candidato, con 36 tickers en Theta— y no cabe
+  en una sola función sin trocearlo. Hasta entonces las señales nuevas siguen
+  necesitando que alguien pulse el botón; lo automatizado es solo el cierre por
+  nivel.
 
 ### Sección Estrategias — cierre
 - **Recorrido visual autenticado** de `/estrategias`, las seis fichas y la nueva
