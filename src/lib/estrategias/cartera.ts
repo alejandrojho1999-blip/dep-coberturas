@@ -11,7 +11,7 @@
  */
 
 export const CARTERA_META = {
-  titulo: 'Portafolio de futuros',
+  titulo: 'Portafolio cuantitativo de futuros',
   subtitulo: 'Seis sistemas algorítmicos sobre MNQ · un contrato cada uno',
   lema: 'Ninguna estrategia es perfecta. La cartera no necesita que lo sean.',
   cuenta: 50_000,
@@ -188,6 +188,3 @@ export const RIESGO_ESTRUCTURAL = {
   cierre:
     'El histórico contiene la respuesta a «qué pasa si no paga la apuesta», y la respuesta es cinco años y medio ganando poco mientras se soporta el drawdown más grande de todo el registro. La diferencia entre acertar y no acertar en esa pregunta es un Net/DD de 19,19 contra 2,82.',
 } as const
-
-export const NOTA_NATURALEZA =
-  'Esta sección no es un portafolio en vivo. Es el backtest de seis sistemas de futuros sobre once años y medio de historia, en simulado y sin capital asignado. No se suma a los portafolios de acciones y opciones de las otras pestañas: son instrumentos, capital y naturaleza distintos.'

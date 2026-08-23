@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Cpu, ShieldCheck, TriangleAlert } from 'lucide-react'
+import { ArrowRight, Cpu, ShieldCheck } from 'lucide-react'
 import { DrawdownChart } from '@/components/charts/DrawdownChart'
 import { PnlBarChart } from '@/components/charts/PnlBarChart'
 import { PortfolioPieChart } from '@/components/charts/PortfolioPieChart'
@@ -16,7 +16,6 @@ import {
   DIMENSIONAMIENTO,
   ESCENARIOS_ANUALES,
   LECCION_DESCARTES,
-  NOTA_NATURALEZA,
   REGLAS_OPERATIVAS,
   RIESGO_ESTRUCTURAL,
 } from '@/lib/estrategias/cartera'
@@ -34,49 +33,56 @@ import { KpiCard, KpiRow } from './KpiCard'
  * `public/estrategias/` cae dentro del guard de rutas protegidas del proxy y la
  * petición acabaría redirigida a /login.
  */
+/**
+ * Acento de la sección, el mismo que luce el punto de su pestaña.
+ *
+ * Va en hexadecimal y no como `var(--color-accent)` porque el marcado compone
+ * el fondo y el borde del icono añadiendo la opacidad al final (`1a`, `33`), y
+ * eso solo funciona sobre un color literal.
+ */
+const ACENTO = '#003d66'
+
 export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null }) {
   const error = datos === null
   const r = datos?.resumen
 
   return (
     <section id="cartera-cuantitativa" className="scroll-mt-4 space-y-4">
-      {/* ── Cabecera ─────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-surface-raised p-px">
-        <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent">
-              <Cpu size={17} className="text-on-accent" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="font-brand text-sm font-extrabold text-text-primary">
-                {CARTERA_META.titulo}
-              </h2>
-              <p className="mt-0.5 text-xs text-text-secondary">{CARTERA_META.subtitulo}</p>
-            </div>
+      {/* ── Cabecera ─────────────────────────────────────────────────
+          Mismo marcado que `PortfolioSection` —barra de acento, icono y
+          título en versalitas— para que las tres pestañas se lean igual al
+          pasar de una a otra. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 pl-3" style={{ borderColor: ACENTO }}>
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+            style={{ background: `${ACENTO}1a`, border: `1px solid ${ACENTO}33` }}
+          >
+            <Cpu size={17} style={{ color: ACENTO }} />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-md border border-warning/40 bg-warning/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-warning">
-              Backtest {CARTERA_META.periodo}
-            </span>
-            <span className="inline-flex items-center rounded-md border border-border bg-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-text-secondary">
-              Cuenta {fmtUsd(CARTERA_META.cuenta, 0)}
-            </span>
-            <Link
-              href="/estrategias"
-              className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-text-secondary underline-offset-4 transition-colors hover:text-text-primary hover:underline"
-            >
-              Ver las seis
-              <ArrowRight size={11} />
-            </Link>
+          <div className="min-w-0">
+            <h2 className="font-mono text-sm font-semibold uppercase tracking-[0.12em] text-text-primary">
+              {CARTERA_META.titulo}
+            </h2>
+            <p className="text-xs text-text-secondary">{CARTERA_META.subtitulo}</p>
           </div>
         </div>
-
-        {/* Aviso de naturaleza: no se puede sumar a los de arriba */}
-        <div className="border-t border-border bg-surface px-4 py-2.5">
-          <p className="text-[11px] leading-relaxed text-text-secondary">
-            <TriangleAlert size={12} className="mr-1.5 inline text-warning" />
-            {NOTA_NATURALEZA}
-          </p>
+        {/* El distintivo de backtest se queda: es lo que distingue esta pestaña
+            de las otras dos, que sí son carteras en vivo. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-md border border-warning/40 bg-warning/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-warning">
+            Backtest {CARTERA_META.periodo}
+          </span>
+          <span className="inline-flex items-center rounded-md border border-border bg-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-text-secondary">
+            Cuenta {fmtUsd(CARTERA_META.cuenta, 0)}
+          </span>
+          <Link
+            href="/estrategias"
+            className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-text-secondary underline-offset-4 transition-colors hover:text-text-primary hover:underline"
+          >
+            Ver las seis
+            <ArrowRight size={11} />
+          </Link>
         </div>
       </div>
 

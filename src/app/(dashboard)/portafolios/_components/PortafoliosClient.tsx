@@ -40,10 +40,19 @@ type Tab = 'acciones' | 'opciones' | 'futuros'
 
 // El punto de color de cada pestaña es el mismo acento que usa el bloque que
 // abre, para que la pestaña y su contenido no se lean como cosas distintas.
+//
+// Van en hexadecimal literal porque las secciones componen con ellos el fondo y
+// el borde del icono añadiendo la opacidad al final del color, y eso solo
+// funciona sobre un literal: con `var(--color-*)` el navegador descarta la regla
+// y el recuadro se queda sin fondo.
+const ACENTO_ACCIONES = '#10b981'
+const ACENTO_OPCIONES = '#4d95d0'
+const ACENTO_FUTUROS = '#003d66'
+
 const TABS: { key: Tab; label: string; accent: string }[] = [
-  { key: 'acciones', label: 'ACCIONES', accent: 'var(--color-positive)' },
-  { key: 'opciones', label: 'OPCIONES', accent: 'var(--color-info)' },
-  { key: 'futuros', label: 'FUTUROS', accent: 'var(--color-accent)' },
+  { key: 'acciones', label: 'ACCIONES', accent: ACENTO_ACCIONES },
+  { key: 'opciones', label: 'OPCIONES', accent: ACENTO_OPCIONES },
+  { key: 'futuros', label: 'FUTUROS', accent: ACENTO_FUTUROS },
 ]
 
 function esTab(valor: string | null): valor is Tab {
@@ -227,7 +236,7 @@ export default function PortafoliosClient({ cartera }: { cartera: BacktestCarter
           titulo="Portafolio algorítmico de acciones"
           subtitulo={`Agentes Peter y Small · ${fmtUsd(TICKET_ACCIONES, 0)} por recomendación`}
           icono={TrendingUp}
-          acento="var(--color-positive)"
+          acento={ACENTO_ACCIONES}
           metrics={metricsAcciones}
           curva={curvaAcciones}
           serie={serieAcciones}
@@ -244,7 +253,7 @@ export default function PortafoliosClient({ cartera }: { cartera: BacktestCarter
           titulo="Portafolio algorítmico de opciones"
           subtitulo="Agentes Gamma y Theta · 1 contrato por señal (100 acciones)"
           icono={Zap}
-          acento="var(--color-info)"
+          acento={ACENTO_OPCIONES}
           metrics={metricsOpciones}
           curva={curvaOpciones}
           serie={serieOpciones}

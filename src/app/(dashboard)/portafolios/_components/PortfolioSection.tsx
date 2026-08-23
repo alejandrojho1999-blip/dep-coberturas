@@ -17,6 +17,11 @@ interface Props {
   titulo: string
   subtitulo: string
   icono: LucideIcon
+  /**
+   * Acento de la sección, en hexadecimal literal: el marcado compone el fondo
+   * y el borde del icono añadiendo la opacidad al final (`1a`, `33`), y eso no
+   * funciona con `var(--color-*)` —el navegador descarta la regla entera—.
+   */
   acento: string
   metrics: PortfolioMetrics
   curva: CurveMetrics
