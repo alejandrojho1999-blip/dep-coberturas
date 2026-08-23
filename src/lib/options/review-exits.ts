@@ -1,18 +1,13 @@
-import { contractKey, type OptionContractRef } from './occ-symbol'
-import { evaluarSalida, nivelesSalida } from './exit-levels'
-import { optionRefFromRec, type OptionSide } from './mark'
-import type { AgentPickForSettlement } from './settle-picks'
-
 /**
- * Revisión de los niveles de salida de las posiciones vivas de Gamma y Theta.
+ * Cliente de la revisión de niveles de salida.
  *
- * Se ejecuta al principio del agente, antes de liquidar los vencidos. Pide la
- * prima actual de cada contrato y, si un nivel ya se tocó, cierra la posición
- * en la base de datos asumiendo que la orden OCO estaba puesta en el bróker y
- * saltó sola.
+ * El trabajo ocurre entero en `/api/agentes/review-exits`: leer posiciones,
+ * cotizar contratos y escribir los cierres. Aquí solo queda la llamada y el
+ * volcado de su log, para que el agente lo pinte en su consola.
  *
- * No es un stop-loss: entre dos ejecuciones del agente no se vigila nada. Lo
- * que hace este módulo es reflejar lo que ya ocurrió en la cuenta.
+ * Estaba en el navegador y encadenaba una petición por paso. Moverlo al
+ * servidor es lo que permitirá que un cron haga la misma revisión sin que nadie
+ * tenga la pantalla abierta.
  */
 
 export interface ExitReviewSummary {
@@ -28,119 +23,42 @@ export interface ExitReviewSummary {
 
 const VACIO: ExitReviewSummary = { revisadas: 0, porObjetivo: 0, porStop: 0, sinCotizar: 0 }
 
-/**
- * Un contrato ya vencido no se revisa por nivel: su cierre es el valor
- * intrínseco contra el subyacente, y de eso se encarga `settleExpiredPicks`
- * justo después. La hora es la misma que usa aquel módulo.
- */
-function yaVencido(expiration: string, now = new Date()): boolean {
-  const exp = new Date(`${expiration}T21:00:00.000Z`)
-  return !Number.isNaN(exp.getTime()) && exp.getTime() <= now.getTime()
+interface ReviewResponse extends ExitReviewSummary {
+  log?: string[]
 }
 
 /**
- * Revisa las posiciones abiertas y cierra las que hayan tocado un nivel.
- *
- * `picks` debe traer ya solo las posiciones vivas (`estado !== 'Vender'`).
+ * Pide al servidor la revisión de niveles de una categoría de opciones y
+ * vuelca su log. Ante cualquier fallo devuelve el resumen vacío: no cerrar
+ * nada es siempre preferible a cerrar sin datos.
  */
 export async function reviewExitLevels(
-  picks: AgentPickForSettlement[],
-  side: OptionSide,
+  category: 'OPTIONS_GAMMA' | 'OPTIONS_THETA',
   signal: AbortSignal,
   addLog: (msg: string) => void
 ): Promise<ExitReviewSummary> {
-  const refs: Array<{ pick: AgentPickForSettlement; ref: OptionContractRef }> = []
-  for (const pick of picks) {
-    const ref = optionRefFromRec(pick)
-    if (!ref) {
-      addLog(`⚠ ${pick.ticker}: sin contrato utilizable en el informe — no se revisa`)
-      continue
-    }
-    if (yaVencido(ref.expiration)) continue
-    refs.push({ pick, ref })
-  }
-  if (!refs.length) return { ...VACIO }
-
-  let prices: Record<string, number> = {}
   try {
-    const res = await fetch('/api/informes/option-prices', {
+    const res = await fetch('/api/agentes/review-exits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contracts: refs.map(r => r.ref) }),
+      body: JSON.stringify({ category }),
       signal,
     })
-    if (res.ok) prices = await res.json() as Record<string, number>
-    else addLog(`⚠ No se pudieron obtener las primas actuales (HTTP ${res.status}) — no se cierra nada`)
+    if (!res.ok) {
+      addLog(`⚠ Revisión de niveles no disponible (HTTP ${res.status}) — no se cierra nada`)
+      return { ...VACIO }
+    }
+    const data = await res.json() as ReviewResponse
+    for (const line of data.log ?? []) addLog(line)
+    return {
+      revisadas: data.revisadas ?? 0,
+      porObjetivo: data.porObjetivo ?? 0,
+      porStop: data.porStop ?? 0,
+      sinCotizar: data.sinCotizar ?? 0,
+    }
   } catch (e) {
     if (signal.aborted) return { ...VACIO }
-    addLog(`⚠ Error obteniendo las primas actuales — ${(e as Error).message}`)
+    addLog(`⚠ Error en la revisión de niveles — ${(e as Error).message}`)
+    return { ...VACIO }
   }
-
-  const summary: ExitReviewSummary = { ...VACIO }
-
-  for (const { pick, ref } of refs) {
-    if (signal.aborted) break
-
-    const primaViva = prices[contractKey(ref)]
-    const niveles = nivelesSalida(side, pick.precio_entrada)
-
-    if (primaViva == null) {
-      summary.sinCotizar++
-      const nivelesStr = niveles
-        ? ` · salida $${niveles.objetivo.toFixed(2)} / $${niveles.stop.toFixed(2)}`
-        : ''
-      addLog(`· ${pick.ticker}: sin cotización del contrato — se deja viva${nivelesStr}`)
-      continue
-    }
-
-    const evaluacion = evaluarSalida(side, pick.precio_entrada, primaViva)
-    if (!evaluacion) {
-      addLog(`⚠ ${pick.ticker}: prima de entrada inutilizable — no se revisa`)
-      continue
-    }
-    summary.revisadas++
-
-    const pnlStr = (evaluacion.pnlPct >= 0 ? '+' : '') + evaluacion.pnlPct.toFixed(1) + '%'
-
-    if (evaluacion.accion === 'mantener') {
-      addLog(
-        `✓ ${pick.ticker}: prima $${primaViva.toFixed(2)} entre niveles ` +
-        `($${evaluacion.niveles.objetivo.toFixed(2)} obj / $${evaluacion.niveles.stop.toFixed(2)} stop) — vigente ${pnlStr}`
-      )
-      continue
-    }
-
-    const motivo = evaluacion.accion === 'objetivo' ? 'OBJETIVO' : 'STOP'
-    addLog(
-      `⬇ ${pick.ticker}: ${motivo} tocado — entrada $${pick.precio_entrada.toFixed(2)} → ` +
-      `prima $${primaViva.toFixed(2)} | ${pnlStr}`
-    )
-
-    try {
-      const res = await fetch('/api/agentes/picks', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: pick.id,
-          estado: 'Vender',
-          precio_venta: parseFloat(primaViva.toFixed(4)),
-          rentabilidad: parseFloat(evaluacion.pnlPct.toFixed(2)),
-          closed_at: new Date().toISOString(),
-          ai_report: { ...(pick.ai_report ?? {}), salida: evaluacion.accion },
-        }),
-        signal,
-      })
-      if (!res.ok) {
-        addLog(`⚠ ${pick.ticker}: el cierre no se guardó (HTTP ${res.status})`)
-        continue
-      }
-      if (evaluacion.accion === 'objetivo') summary.porObjetivo++
-      else summary.porStop++
-    } catch {
-      if (signal.aborted) break
-      addLog(`⚠ ${pick.ticker}: error guardando el cierre por nivel`)
-    }
-  }
-
-  return summary
 }

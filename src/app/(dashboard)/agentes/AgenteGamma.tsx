@@ -206,7 +206,7 @@ export default function AgenteGamma() {
         addLog(`📋 ${activeGamma.length} opción(es) Gamma activa(s)`)
         // Revisión de niveles: no es vigilancia continua, solo comprueba si la
         // orden que debía estar puesta en el bróker ya habría saltado.
-        const revision = await reviewExitLevels(activeGamma, 'long', signal, addLog)
+        const revision = await reviewExitLevels('OPTIONS_GAMMA', signal, addLog)
         const cerradas = revision.porObjetivo + revision.porStop
         addLog(
           cerradas
