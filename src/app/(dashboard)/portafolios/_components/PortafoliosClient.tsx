@@ -43,7 +43,7 @@ type Tab = 'acciones' | 'opciones' | 'futuros'
 const TABS: { key: Tab; label: string; accent: string }[] = [
   { key: 'acciones', label: 'ACCIONES', accent: 'var(--color-positive)' },
   { key: 'opciones', label: 'OPCIONES', accent: 'var(--color-info)' },
-  { key: 'futuros', label: 'PORTAFOLIO DE FUTUROS', accent: 'var(--color-accent)' },
+  { key: 'futuros', label: 'FUTUROS', accent: 'var(--color-accent)' },
 ]
 
 function esTab(valor: string | null): valor is Tab {
