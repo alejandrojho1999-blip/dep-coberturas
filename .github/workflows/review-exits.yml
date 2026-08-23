@@ -1,0 +1,52 @@
+name: Revisión de niveles de salida
+
+# El plan Hobby de Vercel solo admite crons diarios: una expresión más
+# frecuente hace fallar el deploy. Este workflow hace el mismo trabajo llamando
+# al endpoint, y en un repositorio público los minutos de Actions no se cobran.
+#
+# Las horas van en UTC y el mercado en Nueva York, así que la ventana útil se
+# desplaza una hora entre invierno y verano. Se cubren las dos y el propio
+# endpoint descarta las ejecuciones que caen fuera de sesión: responde
+# `ejecutado: false` sin tocar nada.
+#
+# GitHub no garantiza la puntualidad de `schedule` y en horas de mucha carga
+# retrasa o incluso descarta ejecuciones. Para esta tarea da igual: la
+# protección real es la orden puesta en el bróker, y esto solo pone al día el
+# registro.
+
+on:
+  schedule:
+    # Cada 30 min de 14:00 a 20:30 UTC, de lunes a viernes.
+    # Verano (EDT): 10:00-16:30 ET · Invierno (EST): 09:00-15:30 ET
+    - cron: '0,30 14-20 * * 1-5'
+  workflow_dispatch:
+
+# Si una ejecución se solapa con la anterior, se descarta la nueva: dos
+# revisiones a la vez podrían cerrar la misma posición dos veces.
+concurrency:
+  group: review-exits
+  cancel-in-progress: false
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Llamar al endpoint de revisión
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$APP_URL" ]; then
+            echo "Falta el secreto CRON_SECRET o la variable APP_URL"
+            exit 1
+          fi
+
+          # --fail-with-body devuelve el cuerpo del error y sale con código != 0,
+          # para que un 401 o un 500 pongan el job en rojo en vez de pasar
+          # desapercibidos.
+          curl --silent --show-error --fail-with-body \
+               --max-time 120 \
+               --retry 2 --retry-delay 10 --retry-connrefused \
+               -H "Authorization: Bearer $CRON_SECRET" \
+               "$APP_URL/api/cron/review-exits"

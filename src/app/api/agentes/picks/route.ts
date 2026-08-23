@@ -1,6 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
+import { isAdminEmail } from '@/lib/auth/admin'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * Las recomendaciones de los agentes son una cartera única: la del
+ * administrador. Cualquier usuario autenticado la lee; solo él la escribe.
+ *
+ * Las guardas de escritura de aquí son la primera puerta, no la única: la que
+ * de verdad protege la tabla es la política RLS de la migración 018, porque un
+ * cliente puede hablar con Supabase sin pasar por esta API.
+ */
+
+const SOLO_ADMIN = { error: 'Solo el administrador puede modificar las recomendaciones' }
 
 export async function GET(request: Request): Promise<Response> {
   const supabase = await createClient()
@@ -10,10 +22,12 @@ export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url)
   const category = searchParams.get('category')
 
+  // Sin filtro por usuario a propósito: la política de lectura ya limita las
+  // filas visibles a las del administrador, y filtrar aquí por `user.id`
+  // devolvería una cartera vacía a todos los demás.
   const base = supabase
     .from('agent_recommendations')
     .select('*')
-    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(200)
 
@@ -26,6 +40,7 @@ export async function POST(request: Request): Promise<Response> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!isAdminEmail(user.email)) return Response.json(SOLO_ADMIN, { status: 403 })
 
   const body = await request.json() as Record<string, unknown>
   const { ticker, category } = body as { ticker?: string; category?: string }
@@ -60,6 +75,7 @@ export async function PATCH(request: Request): Promise<Response> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!isAdminEmail(user.email)) return Response.json(SOLO_ADMIN, { status: 403 })
 
   const body = await request.json() as Record<string, unknown>
   const { id, ...rest } = body
@@ -80,6 +96,7 @@ export async function DELETE(request: Request): Promise<Response> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!isAdminEmail(user.email)) return Response.json(SOLO_ADMIN, { status: 403 })
 
   const { id } = await request.json() as { id: string }
   if (!id) return Response.json({ error: 'id requerido' }, { status: 400 })

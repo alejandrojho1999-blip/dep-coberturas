@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isAdminEmail } from '@/lib/auth/admin'
 import { isOptionCategory, runExitReview } from '@/lib/options/exit-review-run'
 
 export const dynamic = 'force-dynamic'
@@ -20,6 +21,13 @@ export async function POST(request: Request): Promise<Response> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  // Cierra posiciones, así que es escritura sobre la cartera del administrador.
+  if (!isAdminEmail(user.email)) {
+    return Response.json(
+      { error: 'Solo el administrador puede modificar las recomendaciones' },
+      { status: 403 }
+    )
+  }
 
   let body: { category?: unknown }
   try {

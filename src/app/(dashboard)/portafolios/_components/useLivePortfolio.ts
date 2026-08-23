@@ -69,10 +69,12 @@ export function useLivePortfolio(): LivePortfolioData {
           if (!cancelled) { setError('Sesión no disponible'); setCargando(false) }
           return
         }
+        // Sin filtro por usuario: la cartera es única y la política de lectura
+        // ya limita las filas visibles a las del administrador. Filtrar por
+        // `user.id` dejaría el portafolio vacío para todos los demás.
         const { data, error: dbError } = await supabase
           .from('agent_recommendations')
           .select('*')
-          .eq('user_id', user.id)
           .order('created_at', { ascending: true })
 
         if (cancelled) return

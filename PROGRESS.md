@@ -33,6 +33,20 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ## Pendiente
 
+### Puesta en marcha del cron y la cartera única — ACCIÓN REQUERIDA
+Nada de esto funciona hasta que se haga a mano:
+
+1. **Aplicar la migración 018** en Supabase (SQL Editor). Hasta entonces sigue
+   vigente `own_data` de la 014 y cada usuario ve solo lo suyo: el despliegue
+   no rompe nada, simplemente no cambia el reparto todavía.
+2. **Variables en Vercel** (Production): `CRON_SECRET`,
+   `SUPABASE_SERVICE_ROLE_KEY` y `CRON_USER_ID` — este último es el UID de
+   `lriofrio915@gmail.com`, no otro. Sin las tres el endpoint responde 503.
+3. **En GitHub**: el secreto `CRON_SECRET` con el mismo valor y la variable
+   `APP_URL` con la URL de producción.
+4. **Comprobar el 403 con una segunda cuenta**: que un usuario no admin vea la
+   cartera y no pueda editarla. No se ha podido verificar desde aquí.
+
 ### Niveles de salida — lo que queda
 - **Recorrido visual autenticado** de la columna «Salida» en las dos tablas de
   opciones de `/recomendaciones`. El servidor efímero solo confirma que la ruta
@@ -132,6 +146,33 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Cartera única del administrador y cron de revisión (2026-08-23)
+Las recomendaciones de los agentes dejan de ser privadas de cada usuario y
+pasan a ser **una sola cartera, la del administrador**, que todos leen y solo
+él escribe.
+
+- **Migración 018** — reemplaza la política `own_data` de la 014. Lectura para
+  cualquier autenticado sobre las filas del admin; escritura solo del admin y
+  solo sobre filas suyas. Usa `admin_user_ids()` (SECURITY DEFINER, porque
+  `auth.users` no es legible por `authenticated`) e `is_admin()` (por el correo
+  del JWT, el mismo criterio de la 016).
+- **`lib/auth/admin.ts`** — la misma lista para la interfaz y las API. La de la
+  base de datos es la que manda: una comprobación en la app se esquiva llamando
+  a Supabase con la clave anónima.
+- **API**: `POST`/`PATCH`/`DELETE` de `/api/agentes/picks` y el `POST` de
+  `/api/agentes/review-exits` responden 403 a quien no sea admin. El `GET` deja
+  de filtrar por `user_id` — con la política nueva, filtrar dejaría la cartera
+  vacía para todos los demás. Igual en `useLivePortfolio`.
+- **UI**: los cuatro agentes reciben `puedeEjecutar`, resuelto en el servidor
+  con el correo de la sesión. Sin permiso se ve el aviso de solo lectura en vez
+  del botón. En `/recomendaciones` los selects de estado, los campos editables
+  y la papelera quedan fuera para el resto de usuarios.
+- **Cron por GitHub Actions** (`.github/workflows/review-exits.yml`), cada 30
+  min de 14:00 a 20:30 UTC, L-V. El plan Hobby de Vercel solo admite crons
+  diarios —una expresión más frecuente **hace fallar el deploy**, no se
+  degrada— y en un repositorio público los minutos de Actions son gratis. Se
+  eliminó `vercel.json` para no tener dos planificadores solapándose.
 
 ### Niveles de salida reales para Gamma y Theta (2026-08-23)
 Gamma y Theta guardaban un objetivo y un stop que **ningún proceso leía**:

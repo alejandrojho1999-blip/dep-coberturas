@@ -19,7 +19,9 @@ const TABS: { key: Tab; label: string; accent: string }[] = [
   { key: 'theta', label: 'AGENTE THETA', accent: AGENT_COLORS.Theta },
 ]
 
-export default function AgentesClient() {
+export default function AgentesClient(
+  { puedeEjecutar = false }: { puedeEjecutar?: boolean }
+) {
   const [tab, setTab] = useState<Tab>('peter')
 
   return (
@@ -58,10 +60,10 @@ export default function AgentesClient() {
       </div>
 
       {/* Agent panel */}
-      {tab === 'peter' ? <AgentePeter />
-        : tab === 'small' ? <AgenteSmall />
-        : tab === 'gamma' ? <AgenteGamma />
-        : <AgenteTheta />}
+      {tab === 'peter' ? <AgentePeter puedeEjecutar={puedeEjecutar} />
+        : tab === 'small' ? <AgenteSmall puedeEjecutar={puedeEjecutar} />
+        : tab === 'gamma' ? <AgenteGamma puedeEjecutar={puedeEjecutar} />
+        : <AgenteTheta puedeEjecutar={puedeEjecutar} />}
     </div>
   )
 }

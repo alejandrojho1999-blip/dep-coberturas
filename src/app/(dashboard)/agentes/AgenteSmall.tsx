@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 import { Loader2, Play, Square, RotateCcw, TrendingUp, BarChart2, Brain, BookOpen, CheckCircle2, ArrowRight, RefreshCw } from 'lucide-react'
 import type { ScreenerResult } from '@/lib/peter-lynch/screener'
 import FichaTecnicaAgente from './FichaTecnicaAgente'
+import SoloLectura from './SoloLectura'
 import { FICHA_SMALL } from './fichas/small'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
@@ -138,7 +139,8 @@ function FunnelBar({ stages }: { stages: { label: string; count: number; color: 
   )
 }
 
-export default function AgenteSmall() {
+export default function AgenteSmall({ puedeEjecutar = false }: { puedeEjecutar?: boolean }
+) {
   const [phase, setPhase]           = useState<Phase>('idle')
   const [step0Phase, setStep0Phase] = useState<Phase>('idle')
   const [step1Phase, setStep1Phase] = useState<Phase>('idle')
@@ -542,6 +544,9 @@ export default function AgenteSmall() {
       )}
 
       {/* Controls */}
+      {!puedeEjecutar ? (
+        <SoloLectura agente="AGENTE SMALL" />
+      ) : (
       <div className="flex flex-wrap items-center gap-2">
         {phase === 'idle' || phase === 'done' || phase === 'error' ? (
           <button
@@ -578,6 +583,7 @@ export default function AgenteSmall() {
           </span>
         )}
       </div>
+      )}
 
       {/* Summary */}
       {summary && summary.created > 0 && (() => {

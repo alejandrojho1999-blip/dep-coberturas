@@ -10,6 +10,7 @@ import { hasFabricatedEntryPrice, FABRICATED_ENTRY_WARNING } from '@/lib/agentes
 import type { AgentRec } from '@/lib/agentes/types'
 import { optionOutcome, optionRefFromRec, type OptionSide } from '@/lib/options/mark'
 import { nivelesSalida } from '@/lib/options/exit-levels'
+import { isAdminEmail } from '@/lib/auth/admin'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -271,6 +272,10 @@ export default function RecomendacionesPage() {
   const [pendingDuplicate, setPendingDuplicate] = useState<string | null>(null)
   const [comisionPct, setComisionPct]           = useState(20)
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
+  // Las recomendaciones de los agentes son una cartera única: todos la ven,
+  // solo el administrador la edita. Empieza en false hasta que se resuelve la
+  // sesión, para no ofrecer controles que la API va a rechazar.
+  const esAdmin = isAdminEmail(currentUserEmail)
   const [agentRecs, setAgentRecs]               = useState<AgentRec[]>([])
   const [agentRecsLoading, setAgentRecsLoading] = useState(true)
   const [agentRowEdits, setAgentRowEdits]       = useState<Record<string, Record<string, string>>>({})
@@ -617,6 +622,7 @@ export default function RecomendacionesPage() {
   }
 
   const saveAgentField = async (id: string, rawUpdates: Record<string, unknown>) => {
+    if (!esAdmin) { addToast('Solo el administrador puede editar las recomendaciones', 'error'); return }
     const updates = withClosedAt(agentRecs.find(r => r.id === id), rawUpdates)
     const res = await fetch('/api/agentes/picks', {
       method: 'PATCH',
@@ -629,6 +635,7 @@ export default function RecomendacionesPage() {
   }
 
   const deleteAgentRec = async (id: string) => {
+    if (!esAdmin) { addToast('Solo el administrador puede borrar recomendaciones', 'error'); return }
     await fetch('/api/agentes/picks', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -1265,6 +1272,7 @@ export default function RecomendacionesPage() {
                                 if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { cantidad_acciones: val })
                               }}
                               onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                              disabled={!esAdmin}
                               className="w-16 bg-transparent text-right text-xs text-text-primary outline-none placeholder-text-muted border-b border-transparent focus:border-accent transition-colors"
                             />
                           </td>
@@ -1300,7 +1308,7 @@ export default function RecomendacionesPage() {
                           </td>
                           <td className="px-3 py-2.5">
                             {(() => { const badge = estadoBadge(rec.estado); return (
-                              <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
+                              <select disabled={!esAdmin} value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
                                 className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
                                 style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}>
                                 <option value="Comprar">Comprar</option>
@@ -1311,7 +1319,9 @@ export default function RecomendacionesPage() {
                             )})()}
                           </td>
                           <td className="px-3 py-2.5 text-right">
-                            {confirmDeleteAgentId === rec.id ? (
+                            {!esAdmin ? (
+                              <span className="text-text-muted">—</span>
+                            ) : confirmDeleteAgentId === rec.id ? (
                               <div className="flex items-center justify-end gap-1 text-xs">
                                 <span className="text-text-secondary">¿Eliminar?</span>
                                 <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
@@ -1409,6 +1419,7 @@ export default function RecomendacionesPage() {
                                 if (!isNaN(val) && val >= 0) void saveAgentField(rec.id, { cantidad_acciones: val })
                               }}
                               onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                              disabled={!esAdmin}
                               className="w-16 bg-transparent text-right text-xs text-text-primary outline-none placeholder-text-muted border-b border-transparent focus:border-accent transition-colors"
                             />
                           </td>
@@ -1444,7 +1455,7 @@ export default function RecomendacionesPage() {
                           </td>
                           <td className="px-3 py-2.5">
                             {(() => { const badge = estadoBadge(rec.estado); return (
-                              <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
+                              <select disabled={!esAdmin} value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
                                 className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
                                 style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}>
                                 <option value="Comprar">Comprar</option>
@@ -1455,7 +1466,9 @@ export default function RecomendacionesPage() {
                             )})()}
                           </td>
                           <td className="px-3 py-2.5 text-right">
-                            {confirmDeleteAgentId === rec.id ? (
+                            {!esAdmin ? (
+                              <span className="text-text-muted">—</span>
+                            ) : confirmDeleteAgentId === rec.id ? (
                               <div className="flex items-center justify-end gap-1 text-xs">
                                 <span className="text-text-secondary">¿Eliminar?</span>
                                 <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
@@ -1612,7 +1625,7 @@ export default function RecomendacionesPage() {
                             <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
                             <td className="px-3 py-2.5">
                               {(() => { const badge = estadoBadge(rec.estado); return (
-                                <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
+                                <select disabled={!esAdmin} value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
                                   className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
                                   style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}>
                                   <option value="Comprar">Comprar</option>
@@ -1623,7 +1636,9 @@ export default function RecomendacionesPage() {
                               )})()}
                             </td>
                             <td className="px-3 py-2.5 text-right">
-                              {confirmDeleteAgentId === rec.id ? (
+                              {!esAdmin ? (
+                                <span className="text-text-muted">—</span>
+                              ) : confirmDeleteAgentId === rec.id ? (
                                 <div className="flex items-center justify-end gap-1 text-xs">
                                   <span className="text-text-secondary">¿Eliminar?</span>
                                   <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>
@@ -1779,7 +1794,7 @@ export default function RecomendacionesPage() {
                             <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary xl:table-cell">{iv != null ? `${(iv * 100).toFixed(0)}%` : '—'}</td>
                             <td className="px-3 py-2.5">
                               {(() => { const badge = estadoBadge(rec.estado); return (
-                                <select value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
+                                <select disabled={!esAdmin} value={rec.estado ?? 'Observacion'} onChange={e => void saveAgentField(rec.id, { estado: e.target.value })}
                                   className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
                                   style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}>
                                   <option value="Comprar">Comprar</option>
@@ -1790,7 +1805,9 @@ export default function RecomendacionesPage() {
                               )})()}
                             </td>
                             <td className="px-3 py-2.5 text-right">
-                              {confirmDeleteAgentId === rec.id ? (
+                              {!esAdmin ? (
+                                <span className="text-text-muted">—</span>
+                              ) : confirmDeleteAgentId === rec.id ? (
                                 <div className="flex items-center justify-end gap-1 text-xs">
                                   <span className="text-text-secondary">¿Eliminar?</span>
                                   <button onClick={() => { void deleteAgentRec(rec.id); setConfirmDeleteAgentId(null) }} className="rounded px-2 py-1 font-medium text-red-400 hover:bg-red-400/10">Sí</button>

@@ -11,6 +11,7 @@ import { settleExpiredPicks } from '@/lib/options/settle-picks'
 import { reviewExitLevels } from '@/lib/options/review-exits'
 import { nivelesSalida } from '@/lib/options/exit-levels'
 import FichaTecnicaAgente from './FichaTecnicaAgente'
+import SoloLectura from './SoloLectura'
 import { FICHA_THETA } from './fichas/theta'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
@@ -151,7 +152,8 @@ function TickerCard({ t }: { t: TickerStage }) {
   )
 }
 
-export default function AgenteTheta() {
+export default function AgenteTheta({ puedeEjecutar = false }: { puedeEjecutar?: boolean }
+) {
   const [phase, setPhase]           = useState<Phase>('idle')
   const [step0Phase, setStep0Phase] = useState<Phase>('idle')
   const [step1Phase, setStep1Phase] = useState<Phase>('idle')
@@ -599,6 +601,9 @@ export default function AgenteTheta() {
       )}
 
       {/* Controls */}
+      {!puedeEjecutar ? (
+        <SoloLectura agente="AGENTE THETA" />
+      ) : (
       <div className="flex flex-wrap items-center gap-2">
         {phase === 'idle' || phase === 'done' || phase === 'error' ? (
           <button
@@ -632,6 +637,7 @@ export default function AgenteTheta() {
           </span>
         )}
       </div>
+      )}
 
       {/* Summary */}
       {summary && summary.created > 0 && (() => {
