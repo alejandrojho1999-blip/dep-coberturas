@@ -21,7 +21,7 @@
 
 | # | Sección | Ruta | Subtítulo |
 |---|---|---|---|
-| 1 | Portafolios | `/portafolios` | Portafolios Algorítmicos de Acciones, Opciones y Futuros · 3 pestañas |
+| 1 | Portafolios | `/portafolios` | Portafolios Algorítmicos de Acciones, Opciones y Futuros · 4 pestañas |
 | 2 | Agentes | `/agentes` | Agentes IA para Acciones y Opciones |
 | 3 | Estrategias | `/estrategias` | Seis sistemas algorítmicos de futuros sobre el Nasdaq |
 | 4 | Recomendaciones | `/recomendaciones` | Panel de Recomendaciones |
@@ -198,6 +198,28 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Opciones partidas en dos carteras: largas y cortas (2026-08-23)
+La pestaña OPCIONES mezclaba las compras de Gamma con las ventas de Theta sobre
+un único capital de $100.000, y la cartera mostraba $254.663 desplegados con un
+capital libre de **−$154.663**: la métrica era correcta, el sizing no.
+
+- **`config.ts`** — `CAPITAL_OPCIONES` se parte en `CAPITAL_OPCIONES_LARGAS`
+  ($100.000) y `CAPITAL_OPCIONES_CORTAS` ($300.000). Nuevas
+  `OPTION_LONG_CATEGORIES` / `OPTION_SHORT_CATEGORIES`, con `OPTION_CATEGORIES`
+  compuesta a partir de ellas para no repetir los strings de categoría.
+- **`buildOptionPositions(recs, primas, categorias?)`** — tercer parámetro
+  opcional. Construir cada cartera por separado mantiene sus exclusiones
+  separadas, cosa que filtrar el resultado por `esCorta` no haría. Cuatro tests
+  nuevos cubren el filtrado y la retrocompatibilidad de la firma.
+- **Cuatro pestañas**: ACCIONES · OPCIONES LARGAS · OPCIONES CORTAS · FUTUROS,
+  con los acentos que los gráficos ya daban a Gamma (`#8b8ff0`) y Theta
+  (`#e0a458`). `?tab=opciones` sigue funcionando: cae en las largas.
+- **Se retira el consolidado.** Con capitales distintos, sumarlos escondía lo
+  único que importa mirar. Cada pestaña abre con su propio resumen, extraído a
+  `ResumenCartera.tsx` (capital, valor actual, resultado global, vs SPY y
+  operaciones), y con sus propios supuestos.
+- Con $300.000, el capital libre de las cortas vuelve a ser positivo.
 
 ### Resumen propio para la pestaña FUTUROS (2026-08-23)
 El bloque de KPIs «Consolidado · ambos portafolios» estaba escrito fuera del
@@ -774,9 +796,15 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
   de `lib/portafolios/config.ts` a `agent_recommendations` en cada carga. Por eso
   una venta del agente se refleja sola y corregir un dato corrige el pasado.
 - **Sizing fijo:** $100 000 y $1 000 por recomendación en acciones (cantidad
-  fraccional), $100 000 y 1 contrato por señal en opciones. `cantidad_acciones`
-  de la tabla se **ignora**: es la cartera manual del operador, no la del
-  portafolio algorítmico.
+  fraccional); 1 contrato por señal en opciones, con $100 000 para las largas de
+  Gamma y $300 000 para las cortas de Theta. `cantidad_acciones` de la tabla se
+  **ignora**: es la cartera manual del operador, no la del portafolio
+  algorítmico.
+- **Las opciones son dos carteras, no una.** Una compra arriesga la prima
+  (cientos de dólares) y una venta inmoviliza el colateral (decenas de miles).
+  Con un capital común, el capital libre salía negativo y los porcentajes de
+  rendimiento no significaban nada. Separadas, cada una se mide contra el
+  capital que de verdad gestiona.
 - **El peso de una opción en el pastel es el capital que inmoviliza**, no la
   prima: colateral del strike en un put vendido y valor de las acciones en una
   call cubierta. Con la prima, Theta parecería una posición diminuta siendo la
@@ -787,7 +815,7 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
 - **Las filas con precio de entrada fabricado se excluyen** del portafolio y se
   informa del recuento. Contarlas inventaría rendimiento en el track record.
 - **Cifras brutas**, sin comisión de rendimiento ni costes de transacción.
-- **Benchmark SPY** en ambos portafolios, normalizado al mismo capital.
+- **Benchmark SPY** en las tres carteras en vivo, normalizado al capital de cada una.
 
 ### Congelado
 - Todo lo de Render y las vulnerabilidades de `npm audit`, documentado en

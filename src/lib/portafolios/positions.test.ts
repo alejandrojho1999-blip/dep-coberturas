@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { AgentRec } from '@/lib/agentes/types'
 import { contractKey } from '@/lib/options/occ-symbol'
-import { TICKET_ACCIONES } from './config'
+import { OPTION_LONG_CATEGORIES, OPTION_SHORT_CATEGORIES, TICKET_ACCIONES } from './config'
 import { buildOptionPositions, buildStockPositions, capitalComprometidoOpcion } from './positions'
 
 function rec(over: Partial<AgentRec>): AgentRec {
@@ -170,5 +170,30 @@ describe('buildOptionPositions', () => {
   it('ignora las recomendaciones de acciones', () => {
     const { positions } = buildOptionPositions([rec({})], {})
     expect(positions).toHaveLength(0)
+  })
+
+  it('sin categorías construye las dos carteras juntas', () => {
+    const { positions } = buildOptionPositions([gamma, theta], {})
+    expect(positions.map(p => p.ticker)).toEqual(['FSLR', 'MSFT'])
+  })
+
+  it('acotada a las largas deja fuera las ventas de Theta', () => {
+    const { positions } = buildOptionPositions([gamma, theta], {}, OPTION_LONG_CATEGORIES)
+    expect(positions).toHaveLength(1)
+    expect(positions[0].ticker).toBe('FSLR')
+    expect(positions[0].esCorta).toBe(false)
+  })
+
+  it('acotada a las cortas deja fuera las compras de Gamma', () => {
+    const { positions } = buildOptionPositions([gamma, theta], {}, OPTION_SHORT_CATEGORIES)
+    expect(positions).toHaveLength(1)
+    expect(positions[0].ticker).toBe('MSFT')
+    expect(positions[0].esCorta).toBe(true)
+  })
+
+  it('las exclusiones no se cuelan de una cartera a la otra', () => {
+    const gammaSinContrato = rec({ id: 'g2', ticker: 'NVDA', category: 'OPTIONS_GAMMA', ai_report: {} })
+    const { excluidas } = buildOptionPositions([gammaSinContrato, theta], {}, OPTION_SHORT_CATEGORIES)
+    expect(excluidas).toHaveLength(0)
   })
 })

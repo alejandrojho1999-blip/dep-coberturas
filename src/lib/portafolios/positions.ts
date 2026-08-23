@@ -126,16 +126,22 @@ export function capitalComprometidoOpcion(
  *
  * `primas` viene indexado por `contractKey`, igual que lo devuelve
  * `/api/informes/option-prices`.
+ *
+ * `categorias` acota qué agentes entran. Las compras de Gamma y las ventas de
+ * Theta son carteras distintas —una arriesga la prima, la otra inmoviliza el
+ * colateral— y cada una se construye por separado para que sus exclusiones y
+ * su capital comprometido no se mezclen. Por defecto entran las dos.
  */
 export function buildOptionPositions(
   recs: AgentRec[],
-  primas: Record<string, number>
+  primas: Record<string, number>,
+  categorias: readonly string[] = OPTION_CATEGORIES
 ): BuildResult<OptionPosition> {
   const positions: OptionPosition[] = []
   const excluidas: BuildResult<OptionPosition>['excluidas'] = []
 
   for (const rec of recs) {
-    if (!OPTION_CATEGORIES.includes(rec.category)) continue
+    if (!categorias.includes(rec.category)) continue
 
     const ref = optionRefFromRec(rec)
     if (!ref) {
