@@ -50,6 +50,28 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
   (`recomendaciones`, `fincept-terminal`): sin acento cálido, la jerarquía
   depende de peso y relleno y puede necesitar retoques al verla en uso.
 
+### Ergo Quant y su backend FastAPI — congelado, candidato a borrado
+Decisión del usuario (2026-08-23): no interesa. **No se toca ni se mantiene**;
+más adelante se decide si se borra.
+
+Estado actual: **ya está fuera de la navegación** — el sidebar no tiene ningún
+enlace a `/ergos-quant` (solo se llega escribiendo la URL, y sigue protegida por
+`proxy.ts:45`). No hace falta ocultar nada más.
+
+Inventario para el día que se borre:
+- `src/app/(dashboard)/ergos-quant/` — 5 archivos, ~464 líneas
+  (`ErgoQuantClient`, `SignalsTable`, `PortfolioOptimizer`, `PpoAgent`, `page`).
+- `src/app/api/ergos-quant/[...path]/route.ts` — el proxy con `X-API-Key`.
+- `ergo-quant-api/` — backend FastAPI en Python, 240 KB.
+- En `render.yaml`: el servicio `pserv` completo y las dos variables
+  `ERGO_QUANT_API_URL` / `ERGO_QUANT_API_KEY` del servicio web.
+- Las rutas en `proxy.ts:45` y las menciones de `DEPLOY_RENDER.md` /
+  `SECURITY_AUDIT_RENDER.md`.
+
+Borrarlo es además el requisito previo para consolidar el despliegue en Vercel:
+ese FastAPI es la única pieza que no es Next, y sin él la migración deja de
+tener parte difícil.
+
 ### Deudas conocidas en los agentes de opciones
 Detectadas al escribir las fichas técnicas. Ninguna se tocó: son cambios de
 comportamiento con dinero real detrás y merecen su propia sesión.
