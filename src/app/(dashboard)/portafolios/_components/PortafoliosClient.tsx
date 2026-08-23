@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Briefcase, Loader2, RefreshCw, TrendingUp, Zap } from 'lucide-react'
 import type { PieSlice } from '@/components/charts/PortfolioPieChart'
 import { fmtPct, fmtUsd } from '@/components/charts/chart-theme'
@@ -35,8 +36,29 @@ const NOTA_PASTEL_OPCIONES =
   'y el colateral que respalda la obligación en las ventas de Theta (efectivo del strike en un put ' +
   'asegurado, valor de las acciones en una call cubierta).'
 
+type Tab = 'acciones' | 'opciones' | 'futuros'
+
+// El punto de color de cada pestaña es el mismo acento que usa el bloque que
+// abre, para que la pestaña y su contenido no se lean como cosas distintas.
+const TABS: { key: Tab; label: string; accent: string }[] = [
+  { key: 'acciones', label: 'ACCIONES', accent: 'var(--color-positive)' },
+  { key: 'opciones', label: 'OPCIONES', accent: 'var(--color-info)' },
+  { key: 'futuros', label: 'PORTAFOLIO DE FUTUROS', accent: 'var(--color-accent)' },
+]
+
+function esTab(valor: string | null): valor is Tab {
+  return TABS.some(t => t.key === valor)
+}
+
 export default function PortafoliosClient({ cartera }: { cartera: BacktestCartera | null }) {
   const { recs, livePrices, primas, closes, cargando, error, actualizado, refrescar } = useLivePortfolio()
+
+  // Quien llega desde `/estrategias` pide directamente el portafolio de futuros.
+  // El parámetro solo se lee al montar —cambiar de pestaña no toca la URL—, y
+  // frente al hash tiene la ventaja de que el servidor lo ve, así que no hay
+  // desajuste de hidratación.
+  const tabInicial = useSearchParams().get('tab')
+  const [tab, setTab] = useState<Tab>(esTab(tabInicial) ? tabInicial : 'acciones')
 
   const acciones = useMemo(
     () => buildStockPositions(recs, livePrices, closes),
@@ -111,7 +133,7 @@ export default function PortafoliosClient({ cartera }: { cartera: BacktestCarter
           <div>
             <h1 className="text-lg font-semibold text-text-primary">Portafolios</h1>
             <p className="text-sm text-text-secondary">
-              SynerGy — Portafolios Algorítmicos de Acciones y Opciones
+              SynerGy — Portafolios Algorítmicos de Acciones, Opciones y Futuros
             </p>
           </div>
         </div>
@@ -169,54 +191,73 @@ export default function PortafoliosClient({ cartera }: { cartera: BacktestCarter
         </KpiRow>
       </section>
 
-      {cargando && recs.length === 0 ? (
+      {/* Pestañas: mismo patrón que la sección Agentes */}
+      <div className="flex flex-wrap gap-1 rounded-xl border border-border-subtle bg-background p-1 w-fit">
+        {TABS.map(({ key, label, accent }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={[
+              'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold font-mono transition-all',
+              tab === key
+                ? 'bg-accent text-on-accent'
+                : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary',
+            ].join(' ')}
+          >
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ background: accent }}
+            />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* El bloque de futuros es estático y no depende de useLivePortfolio, así
+          que se muestra aunque falle la carga de recomendaciones. */}
+      {tab === 'futuros' ? (
+        <QuantPortfolioSection datos={cartera} />
+      ) : cargando && recs.length === 0 ? (
         <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-20 text-sm text-text-muted">
           <Loader2 size={16} className="animate-spin" />
           Cargando recomendaciones de los agentes…
         </div>
+      ) : tab === 'acciones' ? (
+        <PortfolioSection
+          titulo="Portafolio algorítmico de acciones"
+          subtitulo={`Agentes Peter y Small · ${fmtUsd(TICKET_ACCIONES, 0)} por recomendación`}
+          icono={TrendingUp}
+          acento="var(--color-positive)"
+          metrics={metricsAcciones}
+          curva={curvaAcciones}
+          serie={serieAcciones}
+          positions={acciones.positions}
+          trades={tradesAcciones}
+          slices={slices(acciones.positions)}
+          excluidas={acciones.excluidas}
+          etiquetaPrecio="Precio"
+          notaCurva={NOTA_CURVA_ACCIONES}
+          notaPastel={NOTA_PASTEL_ACCIONES}
+        />
       ) : (
-        <>
-          <PortfolioSection
-            titulo="Portafolio algorítmico de acciones"
-            subtitulo={`Agentes Peter y Small · ${fmtUsd(TICKET_ACCIONES, 0)} por recomendación`}
-            icono={TrendingUp}
-            acento="var(--color-positive)"
-            metrics={metricsAcciones}
-            curva={curvaAcciones}
-            serie={serieAcciones}
-            positions={acciones.positions}
-            trades={tradesAcciones}
-            slices={slices(acciones.positions)}
-            excluidas={acciones.excluidas}
-            etiquetaPrecio="Precio"
-            notaCurva={NOTA_CURVA_ACCIONES}
-            notaPastel={NOTA_PASTEL_ACCIONES}
-          />
-
-          <PortfolioSection
-            titulo="Portafolio algorítmico de opciones"
-            subtitulo="Agentes Gamma y Theta · 1 contrato por señal (100 acciones)"
-            icono={Zap}
-            acento="var(--color-info)"
-            metrics={metricsOpciones}
-            curva={curvaOpciones}
-            serie={serieOpciones}
-            positions={opciones.positions}
-            trades={tradesOpciones}
-            slices={slices(opciones.positions)}
-            excluidas={opciones.excluidas}
-            etiquetaPrecio="Prima"
-            notaCurva={NOTA_CURVA_OPCIONES}
-            escalonada
-            notaPastel={NOTA_PASTEL_OPCIONES}
-          />
-        </>
+        <PortfolioSection
+          titulo="Portafolio algorítmico de opciones"
+          subtitulo="Agentes Gamma y Theta · 1 contrato por señal (100 acciones)"
+          icono={Zap}
+          acento="var(--color-info)"
+          metrics={metricsOpciones}
+          curva={curvaOpciones}
+          serie={serieOpciones}
+          positions={opciones.positions}
+          trades={tradesOpciones}
+          slices={slices(opciones.positions)}
+          excluidas={opciones.excluidas}
+          etiquetaPrecio="Prima"
+          notaCurva={NOTA_CURVA_OPCIONES}
+          escalonada
+          notaPastel={NOTA_PASTEL_OPCIONES}
+        />
       )}
-
-      {/* Tercera sección: el backtest de las seis estrategias cuantitativas.
-          Es estática y no depende de useLivePortfolio, así que se muestra
-          aunque falle la carga de recomendaciones. */}
-      <QuantPortfolioSection datos={cartera} />
 
       {/* Supuestos: la cartera es derivada, conviene dejar las reglas a la vista */}
       <section className="rounded-lg border border-border bg-surface px-4 py-3">

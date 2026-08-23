@@ -21,7 +21,7 @@
 
 | # | Sección | Ruta | Subtítulo |
 |---|---|---|---|
-| 1 | Portafolios | `/portafolios` | Portafolios Algorítmicos de Acciones y Opciones |
+| 1 | Portafolios | `/portafolios` | Portafolios Algorítmicos de Acciones, Opciones y Futuros · 3 pestañas |
 | 2 | Agentes | `/agentes` | Agentes IA para Acciones y Opciones |
 | 3 | Estrategias | `/estrategias` | Seis sistemas algorítmicos de futuros sobre el Nasdaq |
 | 4 | Recomendaciones | `/recomendaciones` | Panel de Recomendaciones |

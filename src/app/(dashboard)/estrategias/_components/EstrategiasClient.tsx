@@ -197,7 +197,7 @@ export default function EstrategiasClient({ backtests }: Props) {
 
       {/* Puente a la cartera */}
       <Link
-        href="/portafolios#cartera-cuantitativa"
+        href="/portafolios?tab=futuros"
         className="group flex items-center justify-between gap-4 rounded-xl border border-border-subtle bg-surface px-4 py-4 transition-colors hover:border-border hover:bg-surface-raised"
       >
         <div className="flex min-w-0 items-start gap-3">

@@ -277,7 +277,7 @@ export function FichaEstrategia({ ficha, backtest, codigo, documentos }: Props) 
         descripcion="Qué cambia en el conjunto de seis estrategias cuando esta entra o sale."
         accion={
           <Link
-            href="/portafolios#cartera-cuantitativa"
+            href="/portafolios?tab=futuros"
             className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-text-secondary underline-offset-4 transition-colors hover:text-text-primary hover:underline"
           >
             Ver cartera
