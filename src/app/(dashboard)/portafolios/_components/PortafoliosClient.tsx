@@ -319,20 +319,39 @@ export default function PortafoliosClient({ cartera }: { cartera: BacktestCarter
         />
       )}
 
-      {/* Supuestos: la cartera es derivada, conviene dejar las reglas a la vista */}
-      <section className="rounded-lg border border-border bg-surface px-4 py-3">
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
-          Supuestos de los portafolios
-        </h3>
-        <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-text-secondary">
-          <li>· Capital asignado: {fmtUsd(CAPITAL_ACCIONES, 0)} a acciones y {fmtUsd(CAPITAL_OPCIONES, 0)} a opciones.</li>
-          <li>· Acciones: {fmtUsd(TICKET_ACCIONES, 0)} por recomendación, en cantidad fraccional al precio de entrada del agente.</li>
-          <li>· Opciones: 1 contrato por señal, equivalente a 100 acciones del subyacente.</li>
-          <li>· Benchmark: {BENCHMARK}, normalizado al mismo capital para que las curvas arranquen del mismo punto.</li>
-          <li>· Cifras brutas: no se descuentan comisiones de rendimiento ni costes de transacción.</li>
-          <li>· Las posiciones se derivan en vivo de las recomendaciones: al vender un agente, la posición sale de los gráficos y entra en el track record.</li>
-        </ul>
-      </section>
+      {/* Supuestos: la cartera es derivada, conviene dejar las reglas a la vista.
+          Como el resumen de arriba, cada pestaña trae los suyos: los de futuros
+          son los de una cuenta y un backtest distintos. */}
+      {tab === 'futuros' ? (
+        rFut && (
+          <section className="rounded-lg border border-border bg-surface px-4 py-3">
+            <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
+              Supuestos de la cartera de futuros
+            </h3>
+            <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-text-secondary">
+              <li>· Cuenta de referencia: {fmtUsd(CARTERA_META.cuenta, 0)}, con un contrato por sistema ({rFut.estrategias} sobre MNQ).</li>
+              <li>· Drawdown medido: {fmtUsd(rFut.drawdown, 0)}, el {((Math.abs(rFut.drawdown) / CARTERA_META.cuenta) * 100).toFixed(1)} % de la cuenta. Escala de forma lineal con el número de contratos.</li>
+              <li>· {CARTERA_META.estado}, {CARTERA_META.periodo}: no hay operativa real ni capital asignado.</li>
+              <li>· Sin benchmark: el resultado no se compara con {BENCHMARK}, como sí hacen las otras dos pestañas.</li>
+              <li>· Método, costes y fuente: en «Trazabilidad de la cartera», al final de esta pestaña.</li>
+            </ul>
+          </section>
+        )
+      ) : (
+        <section className="rounded-lg border border-border bg-surface px-4 py-3">
+          <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-muted">
+            Supuestos de los portafolios
+          </h3>
+          <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-text-secondary">
+            <li>· Capital asignado: {fmtUsd(CAPITAL_ACCIONES, 0)} a acciones y {fmtUsd(CAPITAL_OPCIONES, 0)} a opciones.</li>
+            <li>· Acciones: {fmtUsd(TICKET_ACCIONES, 0)} por recomendación, en cantidad fraccional al precio de entrada del agente.</li>
+            <li>· Opciones: 1 contrato por señal, equivalente a 100 acciones del subyacente.</li>
+            <li>· Benchmark: {BENCHMARK}, normalizado al mismo capital para que las curvas arranquen del mismo punto.</li>
+            <li>· Cifras brutas: no se descuentan comisiones de rendimiento ni costes de transacción.</li>
+            <li>· Las posiciones se derivan en vivo de las recomendaciones: al vender un agente, la posición sale de los gráficos y entra en el track record.</li>
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

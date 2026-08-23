@@ -112,10 +112,6 @@ decidir si migrarlas al admin o dejarlas ocultas.
 ### Sección Estrategias — cierre
 - **Recorrido visual autenticado** de `/estrategias`, las seis fichas y la nueva
   sección de `/portafolios`.
-- **«Supuestos de los portafolios» también se sale de su pestaña.** El bloque
-  final de `PortafoliosClient.tsx` está fuera del condicional de pestañas y en
-  FUTUROS habla de acciones, opciones y del benchmark SPY, que ahí no aplican.
-  Mismo tipo de fuga que ya se corrigió en el resumen de arriba.
 
 ### Rebrand SynerGy — cierre
 - **Commitear y pushear.** El rebrand está completo y verificado pero sigue en
@@ -220,6 +216,12 @@ lugar de los suyos.
 - **`QuantPortfolioSection`** — la tarjeta «Beneficio neto» pasaría a duplicar el
   «Resultado global» de la cabecera, así que la fila interna arranca ahora por
   «Estrategias 6».
+- **Supuestos por pestaña** — el bloque de cierre tenía la misma fuga: en FUTUROS
+  hablaba de acciones, opciones y del benchmark SPY. Ahora esa pestaña muestra
+  «Supuestos de la cartera de futuros»: cuenta de $50.000 con un contrato por
+  sistema, drawdown de -$4.099 (8,2 % de la cuenta, lineal con los contratos),
+  backtest en simulado y la advertencia de que no hay benchmark. El método y los
+  costes no se repiten: siguen en «Trazabilidad de la cartera».
 
 ### Cartera única del administrador y cron de revisión (2026-08-23)
 Las recomendaciones de los agentes dejan de ser privadas de cada usuario y
