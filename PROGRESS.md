@@ -7,13 +7,13 @@
 
 ## Estado actual
 
-**Último commit:** `73df0c5` (rebrand a SynerGy) · **Sin commitear: la sección Estrategias**
+**Último commit:** `444773f` (niveles de salida de Gamma y Theta)
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **357/357** |
+| `npm run test:run` | **378/378** |
 | `npm run build` | exit 0 |
 | `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
@@ -32,6 +32,16 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ---
 
 ## Pendiente
+
+### Niveles de salida — lo que queda
+- **Recorrido visual autenticado** de la columna «Salida» en las dos tablas de
+  opciones de `/recomendaciones`. El servidor efímero solo confirma que la ruta
+  responde: `/recomendaciones` y `/agentes` devuelven 307 al login, así que el
+  render de la tabla no se ha visto con datos reales.
+- **Extraer el pipeline de los agentes a una API route.** Es la condición previa
+  a cualquier automatización: mientras `run()` viva en un `onClick`, los niveles
+  solo se revisan cuando alguien entra. `exit-levels.ts` ya está escrito para que
+  un cron lo use sin tocarlo.
 
 ### Sección Estrategias — cierre
 - **Recorrido visual autenticado** de `/estrategias`, las seis fichas y la nueva
@@ -122,6 +132,36 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Niveles de salida reales para Gamma y Theta (2026-08-23)
+Gamma y Theta guardaban un objetivo y un stop que **ningún proceso leía**:
+`stop_loss` no tenía un solo lector en todo `src/`, y las posiciones se cerraban
+solo al vencimiento. La app aparentaba una protección inexistente.
+
+- **`lib/options/exit-levels.ts`** — módulo puro, sin React ni fetch, para que un
+  futuro cron lo reutilice tal cual. Gamma (long): objetivo 2,5× la prima, stop
+  0,5×. Theta (short): recompra al 0,5× de lo cobrado, stop al 2×. La comparación
+  se **invierte** en short —se gana cuando la prima baja— y ese es todo el riesgo
+  del cambio: 16 tests cubren la inversión, los bordes exactos y las primas 0 /
+  negativas / no finitas.
+- **`lib/options/review-exits.ts`** — al arrancar, cada agente pide la prima viva
+  de sus contratos abiertos a `/api/informes/option-prices` y cierra con PATCH lo
+  que ya tocó un nivel, asumiendo que la orden OCO saltó en el bróker. Comprueba
+  `res.ok` (a diferencia de `settle-picks.ts:233`). Lo que Yahoo no cotiza se deja
+  vivo y se dice en el log; **nunca se cierra a ciegas**. Los contratos ya
+  vencidos se saltan: los liquida `settleExpiredPicks` justo después, a valor
+  intrínseco.
+- **`ai_report` gana `nivelesFuente` y `side`.** Hasta ahora la misma columna
+  guardaba precio de acción en unas filas y prima por acción en otras, sin nada
+  que las separase.
+- **Columna «Salida»** en las tablas de opciones de `/recomendaciones`, calculada
+  desde la prima de entrada —no leída de la fila— para que coincida siempre con
+  lo que hace el agente, también en las filas anteriores al cambio. El guard de
+  `precio_objetivo` de las tablas de acciones pasa a `> 0`, así el 0 histórico de
+  Theta cae al guion en vez de pintarse `$0.00`.
+- **Fichas de Gamma y Theta reescritas** en «Cuándo vende»: dejan de decir que no
+  hay cierre anticipado y explican qué se revisa, cuándo, y que entre ejecuciones
+  no vigila nadie.
 
 ### Etiquetas que no correspondían al código (2026-08-23)
 Barrido posterior a las fichas técnicas, buscando lo mismo que ya se corrigió
@@ -579,7 +619,20 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
   exige 6/6 las señales son escasas, así que la muestra tarda años en ser
   significativa. Es la misma disciplina de la condición de graduación del IBS.
 - **La venta se dispara solo por deterioro de las condiciones de mercado**
-  (≥2 de 3 filtros fallando al re-ejecutar). Sin take-profit por objetivo.
+  (≥2 de 3 filtros fallando al re-ejecutar). Sin take-profit por objetivo. Esto
+  vale para las acciones (Peter y Small); las opciones sí tienen niveles.
+- **Los niveles de salida de opciones NO son un stop.** Los agentes solo corren
+  desde un `onClick`: no hay cron ni worker. El sistema calcula los niveles, dice
+  qué órdenes colocar y, al ejecutarse, refleja lo que ya ocurrió en el bróker.
+  Nombres permitidos en UI y logs: «nivel de salida», «objetivo», «revisión al
+  ejecutar». **Prohibido** «stop-loss automático» y «protección».
+- **Theta recompra al 50 % de la prima cobrada.** A partir de ahí queda poco por
+  ganar y sigue en riesgo todo lo que puede perderse: es el tramo con peor
+  relación entre ambas cosas, y cerrarlo libera capital para la siguiente venta.
+  Gamma mantiene 2,5× / 0,5×.
+- **La columna «Salida» se calcula desde la prima de entrada**, no se lee de
+  `precio_objetivo`/`stop_loss`. Así la tabla y el agente no pueden divergir, y
+  las filas guardadas antes del cambio muestran el nivel correcto.
 - **El precio de entrada es siempre el precio real de mercado.** Si falta, el
   ticker se descarta: nunca se sustituye por una proyección ni por cero.
 - **El precio de referencia de un contrato vencido es su valor intrínseco**
