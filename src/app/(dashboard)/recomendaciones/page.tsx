@@ -8,7 +8,8 @@ import { contractKey, type OptionContractRef } from '@/lib/options/occ-symbol'
 import { daysToExpiration } from '@/lib/options/pricing'
 import { hasFabricatedEntryPrice, FABRICATED_ENTRY_WARNING } from '@/lib/agentes/legacy-entry-price'
 import type { AgentRec } from '@/lib/agentes/types'
-import { optionOutcome, optionRefFromRec } from '@/lib/options/mark'
+import { optionOutcome, optionRefFromRec, type OptionSide } from '@/lib/options/mark'
+import { nivelesSalida } from '@/lib/options/exit-levels'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,33 @@ function formatDate(iso: string): string {
 function fmtNum(n: number | null | undefined): string {
   if (n == null) return 'N/D'
   return n.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const SALIDA_TOOLTIP =
+  'Niveles de salida de la posición: son las órdenes que hay que dejar puestas '
+  + 'en el bróker. El sistema los calcula y los revisa cuando el agente se '
+  + 'ejecuta; entre ejecuciones no vigila nada.'
+
+/**
+ * Niveles de salida de una recomendación de opciones, calculados desde la
+ * prima de entrada para que la tabla y el agente digan siempre lo mismo,
+ * también en las filas guardadas antes de que existieran los niveles.
+ */
+function CeldaSalida({ entrada, side }: { entrada: number | null; side: OptionSide }) {
+  const niveles = entrada != null ? nivelesSalida(side, entrada) : null
+  if (!niveles) {
+    return (
+      <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
+        <span className="text-text-muted">—</span>
+      </td>
+    )
+  }
+  return (
+    <td className="hidden px-3 py-2.5 text-right font-mono text-[10px] leading-tight lg:table-cell" title={SALIDA_TOOLTIP}>
+      <span className="block" style={{ color: 'var(--color-positive)' }}>obj ${fmtNum(niveles.objetivo)}</span>
+      <span className="block" style={{ color: 'var(--color-negative)' }}>stop ${fmtNum(niveles.stop)}</span>
+    </td>
+  )
 }
 
 /**
@@ -1244,7 +1272,7 @@ export default function RecomendacionesPage() {
                             {livePrices[rec.ticker] != null ? <span className="text-text-primary">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-text-muted">—</span>}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary lg:table-cell">
-                            {rec.precio_objetivo != null ? `$${fmtNum(rec.precio_objetivo)}` : '—'}
+                            {rec.precio_objetivo != null && rec.precio_objetivo > 0 ? `$${fmtNum(rec.precio_objetivo)}` : "—"}
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                             {(() => {
@@ -1388,7 +1416,7 @@ export default function RecomendacionesPage() {
                             {livePrices[rec.ticker] != null ? <span className="text-text-primary">{livePrices[rec.ticker]!.toFixed(2)}</span> : <span className="text-text-muted">—</span>}
                           </td>
                           <td className="hidden px-3 py-2.5 text-right font-mono text-text-secondary lg:table-cell">
-                            {rec.precio_objetivo != null ? `$${fmtNum(rec.precio_objetivo)}` : '—'}
+                            {rec.precio_objetivo != null && rec.precio_objetivo > 0 ? `$${fmtNum(rec.precio_objetivo)}` : "—"}
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">
                             {(() => {
@@ -1477,13 +1505,14 @@ export default function RecomendacionesPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[860px] text-xs">
+                  <table className="w-full min-w-[940px] text-xs">
                     <thead>
                       <tr className="border-b border-border-subtle" style={{ background: 'var(--color-background)' }}>
                         <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Ticker</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Prima</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">Prima Act.</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell" title={SALIDA_TOOLTIP}>Salida</th>
                         <th className="px-3 py-2.5 text-right font-medium text-text-secondary" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
                         <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Result. (%)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Strike</th>
@@ -1536,6 +1565,7 @@ export default function RecomendacionesPage() {
                                 ? <span className="text-text-primary">${fmtNum(outcome.valorActual)}</span>
                                 : <span className="text-text-muted">—</span>}
                             </td>
+                            <CeldaSalida entrada={rec.precio_entrada} side="long" />
                             {/* Resultado en dólares de 1 contrato = 100 acciones */}
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
                               {outcome != null ? (
@@ -1644,13 +1674,14 @@ export default function RecomendacionesPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[860px] text-xs">
+                  <table className="w-full min-w-[940px] text-xs">
                     <thead>
                       <tr className="border-b border-border-subtle" style={{ background: 'var(--color-background)' }}>
                         <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Ticker</th>
                         <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Prima</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">Prima Act.</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell" title={SALIDA_TOOLTIP}>Salida</th>
                         <th className="px-3 py-2.5 text-right font-medium text-text-secondary" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
                         <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Result. (%)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Strike</th>
@@ -1699,6 +1730,7 @@ export default function RecomendacionesPage() {
                                 ? <span className="text-text-primary">${fmtNum(outcome.valorActual)}</span>
                                 : <span className="text-text-muted">—</span>}
                             </td>
+                            <CeldaSalida entrada={rec.precio_entrada} side="short" />
                             {/* Resultado en dólares de 1 contrato = 100 acciones */}
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
                               {outcome != null ? (

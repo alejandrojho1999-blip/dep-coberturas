@@ -13,8 +13,11 @@ import { CONTRACT_MULTIPLIER } from './settlement'
 /**
  * Extrae el contrato de opción de una recomendación de agente.
  * Devuelve null si el `ai_report` no trae strike/expiración/tipo utilizables.
+ *
+ * Solo pide los dos campos que usa, para que también valga con las filas
+ * recortadas que manejan los agentes en su paso 0.
  */
-export function optionRefFromRec(rec: AgentRec): OptionContractRef | null {
+export function optionRefFromRec(rec: Pick<AgentRec, 'ticker' | 'ai_report'>): OptionContractRef | null {
   const rpt = rec.ai_report ?? {}
   const strike = rpt.strike as number | undefined
   const expiration = rpt.expiration as string | undefined

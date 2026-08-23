@@ -79,13 +79,26 @@ export const FICHA_THETA: Ficha = {
 
   cuandoVende: (
     <>
-      <strong className="text-text-primary">No hay cierre anticipado.</strong>{' '}
-      La posición se mantiene hasta el vencimiento y ahí se liquida: el vendedor
-      se queda la prima cobrada menos lo que valga ejercer el contrato contra el
-      cierre real del subyacente ese día. Si vence sin valor, la prima es
-      beneficio íntegro; si vence dentro de dinero, el resultado puede ser una
-      pérdida mayor que todo lo cobrado. No existe recompra automática para cortar
-      una pérdida en curso.
+      Cada posición lleva dos niveles calculados sobre la prima cobrada:{' '}
+      <strong className="text-text-primary">
+        recompra en la mitad de la prima
+      </strong>{' '}
+      —el objetivo— y{' '}
+      <strong className="text-text-primary">stop en el doble de la prima</strong>,
+      o sea al perder una vez lo cobrado. Se recompra al 50 % porque a partir de
+      ahí queda poco por ganar y sigue en riesgo todo lo que puede perderse: es
+      el tramo con peor relación entre una cosa y la otra, y devolverlo al
+      mercado libera el capital para la siguiente venta. Son las dos órdenes que
+      hay que dejar puestas en el bróker. Cuando el agente se ejecuta pide la
+      prima viva de cada contrato abierto y cierra en el registro el que ya haya
+      tocado un nivel, dando por hecho que la orden saltó sola en la cuenta.{' '}
+      <strong className="text-text-primary">
+        Entre una ejecución y la siguiente no vigila nadie
+      </strong>
+      : esto no es un stop automático, es una revisión al ejecutar. Lo que no
+      toca ningún nivel se mantiene hasta el vencimiento: si vence sin valor la
+      prima es beneficio íntegro, y si vence dentro de dinero el resultado puede
+      ser una pérdida mayor que todo lo cobrado.
     </>
   ),
 

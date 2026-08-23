@@ -8,6 +8,8 @@ import {
   RefreshCw, BarChart2, Filter, Layers,
 } from 'lucide-react'
 import { settleExpiredPicks } from '@/lib/options/settle-picks'
+import { reviewExitLevels } from '@/lib/options/review-exits'
+import { nivelesSalida } from '@/lib/options/exit-levels'
 import FichaTecnicaAgente from './FichaTecnicaAgente'
 import { FICHA_THETA } from './fichas/theta'
 
@@ -203,15 +205,17 @@ export default function AgenteTheta() {
         addLog('✓ Sin opciones Theta activas para re-evaluar')
       } else {
         addLog(`📋 ${activeTheta.length} opción(es) Theta activa(s)`)
-        for (const pick of activeTheta) {
-          const report = pick.ai_report ?? {}
-          const expStr = (report.expiration ?? '') as string
-          const dte = expStr ? calcDTE(expStr) : -1
-          if (dte > 0) {
-            addLog(`✓ ${pick.ticker}: DTE=${dte}d · prima cobrada $${pick.precio_entrada?.toFixed(2) ?? '?'} — vigente`)
-          }
-        }
+        // Revisión de niveles: no es vigilancia continua, solo comprueba si la
+        // orden que debía estar puesta en el bróker ya habría saltado.
+        const revision = await reviewExitLevels(activeTheta, 'short', signal, addLog)
+        const cerradas = revision.porObjetivo + revision.porStop
+        addLog(
+          cerradas
+            ? `✓ Revisión de niveles: ${cerradas} cerrada(s) — ${revision.porObjetivo} recompra(s) al 50 %, ${revision.porStop} por stop`
+            : '✓ Revisión de niveles: ninguna posición ha tocado su nivel de salida'
+        )
       }
+      if (signal.aborted) { setPhase('idle'); return }
 
       // Liquidación de contratos vencidos con el cierre real del subyacente.
       // Un put vendido que vence ITM es pérdida, no la prima íntegra que
@@ -456,6 +460,7 @@ export default function AgenteTheta() {
         if (signal.aborted) break
         const ai = t.aiResult ?? {}
         const premium = t.premium ?? 0
+        const niveles = nivelesSalida('short', premium)
 
         try {
           const sRes = await fetch('/api/agentes/picks', {
@@ -466,8 +471,8 @@ export default function AgenteTheta() {
               empresa: (ai.empresa as string) ?? t.ticker,
               category: 'OPTIONS_THETA',
               precio_entrada: parseFloat(premium.toFixed(4)),
-              precio_objetivo: 0,
-              stop_loss: parseFloat((premium * 2).toFixed(4)),
+              precio_objetivo: niveles?.objetivo ?? null,
+              stop_loss: niveles?.stop ?? null,
               direction: 'INCOME',
               riesgo: (ai.riesgo as string) ?? 'BAJO',
               timeframe: `${t.dte ?? '?'}d`,
@@ -488,6 +493,11 @@ export default function AgenteTheta() {
                 maxLoss: t.strategy === 'SELL_PUT' ? (t.strike ?? 0) - premium : null,
                 forecastReturn: t.forecastReturn,
                 conviction: t.conviction,
+                // Distingue estas filas de las de Peter/Small: aquí
+                // precio_objetivo y stop_loss son primas por acción, no
+                // precios de la acción.
+                nivelesFuente: 'exit-levels',
+                side: 'short',
               },
             }),
             signal,

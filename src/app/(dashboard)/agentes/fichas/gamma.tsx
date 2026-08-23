@@ -78,14 +78,21 @@ export const FICHA_GAMMA: Ficha = {
 
   cuandoVende: (
     <>
-      <strong className="text-text-primary">No hay venta anticipada.</strong>{' '}
-      La posición se mantiene hasta el vencimiento del contrato, y ahí se liquida
-      a su valor intrínseco contra el cierre real del subyacente ese día: lo que
-      valdría ejercerla, sin más. El objetivo y el stop que se guardan junto a
-      cada recomendación —dos veces y media la prima, y la mitad de la prima— son{' '}
-      <strong className="text-text-primary">informativos: ningún proceso los vigila</strong>{' '}
-      ni cierra la posición al tocarlos. Quien opere esto con dinero real y quiera
-      un stop tiene que ponerlo en su bróker.
+      Cada recomendación lleva dos niveles de salida calculados sobre la prima
+      pagada:{' '}
+      <strong className="text-text-primary">objetivo en 2,5 veces la prima</strong>{' '}
+      y <strong className="text-text-primary">stop en la mitad de la prima</strong>.
+      Son las dos órdenes que hay que dejar puestas en el bróker. Cuando el
+      agente se ejecuta pide la prima viva de cada contrato abierto y, si un
+      nivel ya se tocó, cierra la posición en el registro dando por hecho que la
+      orden saltó sola en la cuenta.{' '}
+      <strong className="text-text-primary">
+        Entre una ejecución y la siguiente no vigila nadie
+      </strong>
+      : esto no es un stop automático, es una revisión al ejecutar. La protección
+      real es la orden en el bróker. Lo que no toca ningún nivel se mantiene
+      hasta el vencimiento, y ahí se liquida a su valor intrínseco contra el
+      cierre real del subyacente ese día.
     </>
   ),
 

@@ -8,6 +8,8 @@ import {
   RefreshCw, Activity, Filter, Layers,
 } from 'lucide-react'
 import { settleExpiredPicks } from '@/lib/options/settle-picks'
+import { reviewExitLevels } from '@/lib/options/review-exits'
+import { nivelesSalida } from '@/lib/options/exit-levels'
 import FichaTecnicaAgente from './FichaTecnicaAgente'
 import { FICHA_GAMMA } from './fichas/gamma'
 
@@ -202,15 +204,17 @@ export default function AgenteGamma() {
         addLog('✓ Sin opciones Gamma activas para re-evaluar')
       } else {
         addLog(`📋 ${activeGamma.length} opción(es) Gamma activa(s)`)
-        for (const pick of activeGamma) {
-          const report = pick.ai_report ?? {}
-          const expStr = (report.expiration ?? '') as string
-          const dte = expStr ? calcDTE(expStr) : -1
-          if (dte > 0) {
-            addLog(`✓ ${pick.ticker}: DTE=${dte}d · prima $${pick.precio_entrada?.toFixed(2) ?? '?'} — vigente`)
-          }
-        }
+        // Revisión de niveles: no es vigilancia continua, solo comprueba si la
+        // orden que debía estar puesta en el bróker ya habría saltado.
+        const revision = await reviewExitLevels(activeGamma, 'long', signal, addLog)
+        const cerradas = revision.porObjetivo + revision.porStop
+        addLog(
+          cerradas
+            ? `✓ Revisión de niveles: ${cerradas} cerrada(s) — ${revision.porObjetivo} por objetivo, ${revision.porStop} por stop`
+            : '✓ Revisión de niveles: ninguna posición ha tocado su nivel de salida'
+        )
       }
+      if (signal.aborted) { setPhase('idle'); return }
 
       // Liquidación de contratos vencidos con el cierre real del subyacente en
       // la fecha de expiración. Incluye las posiciones que se cerraron con el
@@ -442,6 +446,7 @@ export default function AgenteGamma() {
         if (signal.aborted) break
         const ai = t.aiResult ?? {}
         const premium = t.premium ?? 0
+        const niveles = nivelesSalida('long', premium)
 
         try {
           const sRes = await fetch('/api/agentes/picks', {
@@ -452,8 +457,8 @@ export default function AgenteGamma() {
               empresa: (ai.empresa as string) ?? t.ticker,
               category: 'OPTIONS_GAMMA',
               precio_entrada: parseFloat(premium.toFixed(4)),
-              precio_objetivo: parseFloat((premium * 2.5).toFixed(4)),
-              stop_loss: parseFloat((premium * 0.5).toFixed(4)),
+              precio_objetivo: niveles?.objetivo ?? null,
+              stop_loss: niveles?.stop ?? null,
               direction: t.optionType === 'CALL' ? 'COMPRA' : 'VENTA',
               riesgo: (ai.riesgo as string) ?? 'MEDIO',
               timeframe: `${t.dte ?? '?'}d`,
@@ -473,6 +478,11 @@ export default function AgenteGamma() {
                 forecastReturn: t.forecastReturn,
                 conviction: t.conviction,
                 underlying: t.ticker,
+                // Distingue estas filas de las de Peter/Small: aquí
+                // precio_objetivo y stop_loss son primas por acción, no
+                // precios de la acción.
+                nivelesFuente: 'exit-levels',
+                side: 'long',
               },
             }),
             signal,
