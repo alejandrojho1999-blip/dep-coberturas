@@ -97,11 +97,11 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
         <>
           {/* ── KPIs ─────────────────────────────────────────────── */}
           <KpiRow>
+            {/* El beneficio neto vive en el resumen de la pestaña, arriba. */}
             <KpiCard
-              label="Beneficio neto"
-              value={fmtUsd(r.neto, 0)}
-              sub={`${fmtUsd(r.porAnio, 0)} al año`}
-              acento="var(--color-positive)"
+              label="Estrategias"
+              value={`${r.estrategias}`}
+              sub="sistemas sobre MNQ · 1 contrato"
             />
             <KpiCard
               label="Max drawdown"

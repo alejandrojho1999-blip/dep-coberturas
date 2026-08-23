@@ -112,6 +112,10 @@ decidir si migrarlas al admin o dejarlas ocultas.
 ### Sección Estrategias — cierre
 - **Recorrido visual autenticado** de `/estrategias`, las seis fichas y la nueva
   sección de `/portafolios`.
+- **«Supuestos de los portafolios» también se sale de su pestaña.** El bloque
+  final de `PortafoliosClient.tsx` está fuera del condicional de pestañas y en
+  FUTUROS habla de acciones, opciones y del benchmark SPY, que ahí no aplican.
+  Mismo tipo de fuga que ya se corrigió en el resumen de arriba.
 
 ### Rebrand SynerGy — cierre
 - **Commitear y pushear.** El rebrand está completo y verificado pero sigue en
@@ -198,6 +202,24 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Resumen propio para la pestaña FUTUROS (2026-08-23)
+El bloque de KPIs «Consolidado · ambos portafolios» estaba escrito fuera del
+condicional de pestañas de `PortafoliosClient.tsx`, así que FUTUROS mostraba el
+capital y las operaciones de las carteras en vivo ($200.000, 35 operaciones) en
+lugar de los suyos.
+
+- **Resumen por pestaña** — acciones y opciones conservan el consolidado intacto;
+  futuros estrena «Cartera de futuros · backtest 2015 – 2026» con capital
+  gestionado $50.000 (`CARTERA_META.cuenta`), valor actual $139.341, resultado
+  global +$89.341 (+178,68 %), rentabilidad anual $7.445 (14,9 % de la cuenta) y
+  3.838 operaciones de 6 estrategias. Todo sale de `cartera.json`, sin números
+  nuevos escritos a mano.
+- Si falla la carga del JSON, en FUTUROS no se pinta el resumen: el aviso de
+  error de `QuantPortfolioSection` ya cubre ese caso.
+- **`QuantPortfolioSection`** — la tarjeta «Beneficio neto» pasaría a duplicar el
+  «Resultado global» de la cabecera, así que la fila interna arranca ahora por
+  «Estrategias 6».
 
 ### Cartera única del administrador y cron de revisión (2026-08-23)
 Las recomendaciones de los agentes dejan de ser privadas de cada usuario y

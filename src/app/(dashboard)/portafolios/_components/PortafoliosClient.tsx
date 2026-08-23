@@ -15,6 +15,7 @@ import type { PortfolioPosition } from '@/lib/portafolios/types'
 import { KpiCard, KpiRow } from './KpiCard'
 import { PortfolioSection } from './PortfolioSection'
 import { QuantPortfolioSection } from './QuantPortfolioSection'
+import { CARTERA_META } from '@/lib/estrategias/cartera'
 import type { BacktestCartera } from '@/lib/estrategias/types'
 import { useLivePortfolio } from './useLivePortfolio'
 
@@ -128,6 +129,11 @@ export default function PortafoliosClient({ cartera }: { cartera: BacktestCarter
   const abiertasTotal = metricsAcciones.posicionesAbiertas + metricsOpciones.posicionesAbiertas
   const cerradasTotal = metricsAcciones.posicionesCerradas + metricsOpciones.posicionesCerradas
 
+  // ── Futuros ────────────────────────────────────────────────────────────
+  // La cartera cuantitativa no se suma a las otras dos: es un backtest sobre
+  // una cuenta propia, así que su pestaña estrena su propio resumen.
+  const rFut = cartera?.resumen ?? null
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -169,36 +175,81 @@ export default function PortafoliosClient({ cartera }: { cartera: BacktestCarter
         </div>
       )}
 
-      {/* Consolidado */}
-      <section className="rounded-xl border border-border bg-surface-raised p-px">
-        <div className="rounded-t-xl bg-surface px-4 py-2">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-primary">
-            Consolidado · ambos portafolios
-          </h2>
-        </div>
-        <KpiRow>
-          <KpiCard
-            label="Capital gestionado"
-            value={fmtUsd(capitalTotal, 0)}
-            sub={`${fmtUsd(CAPITAL_ACCIONES, 0)} acciones + ${fmtUsd(CAPITAL_OPCIONES, 0)} opciones`}
-            acento="var(--color-text-primary)"
-          />
-          <KpiCard label="Valor actual" value={fmtUsd(valorTotal, 0)} sub="capital + resultados" acento="var(--color-text-primary)" />
-          <KpiCard label="Resultado global" value={fmtUsd(pnlTotal, 0)} sub={fmtPct(rendimientoTotal)} signo={pnlTotal} />
-          <KpiCard
-            label={`vs ${BENCHMARK}`}
-            value={benchmarkPct != null ? fmtPct(rendimientoTotal - benchmarkPct) : '—'}
-            sub={benchmarkPct != null ? `${BENCHMARK} ${fmtPct(benchmarkPct)}` : 'sin histórico'}
-            signo={benchmarkPct != null ? rendimientoTotal - benchmarkPct : null}
-          />
-          <KpiCard
-            label="Operaciones"
-            value={`${abiertasTotal + cerradasTotal}`}
-            sub={`${abiertasTotal} abiertas · ${cerradasTotal} cerradas`}
-            acento="var(--color-text-primary)"
-          />
-        </KpiRow>
-      </section>
+      {/* Resumen de la pestaña activa: acciones y opciones comparten el
+          consolidado; futuros tiene cuenta y cifras propias. */}
+      {tab === 'futuros' ? (
+        rFut && (
+          <section className="rounded-xl border border-border bg-surface-raised p-px">
+            <div className="rounded-t-xl bg-surface px-4 py-2">
+              <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-primary">
+                Cartera de futuros · backtest {CARTERA_META.periodo}
+              </h2>
+            </div>
+            <KpiRow>
+              <KpiCard
+                label="Capital gestionado"
+                value={fmtUsd(CARTERA_META.cuenta, 0)}
+                sub="cuenta del backtest · MNQ"
+                acento="var(--color-text-primary)"
+              />
+              <KpiCard
+                label="Valor actual"
+                value={fmtUsd(CARTERA_META.cuenta + rFut.neto, 0)}
+                sub="capital + resultados"
+                acento="var(--color-text-primary)"
+              />
+              <KpiCard
+                label="Resultado global"
+                value={fmtUsd(rFut.neto, 0)}
+                sub={fmtPct((rFut.neto / CARTERA_META.cuenta) * 100)}
+                signo={rFut.neto}
+              />
+              <KpiCard
+                label="Rentabilidad anual"
+                value={fmtUsd(rFut.porAnio, 0)}
+                sub={`${((rFut.porAnio / CARTERA_META.cuenta) * 100).toFixed(1)} % de la cuenta`}
+                signo={rFut.porAnio}
+              />
+              <KpiCard
+                label="Operaciones"
+                value={`${rFut.operaciones}`}
+                sub={`${rFut.estrategias} estrategias · ${CARTERA_META.periodo}`}
+                acento="var(--color-text-primary)"
+              />
+            </KpiRow>
+          </section>
+        )
+      ) : (
+        <section className="rounded-xl border border-border bg-surface-raised p-px">
+          <div className="rounded-t-xl bg-surface px-4 py-2">
+            <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-primary">
+              Consolidado · ambos portafolios
+            </h2>
+          </div>
+          <KpiRow>
+            <KpiCard
+              label="Capital gestionado"
+              value={fmtUsd(capitalTotal, 0)}
+              sub={`${fmtUsd(CAPITAL_ACCIONES, 0)} acciones + ${fmtUsd(CAPITAL_OPCIONES, 0)} opciones`}
+              acento="var(--color-text-primary)"
+            />
+            <KpiCard label="Valor actual" value={fmtUsd(valorTotal, 0)} sub="capital + resultados" acento="var(--color-text-primary)" />
+            <KpiCard label="Resultado global" value={fmtUsd(pnlTotal, 0)} sub={fmtPct(rendimientoTotal)} signo={pnlTotal} />
+            <KpiCard
+              label={`vs ${BENCHMARK}`}
+              value={benchmarkPct != null ? fmtPct(rendimientoTotal - benchmarkPct) : '—'}
+              sub={benchmarkPct != null ? `${BENCHMARK} ${fmtPct(benchmarkPct)}` : 'sin histórico'}
+              signo={benchmarkPct != null ? rendimientoTotal - benchmarkPct : null}
+            />
+            <KpiCard
+              label="Operaciones"
+              value={`${abiertasTotal + cerradasTotal}`}
+              sub={`${abiertasTotal} abiertas · ${cerradasTotal} cerradas`}
+              acento="var(--color-text-primary)"
+            />
+          </KpiRow>
+        </section>
+      )}
 
       {/* Pestañas: mismo patrón que la sección Agentes */}
       <div className="flex flex-wrap gap-1 rounded-xl border border-border-subtle bg-background p-1 w-fit">
