@@ -199,6 +199,36 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Presentación «Emporium Quant Desk» (2026-08-24)
+Presentación de 31 diapositivas para inversores sobre el proyecto completo:
+los cinco operadores (Peter, Small, Gamma, Theta y el Portafolio de Futuros),
+la arquitectura técnica, la metodología de validación con el ZigZag como caso
+completo, y el portafolio conjunto frente a la suma de las partes.
+
+Ficheros en `presentacion/`:
+- `build.js` — generador con pptxgenjs. **Es la fuente de verdad**: el `.pptx` y
+  el guion se regeneran con `node presentacion/build.js`. No editar el `.pptx`
+  a mano, se sobrescribe.
+- `Emporium_Quant_Desk.pptx` — 31 diapositivas, 16:9, paleta tomada de
+  `src/components/charts/chart-theme.ts` para que coincida con la aplicación.
+- `GUION_LOCUCION.md` — qué decir en cada lámina, transición y fuente de cada
+  cifra. ~21 minutos de locución.
+
+Decisiones tomadas:
+- Las cifras se leen en tiempo de compilación de `public/estrategias/data/*.json`,
+  así que si se regeneran los datos basta con relanzar el build.
+- Las infografías PNG de Drive no se incrustaron (≈950 KB cada una): los gráficos
+  se dibujan de forma nativa con la paleta del proyecto.
+- Se mantiene el tono de los documentos internos: la lámina 18 explica por qué los
+  cuatro agentes no tienen backtest (sin fundamentales point-in-time y con sesgo de
+  supervivencia en el universo), la 30 expone la dependencia de régimen y la 31
+  deja claro el estado «Fase E — simulado, sin capital asignado».
+- Verificado con LibreOffice: las 31 láminas renderizadas y revisadas una a una.
+  Se corrigieron 8 defectos de maquetación, entre ellos cuatro tablas que tapaban
+  el contenido siguiente (láminas 22, 26, 27 y 31 — en la 27 quedaba oculta la fila
+  «PORTAFOLIO REAL») y dos gráficos cuyas etiquetas se solapaban (16 y 28), que se
+  redibujaron con formas en lugar de usar el gráfico nativo.
+
 ### Opciones partidas en dos carteras: largas y cortas (2026-08-23)
 La pestaña OPCIONES mezclaba las compras de Gamma con las ventas de Theta sobre
 un único capital de $100.000, y la cartera mostraba $254.663 desplegados con un
