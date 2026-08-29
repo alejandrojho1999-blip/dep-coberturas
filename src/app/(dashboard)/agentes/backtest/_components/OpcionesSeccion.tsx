@@ -17,7 +17,10 @@ function Panel({ titulo, descripcion, children }: {
   titulo: string; descripcion?: ReactNode; children: ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface">
+    // `min-w-0` no es decorativo: un hijo de grid tiene `min-width: auto`, así
+    // que sin esto una tabla ancha empuja la rejilla y desborda la página en vez
+    // de scrollear por dentro.
+    <section className="min-w-0 rounded-xl border border-border-subtle bg-surface">
       <header className="border-b border-border-subtle px-4 py-3">
         <h2 className="font-brand text-[11px] font-extrabold uppercase tracking-[0.14em] text-text-primary">{titulo}</h2>
         {descripcion && <p className="mt-1 max-w-3xl text-xs leading-relaxed text-text-secondary">{descripcion}</p>}

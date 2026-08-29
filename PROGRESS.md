@@ -255,6 +255,51 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Responsive de /agentes/backtest: la causa real era `min-width: auto` (2026-08-29)
+El panel «Qué aporta cada capa» ya se había pasado a tarjetas, pero el problema
+seguía: se perdía texto en horizontal. La causa no estaba en esos paneles sino
+en el contenedor.
+
+**El fallo.** Los paneles van en `grid lg:grid-cols-2`, y **un hijo de grid tiene
+`min-width: auto` por defecto**. Con eso, una tabla con `minWidth: 420` no puede
+encoger su columna: en vez de scrollear dentro de su `overflow-x-auto`, empuja la
+rejilla y **desborda la página entera**, arrastrando al panel de al lado. Por eso
+arreglar solo las capas no bastaba — quien desbordaba era la tabla de criterios,
+y se llevaba a su vecina por delante.
+
+El comentario de `Tabla` prometía «nunca desborda la página», y era falso desde
+que se metió dentro de un grid. Ahora `Panel` lleva `min-w-0` y el comentario
+dice de qué depende la promesa.
+
+**Lo demás se sigue de ahí:**
+- `TarjetaCapa` se generaliza a `TarjetaCorte`, con una columna opcional de
+  Δ CAGR: sirve igual para capas, criterios y robustez. Rejilla de 2 columnas en
+  móvil y 4 desde `sm`.
+- «Qué aporta cada criterio» y «Robustez» pasan de tabla a esas tarjetas. Los
+  nombres de criterio son frases largas en castellano y en una celda se partían
+  letra a letra.
+- «La muestra» y «Paridad con el screener» pasan a `ListaDatos`, una lista de
+  pares etiqueta/valor: eran tablas de dos columnas cuyo `min={320}` forzaba
+  scroll para enseñar dos datos. Ahora la etiqueta envuelve y el valor queda a la
+  derecha.
+- El mismo `min-w-0` se aplica al `Panel` de la sección de opciones.
+
+Tras el cambio, **ningún panel dentro de rejilla de dos columnas contiene ya una
+tabla ancha**. Las dos que quedan —tramos anuales y comparativa de corridas— van
+a ancho completo, donde su scroll interno sí funciona.
+
+Verificado: lint limpio, tsc sin errores, 614 tests, build correcto.
+
+**Nota sobre la verificación:** no pude medir el desbordamiento en un navegador
+real. La pantalla exige sesión y Playwright no está instalado en el proyecto
+(solo disponible vía `npx` global). Intenté desactivar temporalmente la
+protección de `/agentes` en `src/proxy.ts` para medirla y **el clasificador lo
+bloqueó, con razón**: tocar la autenticación para una prueba de CSS no compensa
+el riesgo de dejarla desactivada por olvido. La comprobación es estructural —que
+ningún panel en rejilla contenga ya una tabla con ancho mínimo—, no una medida
+de píxeles.
+
+
 ### Dataset descargable para Gamma y Theta (2026-08-29)
 La sección de opciones enseñaba conclusiones pero no dejaba llevarse los datos:
 el dataset descargable solo cubría Peter y Small. Ahora cubre los cuatro agentes.
