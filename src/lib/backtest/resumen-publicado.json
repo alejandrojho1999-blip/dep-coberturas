@@ -1,0 +1,1924 @@
+{
+  "generado": "2026-08-29T14:38:58.425Z",
+  "ventana": {
+    "desde": "2024-04-30",
+    "hasta": "2026-08-26",
+    "nMeses": 28
+  },
+  "variantes": [
+    {
+      "id": "peter",
+      "agente": "Peter",
+      "universo": "large_cap",
+      "capas": "lynch+tecnico",
+      "capasDescripcion": "cascada completa (Lynch + forecast + momentum)",
+      "generado": "2026-08-27T02:57:36.538Z",
+      "muestra": {
+        "tickersDeclarados": 443,
+        "tickersConDatos": 424,
+        "tickersSinPrecios": 67,
+        "sesgoSupervivenciaPct": 8.93,
+        "medianaEjerciciosConDatos": 4,
+        "desde": "2024-04-30",
+        "hasta": "2026-08-26",
+        "nRebalanceos": 29,
+        "mesesInicialesEnLiquidez": 0
+      },
+      "base": {
+        "nPeriodos": 28,
+        "retornoTotal": 0.359264,
+        "cagr": 0.140592,
+        "volatilidadAnual": 0.132797,
+        "sharpe": 0.720931,
+        "maxDrawdown": 0.11932,
+        "retornoActivoMedio": -0.005011,
+        "trackingError": 0.140003,
+        "informationRatio": -0.429518,
+        "beta": 0.43099,
+        "alphaAnual": 0.054164,
+        "tStat": -0.6857,
+        "pValor": 0.4929,
+        "nOperaciones": 116,
+        "hitRate": 0.560345,
+        "posicionesMedias": 15.48
+      },
+      "benchmark": {
+        "ticker": "SPY",
+        "retornoTotal": 0.567285,
+        "cagr": 0.212369,
+        "volatilidadAnual": 0.119337,
+        "sharpe": 1.306142,
+        "maxDrawdown": 0.07579
+      },
+      "mercadoAmplio": null,
+      "ventaja": {
+        "tStat": -0.6857,
+        "pValor": 0.4929,
+        "bootstrapPValor": 0.7493,
+        "deflatedSharpeProbabilidad": 0.6236,
+        "sharpeEsperadoPorAzar": 0.5045,
+        "nConfiguracionesProbadas": 19
+      },
+      "control": {
+        "nCarteras": 200,
+        "cagrBase": 0.140592,
+        "cagrControlMediano": 0.186699,
+        "percentil": 1.5
+      },
+      "subperiodos": [
+        {
+          "nombre": "2022 (mercado bajista)",
+          "nPeriodos": 0,
+          "retornoAcumulado": null,
+          "retornoActivoMedio": null
+        },
+        {
+          "nombre": "2023",
+          "nPeriodos": 0,
+          "retornoAcumulado": null,
+          "retornoActivoMedio": null
+        },
+        {
+          "nombre": "2024",
+          "nPeriodos": 8,
+          "retornoAcumulado": 0.161104,
+          "retornoActivoMedio": -0.001302
+        },
+        {
+          "nombre": "2025",
+          "nPeriodos": 12,
+          "retornoAcumulado": 0.229325,
+          "retornoActivoMedio": 0.003644
+        },
+        {
+          "nombre": "2026 en adelante",
+          "nPeriodos": 8,
+          "retornoAcumulado": -0.047718,
+          "retornoActivoMedio": -0.021703
+        }
+      ],
+      "porCapa": {
+        "solo_lynch": {
+          "cagr": 0.166738,
+          "sharpe": 1.004336,
+          "informationRatio": -0.35795
+        },
+        "solo_tecnico": {
+          "cagr": 0.203082,
+          "sharpe": 1.224998,
+          "informationRatio": -0.070294
+        },
+        "cascada": {
+          "cagr": 0.140592,
+          "sharpe": 0.720931,
+          "informationRatio": -0.429518
+        }
+      },
+      "leaveOneOut": {
+        "sin_pe_historico": {
+          "cagr": 0.370142,
+          "sharpe": 1.524252,
+          "informationRatio": 0.974432
+        },
+        "sin_pe_proyectado": {
+          "cagr": 0.161204,
+          "sharpe": 0.895593,
+          "informationRatio": -0.335343
+        },
+        "sin_deuda_capital": {
+          "cagr": 0.169534,
+          "sharpe": 0.979707,
+          "informationRatio": -0.254422
+        },
+        "sin_crecimiento_eps": {
+          "cagr": 0.174009,
+          "sharpe": 0.969332,
+          "informationRatio": -0.242792
+        },
+        "sin_peg": {
+          "cagr": 0.140592,
+          "sharpe": 0.720931,
+          "informationRatio": -0.429518
+        },
+        "sin_market_cap": {
+          "cagr": 0.141065,
+          "sharpe": 0.7244,
+          "informationRatio": -0.426839
+        }
+      },
+      "robustez": {
+        "sin_costes": {
+          "cagr": 0.144472,
+          "sharpe": 0.746676,
+          "informationRatio": -0.405747
+        },
+        "ponderado_por_capitalizacion": {
+          "cagr": 0.136345,
+          "sharpe": 0.643464,
+          "informationRatio": -0.38811
+        },
+        "criterios_limpios_sin_proxy": {
+          "cagr": 0.161204,
+          "sharpe": 0.895593,
+          "informationRatio": -0.335343
+        },
+        "umbrales_20pct_mas_laxos": {
+          "cagr": 0.183842,
+          "sharpe": 1.033048,
+          "informationRatio": -0.165826
+        },
+        "umbrales_20pct_mas_estrictos": {
+          "cagr": 0.25139,
+          "sharpe": 1.322562,
+          "informationRatio": 0.24211
+        }
+      },
+      "curvas": {
+        "cartera": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0401
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0091
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.0689
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.0995
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1237
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.1501
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.243
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.1611
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.2418
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.2311
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.2184
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 1.1915
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.1835
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.2553
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.2626
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.3397
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.364
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.3638
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.4078
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.4274
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.4279
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.4344
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.3406
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.356
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.29
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.2632
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.324
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.3593
+          }
+        ],
+        "benchmark": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0506
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0876
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.1008
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.1265
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1502
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.1399
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.2079
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.1789
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.2105
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.1951
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.1286
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 1.1188
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.1891
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.2502
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.279
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.3052
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.3517
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.3839
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.3866
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.3877
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.4082
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.396
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.3271
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.4665
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.5437
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.5278
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.5283
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.5673
+          }
+        ],
+        "mercadoAmplio": null
+      },
+      "paridad": {
+        "comparados": 424,
+        "jaccard": 0.2444,
+        "acuerdoPorCriterio": {
+          "pe_historico": 0.8632,
+          "pe_proyectado": 0.7571,
+          "deuda_capital": 0.9033,
+          "crecimiento_eps": 0.9387,
+          "peg": 0.4623,
+          "market_cap": 0.967
+        }
+      }
+    },
+    {
+      "id": "peter-lynch",
+      "agente": "Peter",
+      "universo": "large_cap",
+      "capas": "lynch",
+      "capasDescripcion": "solo screener Lynch (sin capas técnicas)",
+      "generado": "2026-08-27T02:59:09.026Z",
+      "muestra": {
+        "tickersDeclarados": 443,
+        "tickersConDatos": 424,
+        "tickersSinPrecios": 67,
+        "sesgoSupervivenciaPct": 8.93,
+        "medianaEjerciciosConDatos": 4,
+        "desde": "2024-04-30",
+        "hasta": "2026-08-26",
+        "nRebalanceos": 29,
+        "mesesInicialesEnLiquidez": 0
+      },
+      "base": {
+        "nPeriodos": 28,
+        "retornoTotal": 0.433083,
+        "cagr": 0.166738,
+        "volatilidadAnual": 0.116131,
+        "sharpe": 1.004336,
+        "maxDrawdown": 0.068363,
+        "retornoActivoMedio": -0.00327,
+        "trackingError": 0.109616,
+        "informationRatio": -0.35795,
+        "beta": 0.551631,
+        "alphaAnual": 0.050827,
+        "tStat": -0.6561,
+        "pValor": 0.5117,
+        "nOperaciones": 441,
+        "hitRate": 0.469388,
+        "posicionesMedias": 40.79
+      },
+      "benchmark": {
+        "ticker": "SPY",
+        "retornoTotal": 0.567285,
+        "cagr": 0.212369,
+        "volatilidadAnual": 0.119337,
+        "sharpe": 1.306142,
+        "maxDrawdown": 0.07579
+      },
+      "mercadoAmplio": null,
+      "ventaja": {
+        "tStat": -0.6561,
+        "pValor": 0.5117,
+        "bootstrapPValor": 0.6104,
+        "deflatedSharpeProbabilidad": 0.8471,
+        "sharpeEsperadoPorAzar": 0.3113,
+        "nConfiguracionesProbadas": 19
+      },
+      "control": {
+        "nCarteras": 200,
+        "cagrBase": 0.166738,
+        "cagrControlMediano": 0.174278,
+        "percentil": 24.5
+      },
+      "subperiodos": [
+        {
+          "nombre": "2022 (mercado bajista)",
+          "nPeriodos": 0,
+          "retornoAcumulado": null,
+          "retornoActivoMedio": null
+        },
+        {
+          "nombre": "2023",
+          "nPeriodos": 0,
+          "retornoAcumulado": null,
+          "retornoActivoMedio": null
+        },
+        {
+          "nombre": "2024",
+          "nPeriodos": 8,
+          "retornoAcumulado": 0.085355,
+          "retornoActivoMedio": -0.010156
+        },
+        {
+          "nombre": "2025",
+          "nPeriodos": 12,
+          "retornoAcumulado": 0.192461,
+          "retornoActivoMedio": 0.001028
+        },
+        {
+          "nombre": "2026 en adelante",
+          "nPeriodos": 8,
+          "retornoAcumulado": 0.107274,
+          "retornoActivoMedio": -0.002831
+        }
+      ],
+      "porCapa": {
+        "solo_lynch": {
+          "cagr": 0.166738,
+          "sharpe": 1.004336,
+          "informationRatio": -0.35795
+        },
+        "solo_tecnico": {
+          "cagr": 0.203082,
+          "sharpe": 1.224998,
+          "informationRatio": -0.070294
+        }
+      },
+      "leaveOneOut": {
+        "sin_pe_historico": {
+          "cagr": 0.223387,
+          "sharpe": 1.389775,
+          "informationRatio": 0.103591
+        },
+        "sin_pe_proyectado": {
+          "cagr": 0.195316,
+          "sharpe": 1.215674,
+          "informationRatio": -0.135077
+        },
+        "sin_deuda_capital": {
+          "cagr": 0.191712,
+          "sharpe": 1.230553,
+          "informationRatio": -0.164083
+        },
+        "sin_crecimiento_eps": {
+          "cagr": 0.150095,
+          "sharpe": 0.879639,
+          "informationRatio": -0.497467
+        },
+        "sin_peg": {
+          "cagr": 0.166738,
+          "sharpe": 1.004336,
+          "informationRatio": -0.35795
+        },
+        "sin_market_cap": {
+          "cagr": 0.16782,
+          "sharpe": 1.012593,
+          "informationRatio": -0.34941
+        }
+      },
+      "robustez": {
+        "sin_costes": {
+          "cagr": 0.171734,
+          "sharpe": 1.042391,
+          "informationRatio": -0.319218
+        },
+        "ponderado_por_capitalizacion": {
+          "cagr": 0.2411,
+          "sharpe": 1.338527,
+          "informationRatio": 0.185125
+        },
+        "criterios_limpios_sin_proxy": {
+          "cagr": 0.195316,
+          "sharpe": 1.215674,
+          "informationRatio": -0.135077
+        },
+        "umbrales_20pct_mas_laxos": {
+          "cagr": 0.202663,
+          "sharpe": 1.258164,
+          "informationRatio": -0.077539
+        },
+        "umbrales_20pct_mas_estrictos": {
+          "cagr": 0.183558,
+          "sharpe": 0.995146,
+          "informationRatio": -0.177709
+        }
+      },
+      "curvas": {
+        "cartera": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0398
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0211
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.0844
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.0821
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1078
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.0852
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.1417
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.0854
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.1287
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.1082
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.0874
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 1.0637
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.1211
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.1706
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.1703
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.2432
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.2639
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.2541
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.2857
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.2942
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.3028
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.2975
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.233
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.2574
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.2753
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.2688
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.3526
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.4331
+          }
+        ],
+        "benchmark": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0506
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0876
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.1008
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.1265
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1502
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.1399
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.2079
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.1789
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.2105
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.1951
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.1286
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 1.1188
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.1891
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.2502
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.279
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.3052
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.3517
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.3839
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.3866
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.3877
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.4082
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.396
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.3271
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.4665
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.5437
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.5278
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.5283
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.5673
+          }
+        ],
+        "mercadoAmplio": null
+      },
+      "paridad": {
+        "comparados": 424,
+        "jaccard": 0.2444,
+        "acuerdoPorCriterio": {
+          "pe_historico": 0.8632,
+          "pe_proyectado": 0.7571,
+          "deuda_capital": 0.9033,
+          "crecimiento_eps": 0.9387,
+          "peg": 0.4623,
+          "market_cap": 0.967
+        }
+      }
+    },
+    {
+      "id": "small",
+      "agente": "Small",
+      "universo": "small_cap",
+      "capas": "lynch+tecnico",
+      "capasDescripcion": "cascada completa (Lynch + forecast + momentum)",
+      "generado": "2026-08-27T02:59:58.327Z",
+      "muestra": {
+        "tickersDeclarados": 307,
+        "tickersConDatos": 259,
+        "tickersSinPrecios": 67,
+        "sesgoSupervivenciaPct": 8.93,
+        "medianaEjerciciosConDatos": 4,
+        "desde": "2024-04-30",
+        "hasta": "2026-08-26",
+        "nRebalanceos": 29,
+        "mesesInicialesEnLiquidez": 0
+      },
+      "base": {
+        "nPeriodos": 28,
+        "retornoTotal": 0.48082,
+        "cagr": 0.183239,
+        "volatilidadAnual": 0.173153,
+        "sharpe": 0.800892,
+        "maxDrawdown": 0.135686,
+        "retornoActivoMedio": 0.000492,
+        "trackingError": 0.092045,
+        "informationRatio": 0.064104,
+        "beta": 0.84391,
+        "alphaAnual": 0.03365,
+        "tStat": 0.0951,
+        "pValor": 0.9243,
+        "nOperaciones": 214,
+        "hitRate": 0.485981,
+        "posicionesMedias": 27.03
+      },
+      "benchmark": {
+        "ticker": "IJR",
+        "retornoTotal": 0.458985,
+        "cagr": 0.17573,
+        "volatilidadAnual": 0.17684,
+        "sharpe": 0.750829,
+        "maxDrawdown": 0.198834
+      },
+      "mercadoAmplio": {
+        "ticker": "SPY",
+        "retornoTotal": 0.567285,
+        "cagr": 0.212369,
+        "volatilidadAnual": 0.119337,
+        "sharpe": 1.306142,
+        "maxDrawdown": 0.07579
+      },
+      "ventaja": {
+        "tStat": 0.0951,
+        "pValor": 0.9243,
+        "bootstrapPValor": 0.3596,
+        "deflatedSharpeProbabilidad": 0.8149,
+        "sharpeEsperadoPorAzar": 0.2024,
+        "nConfiguracionesProbadas": 19
+      },
+      "control": {
+        "nCarteras": 200,
+        "cagrBase": 0.183239,
+        "cagrControlMediano": 0.182027,
+        "percentil": 53.5
+      },
+      "subperiodos": [
+        {
+          "nombre": "2022 (mercado bajista)",
+          "nPeriodos": 0,
+          "retornoAcumulado": null,
+          "retornoActivoMedio": null
+        },
+        {
+          "nombre": "2023",
+          "nPeriodos": 0,
+          "retornoAcumulado": null,
+          "retornoActivoMedio": null
+        },
+        {
+          "nombre": "2024",
+          "nPeriodos": 8,
+          "retornoAcumulado": 0.114942,
+          "retornoActivoMedio": -0.000362
+        },
+        {
+          "nombre": "2025",
+          "nPeriodos": 12,
+          "retornoAcumulado": 0.165339,
+          "retornoActivoMedio": 0.007719
+        },
+        {
+          "nombre": "2026 en adelante",
+          "nPeriodos": 8,
+          "retornoAcumulado": 0.139719,
+          "retornoActivoMedio": -0.009496
+        }
+      ],
+      "porCapa": {
+        "solo_lynch": {
+          "cagr": 0.220554,
+          "sharpe": 0.943202,
+          "informationRatio": 0.565255
+        },
+        "solo_tecnico": {
+          "cagr": 0.169142,
+          "sharpe": 0.705823,
+          "informationRatio": -0.09263
+        },
+        "cascada": {
+          "cagr": 0.183239,
+          "sharpe": 0.800892,
+          "informationRatio": 0.064104
+        }
+      },
+      "leaveOneOut": {
+        "sin_pe_historico": {
+          "cagr": 0.194271,
+          "sharpe": 0.834332,
+          "informationRatio": 0.146402
+        },
+        "sin_pe_proyectado": {
+          "cagr": 0.178514,
+          "sharpe": 0.750991,
+          "informationRatio": 0.028561
+        },
+        "sin_deuda_capital": {
+          "cagr": 0.188097,
+          "sharpe": 0.801747,
+          "informationRatio": 0.089074
+        },
+        "sin_crecimiento_eps": {
+          "cagr": 0.163675,
+          "sharpe": 0.701115,
+          "informationRatio": -0.106735
+        },
+        "sin_peg": {
+          "cagr": 0.165608,
+          "sharpe": 0.709978,
+          "informationRatio": -0.087066
+        },
+        "sin_market_cap": {
+          "cagr": 0.201692,
+          "sharpe": 0.860949,
+          "informationRatio": 0.187522
+        }
+      },
+      "robustez": {
+        "sin_costes": {
+          "cagr": 0.187201,
+          "sharpe": 0.820244,
+          "informationRatio": 0.100796
+        },
+        "ponderado_por_capitalizacion": {
+          "cagr": 0.242469,
+          "sharpe": 1.060886,
+          "informationRatio": 0.552205
+        },
+        "criterios_limpios_sin_proxy": {
+          "cagr": 0.159257,
+          "sharpe": 0.666152,
+          "informationRatio": -0.147705
+        },
+        "umbrales_20pct_mas_laxos": {
+          "cagr": 0.176365,
+          "sharpe": 0.752738,
+          "informationRatio": 0.007222
+        },
+        "umbrales_20pct_mas_estrictos": {
+          "cagr": 0.191977,
+          "sharpe": 0.818582,
+          "informationRatio": 0.150971
+        }
+      },
+      "curvas": {
+        "cartera": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0748
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.036
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.1677
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.1559
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.14
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.1318
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.2424
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.1149
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.1428
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.1349
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.0738
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 1.1059
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.1514
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.1919
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.1848
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.2559
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.2483
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.2195
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.2628
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.2993
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.3623
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.3272
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.2698
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.3397
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.3292
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.4516
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.479
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.4808
+          }
+        ],
+        "benchmark": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0504
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0255
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.1378
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.1201
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1295
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.1001
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.2219
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.123
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.1544
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.0896
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.0223
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 0.9789
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.0302
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.0724
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.0821
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.1583
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.1704
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.1602
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.1905
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.1892
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.257
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.2834
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.232
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.3588
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.3742
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.4743
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.446
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.459
+          }
+        ],
+        "mercadoAmplio": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0506
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0876
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.1008
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.1265
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1502
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.1399
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.2079
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.1789
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.2105
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.1951
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.1286
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 1.1188
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.1891
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.2502
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.279
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.3052
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.3517
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.3839
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.3866
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.3877
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.4082
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.396
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.3271
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.4665
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.5437
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.5278
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.5283
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.5673
+          }
+        ]
+      },
+      "paridad": {
+        "comparados": 258,
+        "jaccard": 0.4862,
+        "acuerdoPorCriterio": {
+          "pe_historico": 0.8837,
+          "pe_proyectado": 0.6705,
+          "deuda_capital": 0.9341,
+          "crecimiento_eps": 0.9496,
+          "peg": 0.5465,
+          "market_cap": 0.9922
+        }
+      }
+    },
+    {
+      "id": "small-lynch",
+      "agente": "Small",
+      "universo": "small_cap",
+      "capas": "lynch",
+      "capasDescripcion": "solo screener Lynch (sin capas técnicas)",
+      "generado": "2026-08-27T03:01:36.663Z",
+      "muestra": {
+        "tickersDeclarados": 307,
+        "tickersConDatos": 259,
+        "tickersSinPrecios": 67,
+        "sesgoSupervivenciaPct": 8.93,
+        "medianaEjerciciosConDatos": 4,
+        "desde": "2024-04-30",
+        "hasta": "2026-08-26",
+        "nRebalanceos": 29,
+        "mesesInicialesEnLiquidez": 0
+      },
+      "base": {
+        "nPeriodos": 28,
+        "retornoTotal": 0.592086,
+        "cagr": 0.220554,
+        "volatilidadAnual": 0.181794,
+        "sharpe": 0.943202,
+        "maxDrawdown": 0.138933,
+        "retornoActivoMedio": 0.003224,
+        "trackingError": 0.06845,
+        "informationRatio": 0.565255,
+        "beta": 0.953492,
+        "alphaAnual": 0.04696,
+        "tStat": 0.818,
+        "pValor": 0.4134,
+        "nOperaciones": 793,
+        "hitRate": 0.484237,
+        "posicionesMedias": 78.66
+      },
+      "benchmark": {
+        "ticker": "IJR",
+        "retornoTotal": 0.458985,
+        "cagr": 0.17573,
+        "volatilidadAnual": 0.17684,
+        "sharpe": 0.750829,
+        "maxDrawdown": 0.198834
+      },
+      "mercadoAmplio": {
+        "ticker": "SPY",
+        "retornoTotal": 0.567285,
+        "cagr": 0.212369,
+        "volatilidadAnual": 0.119337,
+        "sharpe": 1.306142,
+        "maxDrawdown": 0.07579
+      },
+      "ventaja": {
+        "tStat": 0.818,
+        "pValor": 0.4134,
+        "bootstrapPValor": 0.1189,
+        "deflatedSharpeProbabilidad": 0.8863,
+        "sharpeEsperadoPorAzar": 0.1668,
+        "nConfiguracionesProbadas": 19
+      },
+      "control": {
+        "nCarteras": 200,
+        "cagrBase": 0.220554,
+        "cagrControlMediano": 0.191808,
+        "percentil": 99.5
+      },
+      "subperiodos": [
+        {
+          "nombre": "2022 (mercado bajista)",
+          "nPeriodos": 0,
+          "retornoAcumulado": null,
+          "retornoActivoMedio": null
+        },
+        {
+          "nombre": "2023",
+          "nPeriodos": 0,
+          "retornoAcumulado": null,
+          "retornoActivoMedio": null
+        },
+        {
+          "nombre": "2024",
+          "nPeriodos": 8,
+          "retornoAcumulado": 0.147372,
+          "retornoActivoMedio": 0.003142
+        },
+        {
+          "nombre": "2025",
+          "nPeriodos": 12,
+          "retornoAcumulado": 0.167801,
+          "retornoActivoMedio": 0.008134
+        },
+        {
+          "nombre": "2026 en adelante",
+          "nPeriodos": 8,
+          "retornoAcumulado": 0.18821,
+          "retornoActivoMedio": -0.004058
+        }
+      ],
+      "porCapa": {
+        "solo_lynch": {
+          "cagr": 0.220554,
+          "sharpe": 0.943202,
+          "informationRatio": 0.565255
+        },
+        "solo_tecnico": {
+          "cagr": 0.169142,
+          "sharpe": 0.705823,
+          "informationRatio": -0.09263
+        }
+      },
+      "leaveOneOut": {
+        "sin_pe_historico": {
+          "cagr": 0.223752,
+          "sharpe": 0.954816,
+          "informationRatio": 0.550308
+        },
+        "sin_pe_proyectado": {
+          "cagr": 0.226011,
+          "sharpe": 0.947002,
+          "informationRatio": 0.539021
+        },
+        "sin_deuda_capital": {
+          "cagr": 0.224797,
+          "sharpe": 0.949722,
+          "informationRatio": 0.499266
+        },
+        "sin_crecimiento_eps": {
+          "cagr": 0.212493,
+          "sharpe": 0.911858,
+          "informationRatio": 0.421319
+        },
+        "sin_peg": {
+          "cagr": 0.207311,
+          "sharpe": 0.883531,
+          "informationRatio": 0.350682
+        },
+        "sin_market_cap": {
+          "cagr": 0.23166,
+          "sharpe": 1.025429,
+          "informationRatio": 0.660673
+        }
+      },
+      "robustez": {
+        "sin_costes": {
+          "cagr": 0.225317,
+          "sharpe": 0.964526,
+          "informationRatio": 0.622547
+        },
+        "ponderado_por_capitalizacion": {
+          "cagr": 0.24279,
+          "sharpe": 1.080931,
+          "informationRatio": 0.811173
+        },
+        "criterios_limpios_sin_proxy": {
+          "cagr": 0.22172,
+          "sharpe": 0.959176,
+          "informationRatio": 0.642431
+        },
+        "umbrales_20pct_mas_laxos": {
+          "cagr": 0.213063,
+          "sharpe": 0.912361,
+          "informationRatio": 0.498662
+        },
+        "umbrales_20pct_mas_estrictos": {
+          "cagr": 0.222768,
+          "sharpe": 0.93225,
+          "informationRatio": 0.590969
+        }
+      },
+      "curvas": {
+        "cartera": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0606
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0386
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.1834
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.1694
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1565
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.133
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.2545
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.1474
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.187
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.1547
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.1088
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 1.0802
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.144
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.1961
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.1932
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.2849
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.2753
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.242
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.308
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.3399
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.4127
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.4056
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.3403
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.442
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.4028
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.5288
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.5716
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.5921
+          }
+        ],
+        "benchmark": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0504
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0255
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.1378
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.1201
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1295
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.1001
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.2219
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.123
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.1544
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.0896
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.0223
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 0.9789
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.0302
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.0724
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.0821
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.1583
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.1704
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.1602
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.1905
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.1892
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.257
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.2834
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.232
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.3588
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.3742
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.4743
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.446
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.459
+          }
+        ],
+        "mercadoAmplio": [
+          {
+            "fecha": "2024-04-30",
+            "valor": 1
+          },
+          {
+            "fecha": "2024-05-31",
+            "valor": 1.0506
+          },
+          {
+            "fecha": "2024-06-28",
+            "valor": 1.0876
+          },
+          {
+            "fecha": "2024-07-31",
+            "valor": 1.1008
+          },
+          {
+            "fecha": "2024-08-30",
+            "valor": 1.1265
+          },
+          {
+            "fecha": "2024-09-30",
+            "valor": 1.1502
+          },
+          {
+            "fecha": "2024-10-31",
+            "valor": 1.1399
+          },
+          {
+            "fecha": "2024-11-29",
+            "valor": 1.2079
+          },
+          {
+            "fecha": "2024-12-31",
+            "valor": 1.1789
+          },
+          {
+            "fecha": "2025-01-31",
+            "valor": 1.2105
+          },
+          {
+            "fecha": "2025-02-28",
+            "valor": 1.1951
+          },
+          {
+            "fecha": "2025-03-31",
+            "valor": 1.1286
+          },
+          {
+            "fecha": "2025-04-30",
+            "valor": 1.1188
+          },
+          {
+            "fecha": "2025-05-30",
+            "valor": 1.1891
+          },
+          {
+            "fecha": "2025-06-30",
+            "valor": 1.2502
+          },
+          {
+            "fecha": "2025-07-31",
+            "valor": 1.279
+          },
+          {
+            "fecha": "2025-08-29",
+            "valor": 1.3052
+          },
+          {
+            "fecha": "2025-09-30",
+            "valor": 1.3517
+          },
+          {
+            "fecha": "2025-10-31",
+            "valor": 1.3839
+          },
+          {
+            "fecha": "2025-11-28",
+            "valor": 1.3866
+          },
+          {
+            "fecha": "2025-12-31",
+            "valor": 1.3877
+          },
+          {
+            "fecha": "2026-01-30",
+            "valor": 1.4082
+          },
+          {
+            "fecha": "2026-02-27",
+            "valor": 1.396
+          },
+          {
+            "fecha": "2026-03-31",
+            "valor": 1.3271
+          },
+          {
+            "fecha": "2026-04-30",
+            "valor": 1.4665
+          },
+          {
+            "fecha": "2026-05-29",
+            "valor": 1.5437
+          },
+          {
+            "fecha": "2026-06-30",
+            "valor": 1.5278
+          },
+          {
+            "fecha": "2026-07-31",
+            "valor": 1.5283
+          },
+          {
+            "fecha": "2026-08-26",
+            "valor": 1.5673
+          }
+        ]
+      },
+      "paridad": {
+        "comparados": 258,
+        "jaccard": 0.4862,
+        "acuerdoPorCriterio": {
+          "pe_historico": 0.8837,
+          "pe_proyectado": 0.6705,
+          "deuda_capital": 0.9341,
+          "crecimiento_eps": 0.9496,
+          "peg": 0.5465,
+          "market_cap": 0.9922
+        }
+      }
+    }
+  ]
+}

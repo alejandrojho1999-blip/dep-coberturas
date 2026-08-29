@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Ficha } from './tipos'
 
 /**
@@ -104,14 +105,44 @@ export const FICHA_SMALL: Ficha = {
 
   validacion: [
     {
-      id: 'sin-backtest',
+      id: 'backtest-hecho',
       texto: (
         <>
-          <strong style={{ color: 'var(--color-warning)' }}>Este agente no tiene backtest.</strong>{' '}
-          Su respaldo hoy es el historial en vivo que se acumula desde la primera
-          recomendación guardada, visible en la sección Portafolios y comparado
-          contra el S&amp;P&nbsp;500. Es un registro real y sin retoques, pero
-          todavía corto.
+          <strong className="text-text-primary">Este agente sí tiene backtest</strong>, y es el
+          único de los cuatro cuyo resultado apunta en la dirección de la tesis. Medido contra
+          IJR —el S&amp;P&nbsp;600, que es de donde sale su universo— el screener Lynch sin
+          capas técnicas rinde un{' '}
+          <strong className="text-text-primary">22,06 % anual frente al 17,57 % del índice</strong>,
+          con <em>information ratio</em> +0,57 y percentil 99,5 sobre 200 carteras aleatorias
+          emparejadas por sector y decil de tamaño.{' '}
+          <Link href="/agentes/backtest" className="underline underline-offset-2 hover:text-text-primary">
+            Ver el backtest completo
+          </Link>.
+        </>
+      ),
+    },
+    {
+      id: 'benchmark-correcto',
+      texto: (
+        <>
+          El índice de referencia importa tanto como el resultado: contra el S&amp;P&nbsp;500
+          este mismo agente sale con IR −0,31, y contra IJR sale +0,57. Comparar una cartera de
+          pequeña capitalización con el índice grande{' '}
+          <strong className="text-text-primary">mide el segmento, no la selección</strong>. La
+          cascada de producción, con sus capas técnicas, se queda en 18,32 % e IR +0,06:
+          prácticamente el índice.
+        </>
+      ),
+    },
+    {
+      id: 'no-concluyente',
+      texto: (
+        <>
+          <strong style={{ color: 'var(--color-warning)' }}>No es una demostración.</strong>{' '}
+          La ventana utilizable es de 28 meses —el criterio de crecimiento necesita dos
+          ejercicios anuales y la fuente gratuita solo da cuatro, uno de ellos incompleto— y con
+          esa muestra el t-stat es 0,82 frente al umbral convencional de 2,0. Es un indicio
+          consistente en un solo régimen de mercado, no una ventaja probada.
         </>
       ),
     },
@@ -119,23 +150,23 @@ export const FICHA_SMALL: Ficha = {
       id: 'sesgo-supervivencia',
       texto: (
         <>
-          Los obstáculos para backtestear el primer filtro son los mismos que en el
-          Agente Peter —fundamentales revisados a posteriori y lista de miembros del
-          índice cambiante— y aquí{' '}
-          <strong className="text-text-primary">pesan más</strong>: las empresas
-          pequeñas quiebran, salen del índice y son absorbidas con mucha más
-          frecuencia que las grandes, así que medir solo sobre las que siguen vivas
-          hoy exagera el resultado más todavía.
+          El sesgo de supervivencia{' '}
+          <strong className="text-text-primary">pesa más aquí</strong> que en el Agente Peter:
+          las empresas pequeñas quiebran, salen del índice y son absorbidas con mucha más
+          frecuencia. El backtest lo acota declarando el 8,9 % del universo sin precios
+          recuperables en vez de ignorarlo, pero acotarlo no es eliminarlo, y el sesgo siempre
+          favorece al resultado.
         </>
       ),
     },
     {
-      id: 'hipotesis',
+      id: 'siguiente-paso',
       texto: (
         <>
-          A cambio, el universo pequeño es donde la metodología de Lynch tiene más
-          sentido teórico: menos cobertura de analistas, más ineficiencias. Es una{' '}
-          <em>hipótesis razonable</em>, no un resultado medido.
+          Confirmarlo exige datos <em>point-in-time</em> de varios ciclos de mercado o un
+          forward-test en vivo sobre las selecciones de solo-Lynch, en paralelo a producción.
+          Hasta entonces la hipótesis —menos cobertura de analistas, más ineficiencias— sigue
+          siendo razonable y medida una vez, no establecida.
         </>
       ),
     },

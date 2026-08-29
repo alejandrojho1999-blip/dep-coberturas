@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Ficha } from './tipos'
 
 /**
@@ -99,34 +100,68 @@ export const FICHA_PETER: Ficha = {
 
   validacion: [
     {
-      id: 'sin-backtest',
+      id: 'backtest-hecho',
       texto: (
         <>
-          <strong style={{ color: 'var(--color-warning)' }}>Este agente no tiene backtest.</strong>{' '}
-          Su respaldo hoy es el historial en vivo que se acumula desde la primera
-          recomendación guardada, visible en la sección Portafolios y comparado
-          contra el S&amp;P&nbsp;500. Es un registro real y sin retoques, pero
-          todavía corto.
+          <strong className="text-text-primary">Este agente sí tiene backtest</strong>, y el
+          resultado no lo respalda: sobre 28 meses de datos utilizables, la cascada completa
+          rinde un <strong className="text-text-primary">14,06 % anual frente al 21,24 % del
+          S&amp;P&nbsp;500</strong>, con un <em>information ratio</em> de −0,43 y un percentil
+          de control de 1,5 sobre 100 carteras aleatorias emparejadas por sector y tamaño. En
+          gran capitalización el screener no está seleccionando.{' '}
+          <Link href="/agentes/backtest" className="underline underline-offset-2 hover:text-text-primary">
+            Ver el backtest completo
+          </Link>.
         </>
       ),
     },
     {
-      id: 'no-es-omision',
+      id: 'sin-capas-tecnicas',
       texto: (
         <>
-          No es una omisión:{' '}
-          <strong className="text-text-primary">el primer filtro no se puede backtestear de forma honesta</strong>{' '}
-          con los datos disponibles. Harían falta fundamentales{' '}
-          <em>tal y como se conocían en cada fecha</em> —los proveedores gratuitos
-          solo dan los actuales, ya revisados— y la lista histórica de miembros del
-          índice: medir sobre las empresas que siguen en él hoy excluye a las que
-          quebraron o salieron, y ese sesgo siempre favorece al resultado.
+          Quitar las capas técnicas mejora las cuatro métricas —CAGR 16,67 %, IR −0,36,
+          percentil 24,5— pero sigue por debajo del índice. La mejora es consistente con lo
+          que se ve en el Agente Small, así que{' '}
+          <strong className="text-text-primary">las capas 2 y 3 quedan bajo sospecha</strong>;
+          no se retiran de producción con una muestra de este tamaño.
         </>
       ),
     },
     {
-      id: 'filtros-validables',
-      texto: 'Los filtros 2 y 3 sí son validables, porque solo usan precio y volumen. Es la vía abierta para medir el sistema sin gastar en datos.',
+      id: 'ventana-corta',
+      texto: (
+        <>
+          La ventana es corta por una razón concreta y no por descuido: el criterio de
+          crecimiento necesita dos ejercicios anuales publicados, y la fuente gratuita da
+          cuatro de los cuales el más antiguo llega sin beneficio neto. Antes de abril de 2024
+          el screener no puede decidir nada. Con 28 meses de un solo régimen de mercado,
+          ningún contraste alcanza significación: el t-stat es −0,69 frente al umbral
+          convencional de 2,0.
+        </>
+      ),
+    },
+    {
+      id: 'point-in-time',
+      texto: (
+        <>
+          Lo que falta para cerrar la pregunta son{' '}
+          <strong className="text-text-primary">fundamentales tal y como se conocían en cada
+          fecha</strong> —los proveedores gratuitos solo dan los actuales, ya revisados— y la
+          lista histórica de miembros del índice. El backtest acota el sesgo de supervivencia
+          en un 8,9 % del universo en vez de ignorarlo, pero acotarlo no es eliminarlo.
+        </>
+      ),
+    },
+    {
+      id: 'historial-vivo',
+      texto: (
+        <>
+          En paralelo sigue corriendo el historial en vivo desde la primera recomendación
+          guardada, visible en Portafolios y comparado contra el S&amp;P&nbsp;500. Es un
+          registro real y sin retoques, y es la vía que no arrastra ningún sesgo de
+          reconstrucción.
+        </>
+      ),
     },
   ],
 

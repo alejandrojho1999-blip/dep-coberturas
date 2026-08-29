@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Cpu } from 'lucide-react'
+import Link from 'next/link'
+import { Cpu, FlaskConical } from 'lucide-react'
 import AgentePeter from './AgentePeter'
 import AgenteSmall from './AgenteSmall'
 import AgenteGamma from './AgenteGamma'
@@ -27,14 +28,23 @@ export default function AgentesClient(
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent">
           <Cpu size={20} className="text-on-accent" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="font-brand text-lg font-extrabold text-text-primary">Agentes</h1>
           <p className="text-sm text-text-secondary">SynerGy — Agentes IA para Acciones y Opciones</p>
         </div>
+        {/* El backtest vive en su propia pantalla: son cuatro variantes con sus
+            contrastes, y meterlo en una pestaña de agente invitaría a leer el
+            resultado de uno como si valiera para los cuatro. */}
+        <Link
+          href="/agentes/backtest"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+        >
+          <FlaskConical size={13} /> Backtest
+        </Link>
       </div>
 
       {/* Tabs */}
