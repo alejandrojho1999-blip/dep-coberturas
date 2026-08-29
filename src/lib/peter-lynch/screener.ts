@@ -23,7 +23,7 @@ export interface ScreenerResult {
 }
 
 // S&P 500 + NASDAQ 100 — universo large-cap (443 tickers)
-const SP500_NASDAQ100_TICKERS = [
+export const SP500_NASDAQ100_TICKERS = [
   // Mega-cap tech / NASDAQ 100 core
   'AAPL','MSFT','NVDA','GOOGL','GOOG','AMZN','META','TSLA','AVGO','ORCL',
   'CRM','ADBE','AMD','QCOM','TXN','INTC','MU','LRCX','KLAC','AMAT',
@@ -88,7 +88,7 @@ const SP500_NASDAQ100_TICKERS = [
 ]
 
 // S&P 600 + Russell 2000 — universo small/mid-cap (307 tickers)
-const SMALL_CAP_TICKERS = [
+export const SMALL_CAP_TICKERS = [
   // ── S&P 600 · Technology ─────────────────────────────────────────
   'QLYS','TNET','BL','SPSC','CEVA','DIOD','POWI','SMTC','SLAB','OSIS',
   'VIAV','HLIT','CRUS','CALX','CCOI','NSIT','ICFI','EXPO','KFRC','MMS',
@@ -143,7 +143,7 @@ const SMALL_CAP_TICKERS = [
   'CENX',
 ]
 
-interface ScreenerOptions {
+export interface ScreenerOptions {
   peTrailing: number
   peForward: number
   debtRatio: number
@@ -153,36 +153,105 @@ interface ScreenerOptions {
   marketCapMax: number
 }
 
-const LARGE_CAP_OPTIONS: ScreenerOptions = {
+export const LARGE_CAP_OPTIONS: ScreenerOptions = {
   peTrailing: 25, peForward: 15, debtRatio: 0.35,
   epsGrowth: 0.15, pegMax: 2,
   marketCapMin: 5_000_000_000, marketCapMax: Infinity,
 }
 
-const SMALL_CAP_OPTIONS: ScreenerOptions = {
+export const SMALL_CAP_OPTIONS: ScreenerOptions = {
   peTrailing: 20, peForward: 18, debtRatio: 0.5,
   epsGrowth: 0.15, pegMax: 1.5,
   marketCapMin: 100_000_000, marketCapMax: 2_000_000_000,
+}
+
+/**
+ * Entrada mínima para evaluar los 6 criterios de Lynch, ya calculada.
+ * El screener en vivo la construye desde Yahoo `quoteSummary`; el motor de
+ * backtest (`src/lib/backtest/engine.ts`) la construye desde el panel
+ * point-in-time. Ambos comparten `evaluarCriterios` para que no puedan
+ * divergir.
+ */
+export interface ScreenerFeatures {
+  trailingPE: number | null
+  forwardPE: number | null
+  debtToEquity: number | null
+  earningsGrowth: number | null
+  pegRatio: number | null
+  marketCap: number | null
+}
+
+export type ScreenerCriteria = ScreenerResult['criteria']
+
+/** Los 6 criterios booleanos de Lynch. Fuente única de verdad de los umbrales. */
+export function evaluarCriterios(f: ScreenerFeatures, opts: ScreenerOptions): ScreenerCriteria {
+  return {
+    pe_historico:    f.trailingPE     != null && f.trailingPE     > 0 && f.trailingPE     < opts.peTrailing,
+    pe_proyectado:   f.forwardPE      != null && f.forwardPE      > 0 && f.forwardPE      < opts.peForward,
+    deuda_capital:   f.debtToEquity   != null && f.debtToEquity   >= 0 && f.debtToEquity  < opts.debtRatio,
+    crecimiento_eps: f.earningsGrowth != null && f.earningsGrowth > opts.epsGrowth,
+    peg:             f.pegRatio       != null && f.pegRatio       > 0 && f.pegRatio       < opts.pegMax,
+    market_cap:      f.marketCap      != null && f.marketCap      >= opts.marketCapMin && f.marketCap <= opts.marketCapMax,
+  }
+}
+
+/** Nº de criterios cumplidos (0-6). Empatado con el `score` del screener. */
+export function contarScore(criteria: ScreenerCriteria): number {
+  return Object.values(criteria).filter(Boolean).length
+}
+
+/** Deuda neta sobre capitalización, acotada a 0 por abajo. */
+export function calcDebtToMarketCap(
+  totalDebt: number | null,
+  totalCash: number | null,
+  marketCap: number | null,
+): number | null {
+  if (totalDebt == null) return null
+  const netDebt = totalDebt - (totalCash ?? 0)
+  if (marketCap == null || marketCap <= 0) return null
+  return Math.max(0, netDebt) / marketCap
 }
 
 let cache: { data: ScreenerResult[]; ts: number } | null = null
 let cacheSmall: { data: ScreenerResult[]; ts: number } | null = null
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000  // 6 horas
 
+/** Primer ejercicio que se pide a Yahoo; solo hacen falta los dos últimos. */
+const FUNDAMENTALS_DESDE = '2018-01-01'
+
+/**
+ * Crecimiento del beneficio entre los dos últimos ejercicios de una serie
+ * ordenada de más antiguo a más reciente. `null` si no hay dos cifras válidas.
+ */
+export function crecimientoAnual(netIncomes: number[]): number | null {
+  if (netIncomes.length < 2) return null
+  const previo = netIncomes[netIncomes.length - 2]
+  const actual = netIncomes[netIncomes.length - 1]
+  if (previo === 0) return null
+  return (actual - previo) / Math.abs(previo)
+}
+
 async function fetchBatch(tickers: string[], opts: ScreenerOptions): Promise<ScreenerResult[]> {
   const yf = new YahooFinance()
   const results = await Promise.allSettled(
     tickers.map(async (ticker) => {
-      const summary = await yf.quoteSummary(ticker, {
-        modules: ['defaultKeyStatistics', 'financialData', 'price', 'summaryProfile', 'summaryDetail', 'incomeStatementHistory'],
-      })
+      // `incomeStatementHistory` viene vacío para muchos valores desde nov-2024
+      // (el propio yahoo-finance2 lo avisa por consola). `fundamentalsTimeSeries`
+      // es el reemplazo que sí devuelve la serie de resultados.
+      const [summary, financials] = await Promise.all([
+        yf.quoteSummary(ticker, {
+          modules: ['defaultKeyStatistics', 'financialData', 'price', 'summaryProfile', 'summaryDetail'],
+        }),
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: FUNDAMENTALS_DESDE, type: 'annual', module: 'financials',
+        }).catch(() => [] as Array<Record<string, unknown>>),
+      ])
 
       const ks = summary.defaultKeyStatistics
       const fd = summary.financialData
       const pr = summary.price
       const sp = summary.summaryProfile
       const sd = summary.summaryDetail
-      const incStmts = summary.incomeStatementHistory?.incomeStatementHistory as Array<{ netIncome?: number }> | undefined
 
       const trailingPE = (sd?.trailingPE as number | null | undefined)
         ?? (ks?.trailingPE as number | null | undefined) ?? null
@@ -190,37 +259,29 @@ async function fetchBatch(tickers: string[], opts: ScreenerOptions): Promise<Scr
         ?? (ks?.forwardPE  as number | null | undefined) ?? null
       const pegRatio   = (ks?.pegRatio   as number | null | undefined) ?? null
 
-      let earningsGrowth: number | null = null
-      if (incStmts && incStmts.length >= 2) {
-        const latestNi = incStmts[0]?.netIncome ?? null
-        const prevNi   = incStmts[1]?.netIncome ?? null
-        if (latestNi != null && prevNi != null && prevNi !== 0) {
-          earningsGrowth = (latestNi - prevNi) / Math.abs(prevNi)
-        }
-      }
+      // `fundamentalsTimeSeries` devuelve los ejercicios de más antiguo a más
+      // reciente, al revés que el difunto `incomeStatementHistory`.
+      const netIncomes = (financials as Array<Record<string, unknown>>)
+        .map(r => r.netIncome)
+        .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+
+      let earningsGrowth = crecimientoAnual(netIncomes)
       earningsGrowth ??= (fd?.earningsGrowth as number | null | undefined) ?? null
 
       const marketCap = (pr?.marketCap as number | null | undefined) ?? null
       const totalDebt = (fd?.totalDebt as number | null | undefined) ?? null
       const totalCash = (fd?.totalCash as number | null | undefined) ?? null
-      const netDebt = totalDebt != null ? totalDebt - (totalCash ?? 0) : null
-      const debtToEquity = netDebt != null && marketCap != null && marketCap > 0
-        ? Math.max(0, netDebt) / marketCap
-        : null
+      const debtToEquity = calcDebtToMarketCap(totalDebt, totalCash, marketCap)
       const currentPrice = (pr?.regularMarketPrice as number | null | undefined) ?? null
       const name         = (pr?.longName   as string | undefined) ?? (pr?.shortName as string | undefined) ?? ticker
       const sector       = (sp?.sector     as string | undefined) ?? '—'
 
-      const criteria = {
-        pe_historico:    trailingPE    != null && trailingPE    > 0 && trailingPE    < opts.peTrailing,
-        pe_proyectado:   forwardPE     != null && forwardPE     > 0 && forwardPE     < opts.peForward,
-        deuda_capital:   debtToEquity  != null && debtToEquity  >= 0 && debtToEquity < opts.debtRatio,
-        crecimiento_eps: earningsGrowth != null && earningsGrowth > opts.epsGrowth,
-        peg:             pegRatio      != null && pegRatio      > 0 && pegRatio      < opts.pegMax,
-        market_cap:      marketCap     != null && marketCap     >= opts.marketCapMin && marketCap <= opts.marketCapMax,
-      }
+      const criteria = evaluarCriterios(
+        { trailingPE, forwardPE, debtToEquity, earningsGrowth, pegRatio, marketCap },
+        opts,
+      )
 
-      const score = Object.values(criteria).filter(Boolean).length
+      const score = contarScore(criteria)
 
       return {
         ticker,

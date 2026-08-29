@@ -313,17 +313,6 @@ function flechaDer(s, { x, y, w = 0.3, color = C.tenue }) {
   })
 }
 
-function flechaAbajo(s, { x, y, h = 0.26, color = C.tenue }) {
-  s.addShape(pres.shapes.DOWN_ARROW, {
-    x,
-    y,
-    w: 0.22,
-    h,
-    fill: { color },
-    line: { color, width: 0 },
-  })
-}
-
 /**
  * Tabla con el estilo del documento.
  * `alinear` permite fijar la alineación por columna; por defecto la primera va a
