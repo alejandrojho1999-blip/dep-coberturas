@@ -20,7 +20,9 @@ import type {
   CorteMetricas, IndicePublicado, MetricasPublicadas, ResumenPublicado,
   VariantePublicada,
 } from '@/lib/backtest/publicado'
-import { exportarDataset, rutaPublica, type BrutoExportable } from './dataset.mts'
+import {
+  catalogoDataset, type DatasetPublicado, type VarianteDataset,
+} from '@/lib/backtest/dataset'
 
 /** Variantes que se publican, en el orden en que aparecen en pantalla. */
 const VARIANTES = [
@@ -31,6 +33,10 @@ const VARIANTES = [
 ] as const
 
 const SALIDA = path.resolve(process.cwd(), 'src/lib/backtest/resumen-publicado.json')
+/** Fuente de las descargas. Vive aparte del resumen porque pesa quince veces más
+ *  y solo lo importa la ruta de API: si estuviera en el mismo módulo, el medio
+ *  mega de operaciones viajaría al navegador en cada visita a la pantalla. */
+const SALIDA_DATASET = path.resolve(process.cwd(), 'src/lib/backtest/dataset-publicado.json')
 
 /** Forma mínima que este script necesita del `resultados-*.json`. */
 interface Bruto {
@@ -57,6 +63,7 @@ interface Bruto {
   }
   atribucion: {
     porCapa: Record<string, Record<string, number>>
+    porScore: Record<string, Record<string, number>>
     leaveOneOut: Record<string, Record<string, number>>
   }
   robustez: Record<string, unknown> & {
@@ -77,6 +84,17 @@ interface Bruto {
     benchmark: Array<{ fecha: string; valor: number }>
     mercadoAmplio: Array<{ fecha: string; valor: number }> | null
   }
+  operaciones: Array<{
+    ticker: string
+    fechaEntrada: string
+    fechaSalida: string
+    precioEntrada: number
+    precioSalida: number
+    retorno: number
+    motivoSalida: string
+    scoreEntrada: number
+    criteriosEntrada: Record<string, boolean>
+  }>
 }
 
 /** Redondea a los decimales que la interfaz llega a mostrar, no más. */
@@ -228,9 +246,57 @@ function publicar(id: string, b: Bruto): VariantePublicada {
   }
 }
 
+/** Redondea todos los números de una estructura, que llegan con 16 decimales. */
+function redondearProfundo<T>(valor: T, decimales = 6): T {
+  if (typeof valor === 'number') return r(valor, decimales) as T
+  if (Array.isArray(valor)) return valor.map(x => redondearProfundo(x, decimales)) as T
+  if (valor && typeof valor === 'object') {
+    return Object.fromEntries(
+      Object.entries(valor).map(([k, v]) => [k, redondearProfundo(v, decimales)]),
+    ) as T
+  }
+  return valor
+}
+
+/**
+ * Lo que necesita el constructor de descargas: el bruto sin el barrido de
+ * sensibilidad —19 configuraciones que no aparecen en ninguna hoja— y con las
+ * listas de tickers de la paridad recortadas, que tampoco se exportan.
+ */
+function paraDataset(id: string, b: Bruto): VarianteDataset {
+  return redondearProfundo({
+    id,
+    agente: b.agente,
+    capas: b.capas,
+    universo: b.universo,
+    generado: b.generado,
+    muestra: b.muestra,
+    base: b.base,
+    benchmark: b.benchmark,
+    mercadoAmplio: b.mercadoAmplio,
+    ventajaEstadistica: b.ventajaEstadistica,
+    testDeControl: b.testDeControl,
+    atribucion: b.atribucion,
+    robustez: Object.fromEntries(
+      Object.entries(b.robustez).filter(([k, v]) =>
+        k !== 'subperiodos' && k !== 'pruebaLookAhead' && v && typeof v === 'object'),
+    ),
+    subperiodos: b.robustez.subperiodos,
+    paridad: b.paridadConElScreenerEnVivo
+      ? {
+          comparados: b.paridadConElScreenerEnVivo.comparados,
+          jaccard: b.paridadConElScreenerEnVivo.jaccard,
+          acuerdoPorCriterio: b.paridadConElScreenerEnVivo.acuerdoPorCriterio,
+        }
+      : null,
+    curvas: b.curvas,
+    operaciones: b.operaciones,
+  } as unknown as VarianteDataset)
+}
+
 async function main() {
   const variantes: VariantePublicada[] = []
-  const brutos: BrutoExportable[] = []
+  const paraDescargas: VarianteDataset[] = []
 
   for (const v of VARIANTES) {
     const ruta = path.join(DATA_DIR, v.fichero)
@@ -246,7 +312,7 @@ async function main() {
       process.exit(1)
     }
     variantes.push(publicar(v.id, bruto))
-    brutos.push({ ...(bruto as unknown as BrutoExportable), id: v.id })
+    paraDescargas.push(paraDataset(v.id, bruto))
     console.log(`· ${v.id.padEnd(12)} ${bruto.muestra.nRebalanceos} rebalanceos, CAGR ${(bruto.base.cagr * 100).toFixed(2)} %`)
   }
 
@@ -256,21 +322,40 @@ async function main() {
   const hasta = variantes.map(v => v.muestra.hasta).sort()[0]
   const nMeses = Math.min(...variantes.map(v => v.base.nPeriodos))
 
-  // El dataset descargable sale de la misma pasada: si se generara aparte,
-  // pantalla y descargas podrían acabar contando corridas distintas.
-  const exportados = await exportarDataset(brutos)
-  for (const f of exportados) console.log(`· ${f.fichero.padEnd(30)} ${(f.bytes / 1024).toFixed(0)} kB`)
+  // El dataset sale de la misma pasada: si se generara aparte, pantalla y
+  // descargas podrían acabar contando corridas distintas.
+  const dataset: DatasetPublicado = { generado: new Date().toISOString(), variantes: paraDescargas }
+  await writeFile(SALIDA_DATASET, JSON.stringify(dataset) + '\n', 'utf8')
+
+  // Cada entrada del catálogo se construye aquí una vez, aunque el fichero se
+  // descarte: sirve para medir lo que pesará la descarga y para que un
+  // exportador roto falle al publicar y no delante del usuario.
+  const descargas = catalogoDataset(dataset).map(e => {
+    const contenido = e.construir()
+    const bytes = typeof contenido === 'string' ? Buffer.byteLength(contenido) : contenido.byteLength
+    console.log(`· ${e.fichero.padEnd(30)} ${(bytes / 1024).toFixed(0)} kB`)
+    return {
+      fichero: e.fichero,
+      ruta: `/api/backtest/dataset?fichero=${encodeURIComponent(e.fichero)}`,
+      formato: e.formato,
+      bytes,
+      etiqueta: e.etiqueta,
+      descripcion: e.descripcion,
+    }
+  })
 
   const resumen: ResumenPublicado = {
     generado: new Date().toISOString(),
     ventana: { desde, hasta, nMeses },
     variantes,
-    descargas: exportados.map(f => ({ ...f, ruta: rutaPublica(f.fichero) })),
+    descargas,
   }
 
   await writeFile(SALIDA, JSON.stringify(resumen, null, 2) + '\n', 'utf8')
   const kb = (Buffer.byteLength(JSON.stringify(resumen)) / 1024).toFixed(0)
+  const kbDataset = (Buffer.byteLength(JSON.stringify(dataset)) / 1024).toFixed(0)
   console.log(`\n✓ ${SALIDA} (${kb} kB) — ventana ${desde} → ${hasta}, ${nMeses} meses`)
+  console.log(`✓ ${SALIDA_DATASET} (${kbDataset} kB) — fuente de las descargas`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

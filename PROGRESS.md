@@ -199,6 +199,47 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Las descargas pasan por una ruta de API autenticada (2026-08-29)
+Los ficheros vivían en `public/descargas/backtest/`, y ahí Next los sirve como
+estáticos: **cualquiera con la URL se los llevaba sin iniciar sesión**, aunque la
+pantalla que los enseña sí exige sesión. `/descargas` tampoco estaba en
+`isProtectedRoute` de `src/proxy.ts`.
+
+Ahora se generan al vuelo en `/api/backtest/dataset?fichero=…`, que comprueba la
+sesión de Supabase antes de construir nada y devuelve 401 si no la hay.
+Verificado con `npm start` y curl: 401 sin sesión y 404 en las rutas estáticas
+antiguas.
+
+**Reparto de módulos**, que responde a dos restricciones distintas:
+- `src/lib/backtest/dataset.ts` — funciones puras que construyen CSV y XLSX en
+  memoria. No importan el JSON ni tocan disco, así que sirven igual al script y
+  a la ruta de API: un único exportador, sin dos versiones que puedan divergir.
+- `src/lib/backtest/dataset-source.ts` — carga el JSON. Separado porque Node
+  exige atributos de importación para JSON y el bundler de Next no los admite,
+  y sobre todo porque arrastra medio mega: si lo importara la pantalla, ese
+  medio mega viajaría al navegador en cada visita. Hay una prueba que vigila que
+  `BacktestClient.tsx` no lo importe.
+- `dataset-publicado.json` (538 kB, versionado) sustituye a los 1,3 MB de
+  binarios que antes iban al repositorio.
+
+**El catálogo es la lista blanca.** La ruta solo sirve nombres que aparecen en
+`catalogoDataset()`, así que el parámetro de consulta nunca llega a componer una
+ruta del sistema de ficheros; no hay superficie de recorrido de directorios
+porque no se toca el disco. Hay pruebas con `../../.env.local` y similares.
+
+El publicador construye cada entrada del catálogo al publicar aunque descarte el
+resultado: mide lo que pesará la descarga y hace que un exportador roto falle al
+publicar en vez de delante del usuario.
+
+Verificado: lint limpio, tsc sin errores, 510 tests (36 archivos), build con
+`/api/backtest/dataset` en el manifiesto.
+
+**Pendiente de comprobar:** el camino con sesión iniciada solo está cubierto por
+pruebas unitarias del constructor —que el fichero se construye y pesa lo
+anunciado—, no de extremo a extremo: no hay credenciales de un usuario de prueba
+en este entorno para pedir la descarga autenticada contra el servidor.
+
+
 ### Dataset descargable y responsive de la atribución por capa (2026-08-29)
 
 **Descargas.** La pantalla enseñaba conclusiones pero no dejaba llevarse los
