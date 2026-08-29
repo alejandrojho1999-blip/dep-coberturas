@@ -21,8 +21,12 @@ import { volatilidadRealizada, primaDeVarianza } from '@/lib/backtest/opciones/v
 import type {
   AgenteOpciones, PuntoBarrido, PuntoCalibracion, ResumenOpciones, VarianteOpciones,
 } from '@/lib/backtest/opciones-publicado'
+import { catalogoOpciones, type DatasetOpciones, type VarianteDatasetOpciones } from '@/lib/backtest/opciones-dataset'
 
 const SALIDA = path.resolve(process.cwd(), 'src/lib/backtest/opciones-resumen-publicado.json')
+/** Fuente de las descargas: lleva las operaciones una a una, que la pantalla no
+ *  necesita y que multiplicarían por diez lo que viaja al navegador. */
+const SALIDA_DATASET = path.resolve(process.cwd(), 'src/lib/backtest/opciones-dataset-publicado.json')
 
 /** Las corridas que se publican, en el orden en que aparecen en pantalla. */
 const CORRIDAS = [
@@ -97,6 +101,7 @@ async function main() {
 
   // ── Corridas ─────────────────────────────────────────────────────────────
   const variantes: VarianteOpciones[] = []
+  const paraDescargas: VarianteDatasetOpciones[] = []
   const benchmarkCurvas: Record<string, Array<{ fecha: string; valor: number }>> = {}
   let ventana = { desde: '', hasta: '', nVencimientos: 0 }
 
@@ -163,6 +168,50 @@ async function main() {
       }
     })
 
+    // El dataset descargable sale de la misma pasada que el resumen: generarlo
+    // aparte dejaría que pantalla y descargas contaran corridas distintas.
+    paraDescargas.push({
+      id: corrida.id,
+      descripcionModo: corrida.etiqueta,
+      modo: crudo.modo,
+      conSkew: crudo.skew,
+      conNivelesDeSalida: crudo.nivelesDeSalida,
+      calibracion: {
+        kOptimo,
+        errorSeguimiento: r(crudo.calibracion.errorSeguimiento, 4),
+        correlacion: r(crudo.calibracion.correlacion, 4),
+        rejilla,
+      },
+      agentes: agentes.map(a => {
+        const bruto = crudo.agentes[a.id]
+        return {
+          id: a.id,
+          nombre: a.nombre,
+          capital: a.capital,
+          benchmark: a.benchmark.ticker,
+          metricas: a.metricas,
+          benchmarkMetricas: {
+            cagr: a.benchmark.cagr, sharpe: a.benchmark.sharpe,
+            maxDrawdown: a.benchmark.maxDrawdown, volatilidadAnual: a.benchmark.volatilidadAnual,
+          },
+          curva: a.curva,
+          benchmarkCurva: benchmarkCurvas[a.id] ?? [],
+          barrido: a.barrido,
+          operaciones: (bruto.operaciones ?? []).map((o: Crudo) => ({
+            ticker: o.ticker, lado: o.lado, tipo: o.tipo,
+            strike: r(o.strike, 4), vencimiento: o.vencimiento,
+            fechaEntrada: o.fechaEntrada, fechaSalida: o.fechaSalida,
+            primaEntrada: r(o.primaEntrada, 4), primaSalida: r(o.primaSalida, 4),
+            contratos: o.contratos,
+            resultado: r(o.resultado, 2), retorno: r(o.retorno, 6),
+            motivoSalida: o.motivoSalida,
+            dteEntrada: o.dteEntrada,
+            deltaEntrada: r(o.deltaEntrada, 6), ivEntrada: r(o.ivEntrada, 6),
+          })),
+        }
+      }),
+    })
+
     variantes.push({
       id: corrida.id,
       modo: crudo.modo,
@@ -188,7 +237,35 @@ async function main() {
     primaDeVarianzaObservada: primaObservada,
     benchmarkCurvas,
     variantes,
+    descargas: [],
   }
+
+  const dataset: DatasetOpciones = {
+    generado: resumen.generado,
+    ventana,
+    primaDeVarianzaObservada: primaObservada,
+    variantes: paraDescargas,
+  }
+  await writeFile(SALIDA_DATASET, JSON.stringify(dataset) + '\n', 'utf8')
+
+  // Cada entrada se construye aquí una vez aunque el fichero se descarte: mide
+  // lo que pesará la descarga y hace que un exportador roto falle al publicar
+  // en vez de delante del usuario.
+  console.log('')
+  const descargas = catalogoOpciones(dataset).map(e => {
+    const c = e.construir()
+    const bytes = typeof c === 'string' ? Buffer.byteLength(c) : c.byteLength
+    console.log(`· ${e.fichero.padEnd(38)} ${(bytes / 1024).toFixed(0).padStart(5)} kB`)
+    return {
+      fichero: e.fichero,
+      ruta: `/api/backtest/dataset?fichero=${encodeURIComponent(e.fichero)}`,
+      formato: e.formato,
+      bytes,
+      etiqueta: e.etiqueta,
+      descripcion: e.descripcion,
+    }
+  })
+  resumen.descargas = descargas
 
   await writeFile(SALIDA, JSON.stringify(resumen, null, 2) + '\n', 'utf8')
   const kb = (Buffer.byteLength(JSON.stringify(resumen)) / 1024).toFixed(0)

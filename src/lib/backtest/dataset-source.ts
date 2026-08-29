@@ -11,11 +11,26 @@
  * protege la regla es que ningún componente lo importa, y una prueba lo vigila.
  */
 import { catalogoDataset, type DatasetPublicado, type EntradaCatalogo } from './dataset'
+import { catalogoOpciones, type DatasetOpciones } from './opciones-dataset'
 import datos from './dataset-publicado.json'
+import datosOpciones from './opciones-dataset-publicado.json'
 
 export const DATASET_BACKTEST = datos as unknown as DatasetPublicado
+export const DATASET_OPCIONES = datosOpciones as unknown as DatasetOpciones
+
+/**
+ * Todo lo que la aplicación sabe entregar: acciones y opciones.
+ *
+ * Los dos catálogos se concatenan y la ruta de API busca por nombre, así que los
+ * ficheros de opciones llevan el prefijo `opciones-`: una colisión de nombres
+ * serviría el fichero equivocado sin avisar. Hay un test que comprueba que
+ * ninguno se repite.
+ */
+export function catalogoCompleto(): EntradaCatalogo[] {
+  return [...catalogoDataset(DATASET_BACKTEST), ...catalogoOpciones(DATASET_OPCIONES)]
+}
 
 /** Busca una entrada del catálogo por nombre de fichero. */
 export function entradaDataset(fichero: string): EntradaCatalogo | undefined {
-  return catalogoDataset(DATASET_BACKTEST).find(e => e.fichero === fichero)
+  return catalogoCompleto().find(e => e.fichero === fichero)
 }

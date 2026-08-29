@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { AlertTriangle, Target } from 'lucide-react'
+import { AlertTriangle, Target, Download, FileSpreadsheet, FileText } from 'lucide-react'
 import { AGENT_COLORS } from '@/components/charts/chart-theme'
 import type { ResumenOpciones, VarianteOpciones } from '@/lib/backtest/opciones-publicado'
 import { CurvaBacktest } from './CurvaBacktest'
@@ -10,6 +10,8 @@ const pct = (x: number | null, d = 2) => (x == null ? '—' : `${(x * 100).toFix
 const num = (x: number | null, d = 2) => (x == null ? '—' : x.toFixed(d))
 const tono = (x: number) =>
   x > 0 ? 'var(--color-positive)' : x < 0 ? 'var(--color-negative)' : 'var(--color-text-secondary)'
+const tamano = (bytes: number) =>
+  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.round(bytes / 1024)} kB`
 
 function Panel({ titulo, descripcion, children }: {
   titulo: string; descripcion?: ReactNode; children: ReactNode
@@ -113,6 +115,11 @@ export function OpcionesSeccion({ resumen }: { resumen: ResumenOpciones }) {
   if (!v) return null
 
   const prima = resumen.primaDeVarianzaObservada
+  // Las operaciones del estudio completo, no las de la corrida en pantalla: el
+  // dataset descargable las lleva todas.
+  const totalOperaciones = resumen.variantes.reduce(
+    (a, x) => a + x.agentes.reduce((b, ag) => b + ag.metricas.nOperaciones, 0), 0,
+  )
 
   return (
     <div className="space-y-4">
@@ -324,6 +331,54 @@ export function OpcionesSeccion({ resumen }: { resumen: ResumenOpciones }) {
             )
           })}
         </Tabla>
+      </Panel>
+
+      {/* Descargas */}
+      <Panel
+        titulo="Descargar el dataset"
+        descripcion={
+          <>
+            Las {totalOperaciones.toLocaleString('es-ES')} operaciones de las cuatro corridas, una a
+            una, con strike, vencimiento, primas, delta y volatilidad implícita de entrada. Cada
+            fila lleva su corrida y el supuesto calibrado, para poder agrupar sin cruzar ficheros.
+          </>
+        }
+      >
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {resumen.descargas.map(d => (
+            <li key={d.fichero}>
+              <a
+                href={d.ruta}
+                download
+                className="flex h-full gap-2.5 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2.5 transition-colors hover:border-accent hover:bg-surface"
+              >
+                {d.formato === 'xlsx'
+                  ? <FileSpreadsheet size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--color-positive)' }} />
+                  : <FileText size={15} className="mt-0.5 shrink-0 text-text-muted" />}
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-xs font-semibold text-text-primary">{d.etiqueta}</span>
+                    <span className="font-mono text-[9px] uppercase tracking-wide text-text-muted">
+                      {d.formato} · {tamano(d.bytes)}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-[11px] leading-relaxed text-text-secondary">
+                    {d.descripcion}
+                  </span>
+                </span>
+                <Download size={13} className="mt-0.5 shrink-0 text-text-muted" />
+              </a>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[11px] leading-relaxed text-text-muted">
+          Las primas de estos ficheros están <strong className="text-text-secondary">reconstruidas</strong>,
+          no observadas: no existe histórico gratuito de cadenas de opciones. La columna{' '}
+          <span className="font-mono">k_calibrado</span> dice con qué supuesto de volatilidad se
+          valoró cada operación, y{' '}
+          <span className="font-mono">opciones-barrido-supuesto.csv</span> enseña qué habría salido
+          con otro. Las descargas exigen sesión iniciada, igual que esta pantalla.
+        </p>
       </Panel>
 
       {/* Conclusiones */}

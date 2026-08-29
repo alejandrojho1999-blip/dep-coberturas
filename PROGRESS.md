@@ -255,6 +255,51 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Dataset descargable para Gamma y Theta (2026-08-29)
+La sección de opciones enseñaba conclusiones pero no dejaba llevarse los datos:
+el dataset descargable solo cubría Peter y Small. Ahora cubre los cuatro agentes.
+
+**Nueve ficheros**, generados al vuelo por la misma ruta autenticada que ya servía
+los de acciones (`/api/backtest/dataset`), sin tocarla:
+
+| Fichero | Contenido |
+|---|---|
+| `opciones-backtest-{gamma,theta}.xlsx` | 5 hojas —métricas, operaciones, barrido del supuesto, calibración y curvas— de sus **cuatro** corridas |
+| `opciones-operaciones-{corrida}.csv` × 4 | operaciones de ambos agentes con strike, vencimiento, primas, delta e IV de entrada |
+| `opciones-metricas.csv` | una fila por agente y corrida |
+| `opciones-barrido-supuesto.csv` | qué habría salido con cada valor de `k` |
+| `opciones-calibracion.csv` | error de seguimiento y correlación contra `^PUT` |
+
+**6.975 operaciones** en total, frente a las 1.564 de acciones.
+
+**Decisiones**
+- **Catálogo aparte** (`opciones-dataset.ts`) en vez de meter opciones en
+  `dataset.ts`: los dos estudios no comparten ni una columna —allí hay criterios
+  del screener y atribución por capa; aquí strike, vencimiento, prima y delta— y
+  forzarlos a una tabla común llenaría cada fila de huecos. Los dos catálogos se
+  concatenan en `dataset-source.ts`.
+- **Prefijo `opciones-` en todos los nombres.** La ruta busca por nombre sobre el
+  catálogo unido: una colisión serviría el fichero equivocado sin avisar. Hay un
+  test que comprueba que no se repite ninguno.
+- **Cada fila lleva su corrida y el `k` calibrado**, no solo una hoja aparte:
+  quien cargue el CSV en pandas necesita agrupar por variante sin cruzar
+  ficheros, y sin el supuesto los números no significan nada.
+- Los libros se agrupan **por agente y no por corrida**, porque la pregunta que
+  responde el estudio es «¿de qué depende este resultado?», y eso se lee
+  comparando las cuatro corridas del mismo agente en la misma tabla.
+
+`opciones-dataset-publicado.json` son 2,4 MB versionados, pero **solo lo importa
+el servidor**: la pantalla usa el resumen de 126 kB y las operaciones no viajan
+al navegador.
+
+Verificado: lint limpio, tsc sin errores, **614 tests** (6 nuevos, entre ellos uno
+que **relee los libros de Excel** con la misma librería para comprobar que no
+salen ZIP corruptos y que las hojas y los recuentos cuadran). Probado contra un
+servidor real: 401 sin sesión en los ficheros nuevos y en los de acciones, y
+también en un nombre inexistente —la sesión se comprueba antes que el catálogo,
+así que no se filtra qué ficheros existen a quien no ha entrado.
+
+
 ### Archivo diario de cadenas de opciones (2026-08-29)
 El backtest de Gamma y Theta tuvo que **reconstruir** las primas con
 Black-Scholes porque no existe histórico gratuito de cadenas. Eso obligó a

@@ -108,6 +108,18 @@ export interface ResumenOpciones {
    */
   benchmarkCurvas: Record<string, Array<{ fecha: string; valor: number }>>
   variantes: VarianteOpciones[]
+  /** Ficheros que la pantalla ofrece para descargar el dataset de opciones. */
+  descargas: DescargaOpciones[]
+}
+
+/** Un fichero descargable, servido por `/api/backtest/dataset`. */
+export interface DescargaOpciones {
+  fichero: string
+  ruta: string
+  formato: 'xlsx' | 'csv'
+  bytes: number
+  etiqueta: string
+  descripcion: string
 }
 
 export const RESUMEN_OPCIONES = datos as unknown as ResumenOpciones
