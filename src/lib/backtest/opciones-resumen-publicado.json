@@ -1,5 +1,5 @@
 {
-  "generado": "2026-08-29T17:25:09.244Z",
+  "generado": "2026-08-29T19:32:28.841Z",
   "ventana": {
     "desde": "2005-01-21",
     "hasta": "2026-08-21",
@@ -11681,6 +11681,80 @@
           ]
         }
       ]
+    }
+  ],
+  "descargas": [
+    {
+      "fichero": "opciones-backtest-gamma.xlsx",
+      "ruta": "/api/backtest/dataset?fichero=opciones-backtest-gamma.xlsx",
+      "formato": "xlsx",
+      "bytes": 3328720,
+      "etiqueta": "Agente Gamma · libro completo",
+      "descripcion": "Métricas, operaciones, barrido del supuesto de volatilidad, calibración contra ^PUT y curvas, de sus cuatro corridas."
+    },
+    {
+      "fichero": "opciones-backtest-theta.xlsx",
+      "ruta": "/api/backtest/dataset?fichero=opciones-backtest-theta.xlsx",
+      "formato": "xlsx",
+      "bytes": 2562540,
+      "etiqueta": "Agente Theta · libro completo",
+      "descripcion": "Métricas, operaciones, barrido del supuesto de volatilidad, calibración contra ^PUT y curvas, de sus cuatro corridas."
+    },
+    {
+      "fichero": "opciones-operaciones-constante.csv",
+      "ruta": "/api/backtest/dataset?fichero=opciones-operaciones-constante.csv",
+      "formato": "csv",
+      "bytes": 310127,
+      "etiqueta": "Operaciones · IV proporcional a la realizada",
+      "descripcion": "1818 operaciones de Gamma y Theta con strike, vencimiento, primas, delta y volatilidad implícita de entrada."
+    },
+    {
+      "fichero": "opciones-operaciones-regimen.csv",
+      "ruta": "/api/backtest/dataset?fichero=opciones-operaciones-regimen.csv",
+      "formato": "csv",
+      "bytes": 349260,
+      "etiqueta": "Operaciones · IV escalada por el régimen del VIX",
+      "descripcion": "2013 operaciones de Gamma y Theta con strike, vencimiento, primas, delta y volatilidad implícita de entrada."
+    },
+    {
+      "fichero": "opciones-operaciones-skew.csv",
+      "ruta": "/api/backtest/dataset?fichero=opciones-operaciones-skew.csv",
+      "formato": "csv",
+      "bytes": 297912,
+      "etiqueta": "Operaciones · Con sesgo por moneyness",
+      "descripcion": "1821 operaciones de Gamma y Theta con strike, vencimiento, primas, delta y volatilidad implícita de entrada."
+    },
+    {
+      "fichero": "opciones-operaciones-sin-niveles.csv",
+      "ruta": "/api/backtest/dataset?fichero=opciones-operaciones-sin-niveles.csv",
+      "formato": "csv",
+      "bytes": 215931,
+      "etiqueta": "Operaciones · Sin niveles de salida",
+      "descripcion": "1323 operaciones de Gamma y Theta con strike, vencimiento, primas, delta y volatilidad implícita de entrada."
+    },
+    {
+      "fichero": "opciones-metricas.csv",
+      "ruta": "/api/backtest/dataset?fichero=opciones-metricas.csv",
+      "formato": "csv",
+      "bytes": 2237,
+      "etiqueta": "Métricas · las cuatro corridas",
+      "descripcion": "Una fila por agente y corrida, con rentabilidad, riesgo, contrastes y el supuesto de volatilidad calibrado."
+    },
+    {
+      "fichero": "opciones-barrido-supuesto.csv",
+      "ruta": "/api/backtest/dataset?fichero=opciones-barrido-supuesto.csv",
+      "formato": "csv",
+      "bytes": 7673,
+      "etiqueta": "Barrido del supuesto de volatilidad",
+      "descripcion": "Qué habría salido con cada valor del multiplicador de volatilidad. Es el fichero que enseña de qué depende cada conclusión."
+    },
+    {
+      "fichero": "opciones-calibracion.csv",
+      "ruta": "/api/backtest/dataset?fichero=opciones-calibracion.csv",
+      "formato": "csv",
+      "bytes": 2831,
+      "etiqueta": "Calibración contra ^PUT",
+      "descripcion": "Error de seguimiento y correlación de la réplica sintética frente al índice PutWrite real, para cada valor del supuesto."
     }
   ]
 }

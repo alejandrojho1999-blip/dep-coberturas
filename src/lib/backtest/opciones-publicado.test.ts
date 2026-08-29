@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { RESUMEN_OPCIONES, varianteOpciones } from './opciones-publicado'
 import { REJILLA_K } from './opciones/config'
+import * as XLSX from 'xlsx'
+import { catalogoCompleto, entradaDataset, DATASET_OPCIONES } from './dataset-source'
 
 /**
  * El resumen de opciones es un fichero generado que se versiona a mano. Estas
@@ -116,6 +118,80 @@ describe('resumen publicado del backtest de opciones', () => {
     expect(prima.p90).toBeGreaterThan(prima.mediana)
     for (const v of variantes) {
       expect(v.calibracion.kOptimo).toBeLessThan(prima.mediana)
+    }
+  })
+
+  it('publica un dataset descargable de opciones', () => {
+    const { descargas } = RESUMEN_OPCIONES
+    // Un libro por agente, un CSV de operaciones por corrida, y tres CSV
+    // transversales: métricas, barrido y calibración.
+    expect(descargas.filter(d => d.formato === 'xlsx')).toHaveLength(2)
+    expect(descargas.filter(d => d.fichero.startsWith('opciones-operaciones-'))).toHaveLength(variantes.length)
+    expect(descargas.some(d => d.fichero === 'opciones-barrido-supuesto.csv')).toBe(true)
+    expect(descargas.some(d => d.fichero === 'opciones-calibracion.csv')).toBe(true)
+  })
+
+  it('enlaza ficheros que la ruta de API sabe construir, con el tamaño que anuncia', () => {
+    for (const d of RESUMEN_OPCIONES.descargas) {
+      expect(d.ruta).toBe(`/api/backtest/dataset?fichero=${encodeURIComponent(d.fichero)}`)
+      const entrada = entradaDataset(d.fichero)
+      expect(entrada, `el catálogo no sirve ${d.fichero}`).toBeDefined()
+      const contenido = entrada!.construir()
+      const bytes = typeof contenido === 'string' ? Buffer.byteLength(contenido) : contenido.byteLength
+      expect(bytes, `${d.fichero} pesa distinto de lo anunciado`).toBe(d.bytes)
+    }
+  })
+
+  it('el catálogo une acciones y opciones sin colisiones de nombre', () => {
+    // Los dos catálogos se concatenan y la ruta busca por nombre: un fichero
+    // repetido serviría el equivocado sin avisar de nada.
+    const nombres = catalogoCompleto().map(e => e.fichero)
+    expect(new Set(nombres).size).toBe(nombres.length)
+    // Y las descargas de acciones siguen ahí: añadir opciones no debe taparlas.
+    expect(nombres).toContain('backtest-peter.xlsx')
+    expect(nombres).toContain('opciones-backtest-gamma.xlsx')
+  })
+
+  it('el dataset de opciones lleva las operaciones que anuncian las métricas', () => {
+    for (const v of DATASET_OPCIONES.variantes) {
+      for (const a of v.agentes) {
+        expect(a.operaciones.length, `${v.id}/${a.id}`).toBe(a.metricas.nOperaciones)
+      }
+    }
+  })
+
+  it('cada operación descargable identifica su corrida y su supuesto', () => {
+    // Sin el `k` de la corrida los números no significan nada, y sin la corrida
+    // no se pueden agrupar las filas al cargarlas.
+    const csv = entradaDataset('opciones-operaciones-constante.csv')!.construir() as string
+    const [cabecera, primera] = csv.split('\n')
+    for (const col of ['corrida', 'k_calibrado', 'agente', 'strike', 'vencimiento', 'delta_entrada', 'iv_entrada']) {
+      expect(cabecera.split(','), `falta la columna ${col}`).toContain(col)
+    }
+    expect(primera.length).toBeGreaterThan(0)
+  })
+
+  it('los libros de Excel se abren y llevan las hojas anunciadas', () => {
+    // No basta con que el fichero se genere: tiene que poder abrirse. Se relee
+    // con la misma librería para comprobar que no sale un ZIP corrupto.
+    for (const id of ['gamma', 'theta']) {
+      const buf = entradaDataset(`opciones-backtest-${id}.xlsx`)!.construir() as Buffer
+      const libro = XLSX.read(buf, { type: 'buffer' })
+      expect(libro.SheetNames, id).toEqual([
+        'Métricas', 'Operaciones', 'Barrido del supuesto', 'Calibración', 'Curvas',
+      ])
+
+      // Las operaciones del libro son las de las cuatro corridas juntas.
+      const ops = XLSX.utils.sheet_to_json(libro.Sheets['Operaciones'])
+      const esperadas = DATASET_OPCIONES.variantes.reduce(
+        (n, v) => n + (v.agentes.find(a => a.id === id)?.operaciones.length ?? 0), 0,
+      )
+      expect(ops.length, id).toBe(esperadas)
+
+      // Y las métricas traen una fila por corrida, para poder compararlas.
+      const met = XLSX.utils.sheet_to_json(libro.Sheets['Métricas']) as Array<{ corrida: string }>
+      expect(met).toHaveLength(DATASET_OPCIONES.variantes.length)
+      expect(new Set(met.map(m => m.corrida)).size).toBe(DATASET_OPCIONES.variantes.length)
     }
   })
 
