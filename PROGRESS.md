@@ -231,13 +231,29 @@ El publicador construye cada entrada del catálogo al publicar aunque descarte e
 resultado: mide lo que pesará la descarga y hace que un exportador roto falle al
 publicar en vez de delante del usuario.
 
-Verificado: lint limpio, tsc sin errores, 510 tests (36 archivos), build con
-`/api/backtest/dataset` en el manifiesto.
+Verificado en local: lint limpio, tsc sin errores, 510 tests (36 archivos), build
+con `/api/backtest/dataset` en el manifiesto.
 
-**Pendiente de comprobar:** el camino con sesión iniciada solo está cubierto por
-pruebas unitarias del constructor —que el fichero se construye y pesa lo
-anunciado—, no de extremo a extremo: no hay credenciales de un usuario de prueba
-en este entorno para pedir la descarga autenticada contra el servidor.
+**Verificado en producción** (commit `f35543c`, deployment en `success`), contra
+`https://dep-coberturas.vercel.app`:
+
+| Prueba | Resultado |
+|---|---|
+| `/api/backtest/dataset?fichero=backtest-peter.xlsx` sin sesión | 401 con `{"error":"Hace falta iniciar sesión."}` |
+| `/descargas/backtest/backtest-peter.xlsx` (la ruta estática anterior) | 404 |
+| `/agentes/backtest` sin sesión | 307 a `/login` |
+
+Ojo al medir esto en el futuro: las URL con hash del deployment
+(`dep-coberturas-<hash>-….vercel.app`) llevan delante la protección SSO de
+Vercel y devuelven 302 para todo, incluidas las rutas de API. Esa medición no
+dice nada del comportamiento de la aplicación; hay que usar el dominio público.
+
+**Pendiente de comprobar:** el camino con sesión iniciada. Que devuelva 401 sin
+sesión demuestra que el candado cierra, no que el fichero se entregue bien a
+quien sí tiene derecho a él. Eso solo está cubierto por pruebas unitarias del
+constructor —el fichero se construye y pesa lo anunciado—, porque no hay
+credenciales de un usuario de prueba en este entorno. Basta con entrar en
+`/agentes/backtest` y pulsar un par de enlaces del panel de descargas.
 
 
 ### Dataset descargable y responsive de la atribución por capa (2026-08-29)
