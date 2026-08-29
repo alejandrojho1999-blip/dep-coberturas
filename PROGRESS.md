@@ -199,6 +199,164 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Pantalla `/agentes/backtest` y fichas actualizadas (2026-08-29)
+Los resultados del backtest existían solo como markdown en `data/backtest/`, que
+no se versiona. Ahora están en la aplicación.
+
+**Cómo llegan los datos a la pantalla.** `data/backtest/` seguirá sin versionarse
+—son ~324 MB de caché y los `resultados-*.json` llevan las 3.838 operaciones una
+a una—, así que se añadió `scripts/backtest/publicar-resumen.mts`
+(`npm run backtest:publicar`), que destila las cuatro corridas en
+`src/lib/backtest/resumen-publicado.json`: 23 kB, versionado, sin operaciones
+individuales. La página lo importa estáticamente, así que no depende de Yahoo ni
+de Supabase para pintar.
+
+El script no recalcula nada, copia campo a campo. Dos decisiones:
+- `mercadoAmplio` se publica como `null` en gran capitalización, donde el
+  benchmark ya *es* el mercado amplio. Duplicar la serie sugeriría dos varas de
+  medir donde solo hay una.
+- La fila `cascada` de la atribución por capa solo se publica en la corrida
+  `--capas=lynch+tecnico`. En una corrida `--capas=lynch` el motor la rellena con
+  la propia variante, así que publicarla ahí duplicaría la fila base con otro
+  nombre.
+
+**La pantalla** (`src/app/(dashboard)/agentes/backtest/`) abre con el aviso de la
+ventana de 28 meses antes de cualquier cifra —leer el CAGR sin saber que es un
+solo régimen es leerlo mal—, y luego: selector de las cuatro variantes, KPIs con
+su índice al lado, curva contra benchmark y mercado amplio, tabla comparativa de
+las cuatro, atribución por capa y por criterio, tramos anuales, robustez,
+contrastes estadísticos, muestra, paridad con el screener en vivo y un cierre de
+conclusiones que incluye lo que **no** se concluye.
+
+**Fichas de Peter y Small.** El bloque `sin-backtest` decía literalmente «Este
+agente no tiene backtest». Reemplazado en ambas por las cifras reales y un enlace
+a la pantalla: Peter con el resultado que no lo respalda (14,06 % vs SPY 21,24 %,
+IR −0,43, percentil de control 1,5) y Small con el que sí apunta en la dirección
+de la tesis (22,06 % vs IJR 17,57 %, IR +0,57, percentil 99,5), ambos con el
+caveat de que con t-stat 0,82 y 28 meses no hay significación.
+
+Verificado: `npm run lint` limpio, `npx tsc --noEmit` sin errores, 504 tests en
+36 archivos (8 nuevos en `src/lib/backtest/publicado.test.ts`, que comprueban que
+el JSON generado sigue siendo dibujable), y `npm run build` compila con la ruta
+`/agentes/backtest` presente.
+
+
+### Variante sin capas técnicas + dos bugs del propio backtest (2026-08-27)
+Se añadió `--capas=lynch|lynch+tecnico|tecnico` a `scripts/backtest/run.mts` para
+someter la variante sin filtros técnicos al aparato completo de contrastes, no
+solo a mirar su CAGR. Salida en `informe-{agente}-lynch.md`.
+
+**Dos fallos encontrados y corregidos al hacerlo**
+
+1. **21 de 54 meses estaban en liquidez.** El criterio de cobertura solo exigía
+   que la fila del panel existiera, no que fuera *utilizable*: el criterio de
+   crecimiento necesita dos ejercicios publicados y al principio de la serie solo
+   hay uno, así que nadie llegaba al corte de score. La primera posición no se
+   abría hasta 2023-12. Esos ceros diluían el CAGR y hacían que el "activo
+   positivo" de 2022 fuese simplemente estar fuera del mercado en un año bajista.
+   Ahora la cobertura exige `earningsGrowth != null` y hay un aviso explícito si
+   la cartera arranca vacía.
+2. **`--solo` sobrescribía el manifest entero**, borrando el recuento de tickers
+   delisted del que sale la cota de sesgo de supervivencia. Ahora se fusiona.
+
+**Profundidad real de Yahoo: 4 ejercicios, no 5.** Verificado en MSFT, JPM y WMT:
+`fundamentalsTimeSeries` devuelve 5 fechas anuales pero **la más antigua viene
+siempre sin `netIncome`**. Con dos ejercicios necesarios para el crecimiento, el
+primer mes operable es 2024-04. **La ventana honesta es de 29 meses.**
+
+**Benchmark corregido por universo.** Medir una cartera de small caps contra el
+S&P 500 la compara con otra clase de activo. `BENCHMARK_POR_UNIVERSO` usa ahora
+IJR (S&P 600) para `small_cap` y SPY para `large_cap`; el informe muestra además
+el mercado amplio como coste de oportunidad. El cambio invierte el signo: Small
+pasa de IR −0,31 contra SPY a +0,57 contra su índice.
+
+**Resultados (29 meses, 2024-04 → 2026-08)**
+
+| Variante | Bench | CAGR | Bench | Sharpe | IR | t-stat | Percentil control |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Peter cascada | SPY | 14,06 % | 21,24 % | 0,72 | −0,43 | −0,69 | 2 |
+| Peter solo-Lynch | SPY | 16,67 % | 21,24 % | 1,00 | −0,36 | −0,66 | 25 |
+| Small cascada | IJR | 18,32 % | 17,57 % | 0,80 | 0,06 | 0,10 | 54 |
+| **Small solo-Lynch** | IJR | **22,06 %** | 17,57 % | 0,94 | **0,57** | 0,82 | **99,5** |
+
+Quitar las capas técnicas mejora las cuatro métricas en ambos agentes. Small
+solo-Lynch bate a 995 de cada 1.000 carteras aleatorias emparejadas por sector y
+decil de tamaño, y gana en 2 de 3 años. Pero con 29 meses el t-stat es 0,82: el
+resultado es prometedor y **no concluyente**. No es evidencia suficiente para
+cambiar producción.
+
+### Bug de producción: `crecimiento_eps` mal calculado (2026-08-27)
+`src/lib/peter-lynch/screener.ts` leía el crecimiento de beneficios de
+`quoteSummary.incomeStatementHistory`, que Yahoo dejó de alimentar en nov-2024
+(el propio `yahoo-finance2` lo avisa por consola). Cuando venía vacío, el código
+caía a `financialData.earningsGrowth`, que es crecimiento **TTM trimestral**, no
+anual: no es la misma magnitud que el criterio de Lynch pretende medir.
+
+Caso concreto: JPM devolvía `+46,9 %` por el fallback cuando su beneficio anual
+en realidad **cayó un 2,4 %**. Pasaba el criterio de crecimiento sin merecerlo.
+
+Arreglado migrando a `fundamentalsTimeSeries(type: 'annual', module: 'financials')`,
+que sí devuelve la serie. Ojo al orden: viene de más antiguo a más reciente, al
+revés que el difunto `incomeStatementHistory`. La comparación de los dos últimos
+ejercicios vive ahora en `crecimientoAnual()`, exportada y reutilizada por el
+panel del backtest para que ambos no puedan divergir.
+
+Verificado contra la API real: **424 de 424 tickers** del universo large-cap
+tienen ahora `crecimiento_eps`, frente a los que antes caían al fallback.
+
+También arreglado: `eslint.config.mjs` ya no marca `require()` como error en
+`presentacion/**` y `scripts/**` (son programas CommonJS de Node, no módulos del
+bundle), y se eliminó la función muerta `flechaAbajo` de `presentacion/build.js`.
+`npm run lint` queda limpio. Nota: `node presentacion/build.js` no corre porque
+`pptxgenjs` no está instalado en el servidor — es previo y ajeno a este cambio.
+
+### Backtest de los agentes Peter y Small (2026-08-27)
+Infraestructura para validar si los filtros de selección de acciones tenían
+ventaja estadística en años anteriores, y ejecución sobre los dos agentes.
+
+**Qué se construyó**
+- `scripts/backtest/fetch-data.mts` — descarga y cachea en `data/backtest/`
+  fundamentales (`fundamentalsTimeSeries` anual + trimestral), precios diarios
+  con `chart()` (incluye `adjclose` y eventos de split) y el sector de cada
+  ticker. 749 tickers, lotes de 25.
+- `scripts/backtest/paridad.mts` — compara el panel reconstruido con el screener
+  en vivo, criterio a criterio. Es el control de calidad de la reconstrucción.
+- `scripts/backtest/run.mts` — orquestador. `npm run backtest:run -- --agente=peter|small`.
+- `scripts/backtest/register-alias.mjs` — hook de resolución para que Node
+  ejecute los `.ts` del repo con el alias `@/` y sin build.
+- `src/lib/backtest/{config,types,panel,engine,stats,report}.ts` + tests (62).
+- `src/lib/agentes/signals.ts` — funciones puras de forecast y momentum,
+  extraídas de las rutas API. Las rutas y el backtest ahora comparten el cálculo,
+  y `src/app/api/agentes/__tests__/filters.test.ts` importa en vez de duplicar.
+- `src/lib/peter-lynch/screener.ts` — expone `evaluarCriterios`, `contarScore`,
+  `calcDebtToMarketCap`, los umbrales y los universos. El screener en vivo y el
+  backtest evalúan con la misma función: no pueden divergir.
+
+**Resultado (ventana 2022-03 → 2026-08, 54 rebalanceos mensuales)**
+
+| | Peter | Small | SPY |
+|---|---:|---:|---:|
+| CAGR | 7,61 % | 7,59 % | 14,19 % |
+| Sharpe | 0,32 | 0,26 | 0,64 |
+| IR vs SPY | −0,41 | −0,31 | — |
+| Percentil vs control aleatorio | 8,5 | 38,5 | — |
+| Deflated Sharpe | 0,41 | 0,51 | — |
+
+Ninguno de los dos filtros demuestra ventaja estadística en esta ventana.
+Ambos quedan por debajo del SPY y de las carteras aleatorias emparejadas por
+sector y decil de tamaño. El t-stat del retorno activo es negativo y no
+significativo en los dos casos.
+
+**Hallazgos colaterales**
+- Endurecer los umbrales un 20 % mejora a Peter (CAGR 12,98 %, Sharpe 0,73,
+  64 % de aciertos): la señal, si existe, está en la cola más exigente.
+- Quitar el criterio `pe_historico` mejora mucho a Peter (CAGR 18,54 %): ese
+  criterio está restando.
+- La cascada completa rinde **peor** que la capa Lynch sola (7,61 % vs 10,96 %):
+  las capas técnicas destruyen valor tal y como están calibradas.
+- El acuerdo del PEG reconstruido con el del screener en vivo es solo del
+  46-55 %: es el criterio peor reconstruido y el que más ruido mete.
+
 ### Presentación «Emporium Quant Desk» (2026-08-24)
 Presentación de 31 diapositivas para inversores sobre el proyecto completo:
 los cinco operadores (Peter, Small, Gamma, Theta y el Portafolio de Futuros),
@@ -720,6 +878,42 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
 ---
 
 ## Decisiones tomadas
+
+### Backtest
+- **Yahoo gratis primero, datos de pago después.** `fundamentalsTimeSeries`
+  devuelve 4-5 ejercicios anuales por ticker, pida el rango que pida. Se acepta
+  esa ventana corta a cambio de tener resultados hoy, y el informe se escribe
+  como argumento para contratar Sharadar SF1 / FMP.
+- **Retardo de publicación de 90 días, obligatorio.** Yahoo da el cierre del
+  ejercicio fiscal, no la fecha de presentación. Sin el retardo el backtest usa
+  datos que nadie tenía. Se verifica automáticamente: con retardo 0 el Sharpe
+  debe subir (0,32 → 0,52 en Peter), y si no sube el informe lo denuncia.
+- **La capa de IA queda fuera.** El paso 4 (`conviction >= 7` de un LLM) no es
+  reproducible hacia atrás. Se declara en el informe en vez de simularlo.
+- **`forwardPE` y `PEG` van por proxy declarado.** Sin histórico de consenso se
+  extrapola el crecimiento ya publicado. Nunca se usa el BPA futuro realizado.
+  Se corre siempre también la variante de 4 criterios limpios.
+- **El test de control se empareja por sector y decil de tamaño.** Comparar
+  contra carteras aleatorias sin emparejar mediría exposición sectorial, no
+  calidad del filtro.
+- **Deflated Sharpe siempre.** Este script prueba 19 configuraciones; sin
+  corregir por multiple testing la mejor parecería buena aunque no hubiera señal.
+- **Las capas técnicas quedan bajo sospecha, pero no se retiran todavía.**
+  Quitarlas mejora las cuatro métricas en ambos agentes y es la comparación más
+  limpia del estudio (dos configuraciones, no veinte). Aun así, 29 meses de un
+  solo régimen no bastan: con t-stat 0,82 el resultado es prometedor, no
+  concluyente. Se decide con datos point-in-time o con forward-test real.
+- **El benchmark lo fija la clase de activo, no la costumbre.** Comparar una
+  cartera de small caps contra el S&P 500 mide el segmento, no la selección.
+- **No se tocan los umbrales por lo que diga este backtest.** El barrido de
+  sensibilidad (`sensibilidad.barridoUmbrales`) da una superficie errática, no
+  monótona: en Peter el mejor punto está en −30 % (CAGR 14,83 %) pero −40 % y
+  −10 % caen a 10,80 % y 7,74 %. Un óptimo aislado rodeado de valles es la firma
+  del ruido, no de una señal. Además ninguna variante supera al SPY con un
+  Information Ratio distinto de cero. Recalibrar sobre 54 meses de un solo
+  régimen de mercado sería sobreajuste.
+- **`data/backtest/` no se versiona.** Son ~324 MB de caché regenerable con
+  `npm run backtest:fetch`.
 
 ### Estrategias
 - **Los datos se calculan, no se transcriben.** Las cifras de la sección salen de
