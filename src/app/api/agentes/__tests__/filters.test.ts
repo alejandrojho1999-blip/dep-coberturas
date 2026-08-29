@@ -1,72 +1,29 @@
 import { describe, it, expect } from 'vitest'
+import {
+  linearRegression,
+  ewma,
+  calcRSI,
+  calcEMA,
+  calcMACD as calcMACDRaw,
+  computeForecast,
+} from '@/lib/agentes/signals'
 
-// ── Pure math functions copied from route handlers ──────────────────────────
-// (mirrors src/app/api/agentes/forecast/route.ts)
+// ── Adaptadores sobre las funciones reales de producción ────────────────────
+// Antes este archivo copiaba a mano la matemática de las rutas, así que los
+// tests podían seguir en verde con las rutas ya cambiadas. Ahora importa
+// `src/lib/agentes/signals.ts`, que es lo que usan de verdad
+// `/api/agentes/forecast`, `/api/agentes/momentum` y el motor de backtest.
 
-function linearRegression(y: number[]): { slope: number; intercept: number } {
-  const n = y.length
-  const sumX = (n * (n - 1)) / 2
-  const sumXX = (n * (n - 1) * (2 * n - 1)) / 6
-  const sumY = y.reduce((a, b) => a + b, 0)
-  const sumXY = y.reduce((acc, val, i) => acc + i * val, 0)
-  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
-  const intercept = (sumY - slope * sumX) / n
-  return { slope, intercept }
-}
-
-function ewma(prices: number[], alpha = 0.3): number {
-  return prices.reduce((prev, curr) => alpha * curr + (1 - alpha) * prev)
-}
-
+/** `forecastReturn` en fracción (la señal lo publica en porcentaje). */
 function forecastResult(closes: number[]): { forecastReturn: number; pass: boolean } {
-  const lastPrice = closes[closes.length - 1]
-  const last60 = closes.slice(-Math.min(60, closes.length))
-  const last30 = closes.slice(-Math.min(30, closes.length))
-  const { slope, intercept } = linearRegression(last60)
-  const linearForecast = intercept + slope * (last60.length - 1 + 30)
-  const ewmaVal = ewma(last30, 0.3)
-  const ewmaTrend = last30[0] > 0 ? (ewmaVal - last30[0]) / last30[0] : 0
-  const ewmaForecast = ewmaVal * (1 + ewmaTrend)
-  const forecastPrice = linearForecast * 0.6 + ewmaForecast * 0.4
-  const forecastReturn = lastPrice > 0 ? (forecastPrice - lastPrice) / lastPrice : 0
-  return { forecastReturn, pass: forecastReturn >= 0.02 }
+  const r = computeForecast(closes)
+  if (!r) throw new Error('serie demasiado corta para el forecast')
+  return { forecastReturn: r.forecastReturn / 100, pass: r.pass }
 }
 
-// (mirrors src/app/api/agentes/momentum/route.ts)
-
-function calcRSI(closes: number[], period = 14): number {
-  if (closes.length < period + 1) return 50
-  const changes = closes.slice(1).map((c, i) => c - closes[i])
-  const gains = changes.map(c => (c > 0 ? c : 0))
-  const losses = changes.map(c => (c < 0 ? -c : 0))
-  let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period
-  let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period
-  for (let i = period; i < changes.length; i++) {
-    avgGain = (avgGain * (period - 1) + gains[i]) / period
-    avgLoss = (avgLoss * (period - 1) + losses[i]) / period
-  }
-  if (avgLoss === 0) return avgGain === 0 ? 50 : 100
-  return 100 - 100 / (1 + avgGain / avgLoss)
-}
-
-function calcEMA(prices: number[], period: number): number[] {
-  const k = 2 / (period + 1)
-  const ema: number[] = [prices[0]]
-  for (let i = 1; i < prices.length; i++) {
-    ema.push(prices[i] * k + ema[i - 1] * (1 - k))
-  }
-  return ema
-}
-
+/** MACD con el booleano de cruce que evalúa el paso de momentum. */
 function calcMACD(closes: number[]): { macd: number; signal: number; pass: boolean } {
-  if (closes.length < 35) return { macd: 0, signal: 0, pass: false }
-  const ema12 = calcEMA(closes, 12)
-  const ema26 = calcEMA(closes, 26)
-  const macdLine = ema12.map((v, i) => v - ema26[i]).slice(25)
-  const signalLine = calcEMA(macdLine, 9)
-  const last = macdLine.length - 1
-  const macd = macdLine[last]
-  const signal = signalLine[last]
+  const { macd, signal } = calcMACDRaw(closes)
   return { macd, signal, pass: macd > signal }
 }
 
