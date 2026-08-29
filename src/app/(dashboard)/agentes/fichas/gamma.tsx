@@ -79,21 +79,23 @@ export const FICHA_GAMMA: Ficha = {
 
   cuandoVende: (
     <>
-      Cada recomendación lleva dos niveles de salida calculados sobre la prima
-      pagada:{' '}
-      <strong className="text-text-primary">objetivo en 2,5 veces la prima</strong>{' '}
-      y <strong className="text-text-primary">stop en la mitad de la prima</strong>.
-      Son las dos órdenes que hay que dejar puestas en el bróker. Cuando el
-      agente se ejecuta pide la prima viva de cada contrato abierto y, si un
-      nivel ya se tocó, cierra la posición en el registro dando por hecho que la
-      orden saltó sola en la cuenta.{' '}
-      <strong className="text-text-primary">
-        Entre una ejecución y la siguiente no vigila nadie
-      </strong>
-      : esto no es un stop automático, es una revisión al ejecutar. La protección
-      real es la orden en el bróker. Lo que no toca ningún nivel se mantiene
-      hasta el vencimiento, y ahí se liquida a su valor intrínseco contra el
-      cierre real del subyacente ese día.
+      No vende: <strong className="text-text-primary">mantiene cada contrato hasta
+      el vencimiento</strong> y ahí lo liquida a su valor intrínseco contra el
+      cierre real del subyacente ese día. No hay objetivo ni stop, y el agente
+      tampoco los guarda.
+      {' '}
+      La razón es doble. Comprar opciones ya tiene la{' '}
+      <strong className="text-text-primary">pérdida acotada a la prima pagada</strong>,
+      así que un stop no protege de nada que no estuviera acotado de antemano. Y
+      el backtest sobre 21 años mide lo que ese stop sí hacía: cortar posiciones
+      que después se recuperaban. Retirarlo sube el rendimiento anual del 17,15 %
+      al 25,34 % y, contra la intuición,{' '}
+      <strong className="text-text-primary">reduce la caída máxima del 46 % al 21 %</strong>.
+      {' '}
+      La ventaja aguanta en 10 de los 12 supuestos de volatilidad probados y solo
+      se invierte donde ambas configuraciones ya pierden mucho dinero. El Agente
+      Theta sí conserva sus niveles, porque vender opciones puede costar mucho
+      más que la prima cobrada y sin ellos su cartera llega a cero.
     </>
   ),
 
@@ -175,13 +177,15 @@ export const FICHA_GAMMA: Ficha = {
       ),
     },
     {
-      id: 'niveles-restan',
+      id: 'niveles-retirados',
       texto: (
         <>
-          Hallazgo accionable: <strong className="text-text-primary">quitar los niveles de salida
-          mejora al agente</strong>. El CAGR sube del 17,15 % al 25,34 % y, contra la intuición, la
-          caída máxima baja del 46 % al 21 %. El stop al 0,5× de la prima corta posiciones que
-          después se recuperan. Son dos configuraciones comparadas, no un barrido de parámetros.
+          <strong className="text-text-primary">Los niveles de salida ya se han retirado</strong>{' '}
+          a raíz de este backtest: el CAGR sube del 17,15 % al 25,34 % y la caída máxima baja del
+          46 % al 21 %. El stop al 0,5× de la prima cortaba posiciones que después se recuperaban,
+          y comprar opciones ya tiene la pérdida acotada a la prima pagada. Son dos configuraciones
+          comparadas, no un barrido de parámetros, y la ventaja aguanta en 10 de los 12 supuestos
+          de volatilidad probados.
         </>
       ),
     },

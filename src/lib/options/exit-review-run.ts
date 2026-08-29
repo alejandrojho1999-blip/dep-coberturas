@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { quoteContracts } from './quote-contracts'
 import { sideForCategory } from './mark'
+import { usaNivelesDeSalida, type OptionCategory } from './exit-levels'
 import {
   contractsToQuote,
   planExitReview,
@@ -18,12 +19,14 @@ import {
  * divergiendo en silencio.
  */
 
-export const OPTION_CATEGORIES = ['OPTIONS_GAMMA', 'OPTIONS_THETA'] as const
-export type OptionCategory = typeof OPTION_CATEGORIES[number]
-
-export function isOptionCategory(value: unknown): value is OptionCategory {
-  return typeof value === 'string' && (OPTION_CATEGORIES as readonly string[]).includes(value)
-}
+// La política de niveles y el tipo de categoría viven en `exit-levels.ts`, que
+// no arrastra dependencias de servidor: la tabla de recomendaciones necesita
+// leerlos desde el navegador. Se reexportan para no romper a quien ya los
+// importaba desde aquí.
+export {
+  OPTION_CATEGORIES, isOptionCategory, CATEGORIAS_CON_NIVELES, usaNivelesDeSalida,
+  type OptionCategory,
+} from './exit-levels'
 
 export interface ExitReviewResult {
   category: OptionCategory
@@ -54,6 +57,16 @@ export async function runExitReview(
   const vacio: ExitReviewResult = {
     category, revisadas: 0, cerradas: 0, porObjetivo: 0, porStop: 0,
     sinCotizar: 0, fallidos: 0, log: [],
+  }
+
+  // El corte va aquí y no en quien llama porque por esta función pasan las dos
+  // vías: la revisión que dispara el agente y la del cron. Ponerlo en una sola
+  // dejaría la otra cerrando posiciones que ya no debe tocar.
+  if (!usaNivelesDeSalida(category)) {
+    return {
+      ...vacio,
+      log: [`✓ ${category}: no usa niveles de salida — las posiciones viven hasta el vencimiento`],
+    }
   }
 
   const { data, error } = await supabase
