@@ -37,7 +37,11 @@ function Panel({ titulo, descripcion, children }: {
   children: ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface">
+    // `min-w-0` no es decorativo: un hijo de grid tiene `min-width: auto`, así
+    // que sin esto una tabla ancha no puede encoger su columna y, en vez de
+    // scrollear por dentro, empuja la rejilla y desborda la página entera —
+    // arrastrando también al panel de al lado.
+    <section className="min-w-0 rounded-xl border border-border-subtle bg-surface">
       <header className="border-b border-border-subtle px-4 py-3">
         <h2 className="font-brand text-[11px] font-extrabold uppercase tracking-[0.14em] text-text-primary">
           {titulo}
@@ -68,7 +72,12 @@ function Kpi({ etiqueta, valor, nota, color }: {
   )
 }
 
-/** Tabla compacta con scroll horizontal propio: nunca desborda la página. */
+/**
+ * Tabla compacta con scroll horizontal propio.
+ *
+ * Solo cumple su promesa si el contenedor puede encoger: dentro de un grid hace
+ * falta `min-w-0` en el hijo, que es lo que pone `Panel`.
+ */
 function Tabla({ cabeceras, children, min = 520 }: {
   cabeceras: string[]
   children: ReactNode
@@ -95,6 +104,27 @@ function Tabla({ cabeceras, children, min = 520 }: {
   )
 }
 
+/**
+ * Lista de pares etiqueta/valor.
+ *
+ * Sustituye a una tabla de dos columnas: las etiquetas aquí son frases enteras
+ * («Sin precios (cota de sesgo de supervivencia)») y en una celda de tabla
+ * obligaban a un ancho mínimo que forzaba scroll horizontal. Así la etiqueta
+ * envuelve y el valor se queda pegado a la derecha.
+ */
+function ListaDatos({ filas }: { filas: Array<[string, ReactNode]> }) {
+  return (
+    <dl className="divide-y divide-border-subtle">
+      {filas.map(([k, val]) => (
+        <div key={k} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-2">
+          <dt className="min-w-0 text-xs text-text-secondary">{k}</dt>
+          <dd className="shrink-0 font-mono text-xs text-text-primary">{val}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 function Celda({ children, alineada = 'right', mono = true }: {
   children: ReactNode
   alineada?: 'left' | 'right'
@@ -109,29 +139,6 @@ function Celda({ children, alineada = 'right', mono = true }: {
   )
 }
 
-/** Tres columnas de la misma variante: CAGR, Sharpe e IR. */
-function FilaCorte({ nombre, corte, referencia }: {
-  nombre: string
-  corte: CorteMetricas
-  /** CAGR contra el que se compara, para colorear la diferencia. */
-  referencia: number
-}) {
-  const delta = corte.cagr - referencia
-  return (
-    <tr className="border-b border-border-subtle last:border-0">
-      <td className="px-2 py-2 text-text-primary">{nombre}</td>
-      <Celda>{pct(corte.cagr)}</Celda>
-      <Celda>
-        <span style={{ color: tono(delta) }}>{delta > 0 ? '+' : ''}{pct(delta)}</span>
-      </Celda>
-      <Celda>{num(corte.sharpe)}</Celda>
-      <Celda>
-        <span style={{ color: tono(corte.informationRatio) }}>{num(corte.informationRatio)}</span>
-      </Celda>
-    </tr>
-  )
-}
-
 /**
  * Una capa del embudo, en tarjeta en vez de en fila de tabla.
  *
@@ -140,26 +147,37 @@ function FilaCorte({ nombre, corte, referencia }: {
  * pedía scroll horizontal propio para tres números. Apilar el nombre sobre sus
  * métricas cabe en 320 px sin desbordar y sigue leyéndose en escritorio.
  */
-function TarjetaCapa({ nombre, corte, destacada }: {
+function TarjetaCorte({ nombre, corte, destacada, referencia }: {
   nombre: string
   corte: CorteMetricas
-  /** La capa que coincide con la variante en pantalla. */
+  /** La variante que coincide con la que está en pantalla. */
   destacada?: boolean
+  /** CAGR contra el que comparar; si se pasa, la tarjeta muestra la diferencia. */
+  referencia?: number
 }) {
+  const delta = referencia == null ? null : corte.cagr - referencia
+  const metricas = [
+    { k: 'CAGR', v: pct(corte.cagr), color: undefined as string | undefined },
+    ...(delta == null ? [] : [{
+      k: 'Δ CAGR',
+      v: `${delta > 0 ? '+' : ''}${pct(delta)}`,
+      color: tono(delta),
+    }]),
+    { k: 'Sharpe', v: num(corte.sharpe), color: undefined },
+    { k: 'IR', v: num(corte.informationRatio), color: tono(corte.informationRatio) },
+  ]
+
   return (
     <div
       className="rounded-lg border bg-surface-raised px-3 py-2.5"
-      style={{
-        borderColor: destacada ? 'var(--color-accent)' : 'var(--color-border-subtle)',
-      }}
+      style={{ borderColor: destacada ? 'var(--color-accent)' : 'var(--color-border-subtle)' }}
     >
+      {/* El nombre va sobre sus métricas y no en una columna: los nombres de
+          criterio son largos en castellano y, en una fila, se partían letra a
+          letra o forzaban un scroll horizontal para enseñar cuatro números. */}
       <p className="text-xs font-semibold text-text-primary">{nombre}</p>
-      <dl className="mt-2 grid grid-cols-3 gap-2">
-        {[
-          { k: 'CAGR', v: pct(corte.cagr), color: undefined },
-          { k: 'Sharpe', v: num(corte.sharpe), color: undefined },
-          { k: 'IR', v: num(corte.informationRatio), color: tono(corte.informationRatio) },
-        ].map(m => (
+      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
+        {metricas.map(m => (
           <div key={m.k} className="min-w-0">
             <dt className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-muted">{m.k}</dt>
             <dd
@@ -413,7 +431,7 @@ export default function BacktestClient({ resumen, opciones }: {
         >
           <div className="space-y-2">
             {Object.entries(v.porCapa).map(([k, corte]) => (
-              <TarjetaCapa
+              <TarjetaCorte
                 key={k}
                 nombre={ETIQUETA_CAPA[k] ?? k}
                 corte={corte}
@@ -436,16 +454,16 @@ export default function BacktestClient({ resumen, opciones }: {
           titulo="Qué aporta cada criterio"
           descripcion="Se retira un criterio del screener y se vuelve a correr todo. Si quitarlo mejora el resultado, ese criterio está restando."
         >
-          <Tabla cabeceras={['Sin este criterio', 'CAGR', 'Δ CAGR', 'Sharpe', 'IR']} min={420}>
+          <div className="space-y-2">
             {Object.entries(v.leaveOneOut).map(([k, corte]) => (
-              <FilaCorte
+              <TarjetaCorte
                 key={k}
-                nombre={ETIQUETA_CRITERIO[k.replace('sin_', '')] ?? k}
+                nombre={`Sin ${(ETIQUETA_CRITERIO[k.replace('sin_', '')] ?? k).toLowerCase()}`}
                 corte={corte}
                 referencia={v.base.cagr}
               />
             ))}
-          </Tabla>
+          </div>
         </Panel>
       </div>
 
@@ -454,7 +472,7 @@ export default function BacktestClient({ resumen, opciones }: {
         titulo="Año a año"
         descripcion="Un resultado que solo vive en un año es un año bueno, no una ventaja. Los tramos sin datos utilizables se declaran vacíos en vez de pintarse como cero."
       >
-        <Tabla cabeceras={['Tramo', 'Meses', 'Retorno acumulado', 'Exceso medio mensual']} min={440}>
+        <Tabla cabeceras={['Tramo', 'Meses', 'Retorno', 'Exceso mensual']} min={400}>
           {v.subperiodos.map(s => (
             <tr key={s.nombre} className="border-b border-border-subtle last:border-0">
               <td className="px-2 py-2 text-text-primary">{s.nombre}</td>
@@ -480,11 +498,11 @@ export default function BacktestClient({ resumen, opciones }: {
           titulo="Robustez"
           descripcion="El mismo backtest con una decisión metodológica cambiada cada vez. Un resultado que solo sobrevive a una de ellas no es un resultado."
         >
-          <Tabla cabeceras={['Variante', 'CAGR', 'Δ CAGR', 'Sharpe', 'IR']} min={420}>
+          <div className="space-y-2">
             {Object.entries(v.robustez).map(([k, corte]) => (
-              <FilaCorte key={k} nombre={ETIQUETA_ROBUSTEZ[k] ?? k} corte={corte} referencia={v.base.cagr} />
+              <TarjetaCorte key={k} nombre={ETIQUETA_ROBUSTEZ[k] ?? k} corte={corte} referencia={v.base.cagr} />
             ))}
-          </Tabla>
+          </div>
         </Panel>
 
         <Panel
@@ -534,8 +552,8 @@ export default function BacktestClient({ resumen, opciones }: {
           titulo="La muestra"
           descripcion="De dónde salen los datos y qué se sabe de lo que falta."
         >
-          <Tabla cabeceras={['Concepto', 'Valor']} min={320}>
-            {[
+          <ListaDatos
+            filas={[
               ['Tickers del universo', v.muestra.tickersDeclarados.toLocaleString('es-ES')],
               ['Con precios utilizables', v.muestra.tickersConDatos.toLocaleString('es-ES')],
               ['Sin precios (cota de sesgo de supervivencia)', `${v.muestra.tickersSinPrecios} · ${num(v.muestra.sesgoSupervivenciaPct, 1)} %`],
@@ -543,13 +561,8 @@ export default function BacktestClient({ resumen, opciones }: {
               ['Rebalanceos', String(v.muestra.nRebalanceos)],
               ['Meses iniciales en liquidez', String(v.muestra.mesesInicialesEnLiquidez)],
               ['Ventana', `${v.muestra.desde} → ${v.muestra.hasta}`],
-            ].map(([k, val]) => (
-              <tr key={k} className="border-b border-border-subtle last:border-0">
-                <td className="px-2 py-2 text-text-secondary">{k}</td>
-                <Celda>{val}</Celda>
-              </tr>
-            ))}
-          </Tabla>
+            ]}
+          />
         </Panel>
 
         {v.paridad && (
@@ -557,18 +570,14 @@ export default function BacktestClient({ resumen, opciones }: {
             titulo="Paridad con el screener en vivo"
             descripcion="Cuánto se parece el panel reconstruido a lo que el screener de producción decide hoy, criterio a criterio. Es el control de calidad de la reconstrucción, no un resultado de inversión."
           >
-            <Tabla cabeceras={['Criterio', 'Acuerdo']} min={320}>
-              {Object.entries(v.paridad.acuerdoPorCriterio).map(([k, acuerdo]) => (
-                <tr key={k} className="border-b border-border-subtle last:border-0">
-                  <td className="px-2 py-2 text-text-secondary">{ETIQUETA_CRITERIO[k] ?? k}</td>
-                  <Celda>
-                    <span style={{ color: acuerdo >= 0.85 ? 'var(--color-positive)' : 'var(--color-warning)' }}>
-                      {pct(acuerdo, 1)}
-                    </span>
-                  </Celda>
-                </tr>
-              ))}
-            </Tabla>
+            <ListaDatos
+              filas={Object.entries(v.paridad.acuerdoPorCriterio).map(([k, acuerdo]) => [
+                ETIQUETA_CRITERIO[k] ?? k,
+                <span key={k} style={{ color: acuerdo >= 0.85 ? 'var(--color-positive)' : 'var(--color-warning)' }}>
+                  {pct(acuerdo, 1)}
+                </span>,
+              ])}
+            />
             <p className="mt-3 text-[11px] leading-relaxed text-text-muted">
               {v.paridad.comparados} tickers comparados, solapamiento de selección{' '}
               {pct(v.paridad.jaccard, 1)}. Los dos criterios que peor concuerdan —P/E proyectado y
