@@ -53,3 +53,4 @@ skills-lock.json
 
 # El .pptx se regenera con `node presentacion/build.js`; el que se publica vive en public/descargas/
 presentacion/*.pptx
+data/backtest/
