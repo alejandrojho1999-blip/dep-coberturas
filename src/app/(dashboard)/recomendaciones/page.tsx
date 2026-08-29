@@ -9,7 +9,7 @@ import { daysToExpiration } from '@/lib/options/pricing'
 import { hasFabricatedEntryPrice, FABRICATED_ENTRY_WARNING } from '@/lib/agentes/legacy-entry-price'
 import type { AgentRec } from '@/lib/agentes/types'
 import { optionOutcome, optionRefFromRec, type OptionSide } from '@/lib/options/mark'
-import { nivelesSalida } from '@/lib/options/exit-levels'
+import { nivelesSalida, usaNivelesDeSalida, type OptionCategory } from '@/lib/options/exit-levels'
 import { isAdminEmail } from '@/lib/auth/admin'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -45,17 +45,35 @@ const SALIDA_TOOLTIP =
   + 'en el bróker. El sistema los calcula y los revisa cuando el agente se '
   + 'ejecuta; entre ejecuciones no vigila nada.'
 
+const SIN_NIVELES_TOOLTIP =
+  'Este agente mantiene la posición hasta el vencimiento y la liquida a su valor '
+  + 'intrínseco. No hay objetivo ni stop que dejar puestos en el bróker.'
+
 /**
  * Niveles de salida de una recomendación de opciones, calculados desde la
  * prima de entrada para que la tabla y el agente digan siempre lo mismo,
  * también en las filas guardadas antes de que existieran los niveles.
+ *
+ * Los agentes que mantienen hasta el vencimiento no tienen niveles que enseñar.
+ * Calcularlos igualmente y pintarlos haría creer al lector que hay dos órdenes
+ * puestas en el bróker cuando no las hay, que es exactamente el problema por el
+ * que se retiraron las cifras que nadie leía.
  */
-function CeldaSalida({ entrada, side }: { entrada: number | null; side: OptionSide }) {
-  const niveles = entrada != null ? nivelesSalida(side, entrada) : null
+function CeldaSalida({ entrada, side, category }: {
+  entrada: number | null
+  side: OptionSide
+  category: OptionCategory
+}) {
+  const niveles = usaNivelesDeSalida(category) && entrada != null
+    ? nivelesSalida(side, entrada)
+    : null
   if (!niveles) {
     return (
-      <td className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell">
-        <span className="text-text-muted">—</span>
+      <td
+        className="hidden px-3 py-2.5 text-right font-mono text-xs lg:table-cell"
+        title={usaNivelesDeSalida(category) ? undefined : SIN_NIVELES_TOOLTIP}
+      >
+        <span className="text-text-muted">{usaNivelesDeSalida(category) ? '—' : 'al vencer'}</span>
       </td>
     )
   }
@@ -1525,7 +1543,7 @@ export default function RecomendacionesPage() {
                         <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary lg:table-cell">Fecha</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Prima</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell">Prima Act.</th>
-                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell" title={SALIDA_TOOLTIP}>Salida</th>
+                        <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary lg:table-cell" title={SIN_NIVELES_TOOLTIP}>Salida</th>
                         <th className="px-3 py-2.5 text-right font-medium text-text-secondary" title="Resultado en dólares de 1 contrato (100 acciones)">Result. ($)</th>
                         <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Result. (%)</th>
                         <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Strike</th>
@@ -1578,7 +1596,7 @@ export default function RecomendacionesPage() {
                                 ? <span className="text-text-primary">${fmtNum(outcome.valorActual)}</span>
                                 : <span className="text-text-muted">—</span>}
                             </td>
-                            <CeldaSalida entrada={rec.precio_entrada} side="long" />
+                            <CeldaSalida entrada={rec.precio_entrada} side="long" category="OPTIONS_GAMMA" />
                             {/* Resultado en dólares de 1 contrato = 100 acciones */}
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
                               {outcome != null ? (
@@ -1745,7 +1763,7 @@ export default function RecomendacionesPage() {
                                 ? <span className="text-text-primary">${fmtNum(outcome.valorActual)}</span>
                                 : <span className="text-text-muted">—</span>}
                             </td>
-                            <CeldaSalida entrada={rec.precio_entrada} side="short" />
+                            <CeldaSalida entrada={rec.precio_entrada} side="short" category="OPTIONS_THETA" />
                             {/* Resultado en dólares de 1 contrato = 100 acciones */}
                             <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold" title={outcome?.detalle}>
                               {outcome != null ? (

@@ -8,8 +8,6 @@ import {
   RefreshCw, Activity, Filter, Layers,
 } from 'lucide-react'
 import { settleExpiredPicks } from '@/lib/options/settle-picks'
-import { reviewExitLevels } from '@/lib/options/review-exits'
-import { nivelesSalida } from '@/lib/options/exit-levels'
 import FichaTecnicaAgente from './FichaTecnicaAgente'
 import SoloLectura from './SoloLectura'
 import { FICHA_GAMMA } from './fichas/gamma'
@@ -206,15 +204,11 @@ export default function AgenteGamma({ puedeEjecutar = false }: { puedeEjecutar?:
         addLog('✓ Sin opciones Gamma activas para re-evaluar')
       } else {
         addLog(`📋 ${activeGamma.length} opción(es) Gamma activa(s)`)
-        // Revisión de niveles: no es vigilancia continua, solo comprueba si la
-        // orden que debía estar puesta en el bróker ya habría saltado.
-        const revision = await reviewExitLevels('OPTIONS_GAMMA', signal, addLog)
-        const cerradas = revision.porObjetivo + revision.porStop
-        addLog(
-          cerradas
-            ? `✓ Revisión de niveles: ${cerradas} cerrada(s) — ${revision.porObjetivo} por objetivo, ${revision.porStop} por stop`
-            : '✓ Revisión de niveles: ninguna posición ha tocado su nivel de salida'
-        )
+        // Gamma no cierra por niveles: mantiene hasta el vencimiento. Comprar
+        // opciones ya tiene la pérdida acotada a la prima pagada, así que el
+        // stop no protegía de nada y sí cortaba posiciones que se recuperaban.
+        // Lo que sigue vivo es la liquidación de vencidos, justo debajo.
+        addLog('✓ Sin revisión de niveles: Gamma mantiene hasta el vencimiento')
       }
       if (signal.aborted) { setPhase('idle'); return }
 
@@ -448,7 +442,6 @@ export default function AgenteGamma({ puedeEjecutar = false }: { puedeEjecutar?:
         if (signal.aborted) break
         const ai = t.aiResult ?? {}
         const premium = t.premium ?? 0
-        const niveles = nivelesSalida('long', premium)
 
         try {
           const sRes = await fetch('/api/agentes/picks', {
@@ -459,8 +452,12 @@ export default function AgenteGamma({ puedeEjecutar = false }: { puedeEjecutar?:
               empresa: (ai.empresa as string) ?? t.ticker,
               category: 'OPTIONS_GAMMA',
               precio_entrada: parseFloat(premium.toFixed(4)),
-              precio_objetivo: niveles?.objetivo ?? null,
-              stop_loss: niveles?.stop ?? null,
+              // Sin objetivo ni stop: Gamma mantiene hasta el vencimiento.
+              // Guardar cifras que ningún proceso lee invita a creer que hay una
+              // protección que no existe, que es el error que ya se cometió una
+              // vez en este agente.
+              precio_objetivo: null,
+              stop_loss: null,
               direction: t.optionType === 'CALL' ? 'COMPRA' : 'VENTA',
               riesgo: (ai.riesgo as string) ?? 'MEDIO',
               timeframe: `${t.dte ?? '?'}d`,
@@ -480,10 +477,10 @@ export default function AgenteGamma({ puedeEjecutar = false }: { puedeEjecutar?:
                 forecastReturn: t.forecastReturn,
                 conviction: t.conviction,
                 underlying: t.ticker,
-                // Distingue estas filas de las de Peter/Small: aquí
-                // precio_objetivo y stop_loss son primas por acción, no
-                // precios de la acción.
-                nivelesFuente: 'exit-levels',
+                // Distingue estas filas de las de Peter/Small y deja constancia
+                // de que la ausencia de niveles es deliberada, no un fallo al
+                // guardarlos.
+                nivelesFuente: 'sin-niveles',
                 side: 'long',
               },
             }),

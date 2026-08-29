@@ -95,3 +95,47 @@ export function evaluarSalida(
 
   return { accion, pnlPct, niveles }
 }
+
+/* ── Qué agentes usan niveles ────────────────────────────────────────────── */
+
+export const OPTION_CATEGORIES = ['OPTIONS_GAMMA', 'OPTIONS_THETA'] as const
+export type OptionCategory = typeof OPTION_CATEGORIES[number]
+
+export function isOptionCategory(value: unknown): value is OptionCategory {
+  return typeof value === 'string' && (OPTION_CATEGORIES as readonly string[]).includes(value)
+}
+
+/**
+ * Qué agentes cierran posiciones al tocar un nivel, y cuáles las mantienen
+ * hasta el vencimiento.
+ *
+ * **Theta sí.** Vender opciones puede costar mucho más que la prima cobrada:
+ * cuando el subyacente se desploma, la obligación de recomprar supera la caja.
+ * El backtest sobre 21 años lo mide sin ambigüedad — sin niveles la cartera
+ * llega a cero, con ellos sobrevive con una caída máxima del 26 %.
+ *
+ * **Gamma no.** Comprar opciones tiene la pérdida acotada a la prima pagada, así
+ * que el stop no protege de nada que no estuviera ya acotado; lo que hace es
+ * cortar posiciones que después se recuperan. En el mismo backtest, quitarle los
+ * niveles sube el CAGR del 17,15 % al 25,34 % y **reduce** la caída máxima del
+ * 46 % al 21 %. La ventaja aguanta en 10 de los 12 puntos del barrido del
+ * supuesto de volatilidad, y solo se invierte donde ambas variantes ya pierden
+ * mucho dinero.
+ *
+ * Consecuencia práctica: las posiciones de Gamma viven hasta el vencimiento y
+ * las liquida `settleExpiredPicks` a valor intrínseco. Por eso Gamma tampoco
+ * guarda ya `precio_objetivo` ni `stop_loss`: escribir cifras que ningún proceso
+ * lee invita a creer que hay una protección que no existe.
+ *
+ * Esto vive en este módulo, y no junto al orquestador de la revisión, porque
+ * aquí no hay dependencias de servidor: la tabla de recomendaciones necesita
+ * consultarlo desde el navegador para no pintar niveles inexistentes.
+ */
+export const CATEGORIAS_CON_NIVELES: Record<OptionCategory, boolean> = {
+  OPTIONS_GAMMA: false,
+  OPTIONS_THETA: true,
+}
+
+export function usaNivelesDeSalida(category: OptionCategory): boolean {
+  return CATEGORIAS_CON_NIVELES[category]
+}

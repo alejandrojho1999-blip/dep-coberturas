@@ -199,6 +199,55 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Gamma deja de usar niveles de salida (2026-08-29)
+Decisión tomada a partir del backtest de opciones. Gamma mantiene ahora cada
+contrato **hasta el vencimiento** y lo liquida a valor intrínseco; Theta conserva
+sus niveles intactos.
+
+**Por qué.** Comprar opciones ya tiene la pérdida acotada a la prima pagada, así
+que el stop al 0,5× no protegía de nada que no estuviera acotado de antemano —
+lo que hacía era cortar posiciones que después se recuperaban. Sobre 21 años:
+
+| | CAGR | Caída máxima | IR |
+|---|---:|---:|---:|
+| Gamma con niveles | 17,15 % | 45,6 % | +0,27 |
+| **Gamma sin niveles** | **25,34 %** | **21,5 %** | **+0,38** |
+
+La ventaja aguanta en **10 de los 12 puntos** del barrido del supuesto de
+volatilidad, con diferencias de +8 a +36 pp, y solo se invierte en `k ≥ 1,20`,
+donde ambas configuraciones ya pierden mucho dinero. Además, sin niveles Gamma
+sigue en positivo hasta `k = 1,10`, mientras que con ellos se hunde ya en
+`k = 1,00`: retirarlos también lo hace más robusto al único supuesto libre.
+
+Theta se queda como está, y por la razón contraria: sin niveles su cartera llega
+a cero. Vender opciones puede costar mucho más que la prima cobrada.
+
+**Dónde está el interruptor.** `CATEGORIAS_CON_NIVELES` en
+`lib/options/exit-levels.ts`, consultado desde `runExitReview`. El corte va ahí y
+no en quien llama porque por esa función pasan **las dos** vías —la revisión que
+dispara el agente y la del cron de GitHub Actions—; ponerlo en una sola habría
+dejado a la otra cerrando posiciones que ya no debe tocar.
+
+Vive en `exit-levels.ts` y no junto al orquestador porque aquel módulo es puro:
+la tabla de recomendaciones necesita consultarlo **desde el navegador**. El
+primer intento lo puso en `exit-review-run.ts` y el build de Turbopack falló con
+63 errores de `Module not found` (`fs`, `dns`, `child_process`) al arrastrar
+Supabase al bundle de cliente. Hay un test que fija esa separación.
+
+**Coherencia arrastrada.** Gamma tampoco guarda ya `precio_objetivo` ni
+`stop_loss` —escribir cifras que ningún proceso lee es el error que este agente
+ya cometió una vez— y la tabla de `/recomendaciones` deja de pintarle niveles
+calculados al vuelo: ahora muestra «al vencer» con su explicación. Las fichas de
+Gamma se reescribieron en «Cuándo vende» y en el bloque de validación.
+
+Verificado: lint limpio, tsc sin errores, **582 tests** en 41 archivos, build
+correcto.
+
+**Sin efecto retroactivo:** las posiciones de Gamma ya abiertas con niveles
+guardados simplemente dejan de revisarse y vivirán hasta su vencimiento, donde
+las liquidará `settleExpiredPicks`. No se toca ninguna fila existente.
+
+
 ### Backtest de los agentes de opciones: Gamma y Theta (2026-08-29)
 Los cuatro agentes tienen ya backtest. Este era el difícil, por una razón que
 conviene entender antes que cualquier cifra.
