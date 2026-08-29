@@ -555,9 +555,9 @@ export default function BacktestClient({ resumen }: { resumen: ResumenPublicado 
         descripcion={
           <>
             Las {totalOperaciones.toLocaleString('es-ES')} operaciones del estudio, una a una, con
-            todas las métricas que hay detrás de esta pantalla. Son ficheros estáticos: lo que se
-            descarga es exactamente lo que se publicó, no una consulta que pueda dar otra cosa
-            mañana.
+            todas las métricas que hay detrás de esta pantalla. Se generan a partir de la corrida
+            publicada, así que lo que se descarga es exactamente lo que muestra esta pantalla y no
+            una consulta que pueda dar otra cosa mañana.
           </>
         }
       >

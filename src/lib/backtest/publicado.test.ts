@@ -1,6 +1,8 @@
-import { existsSync, statSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, it, expect } from 'vitest'
+import { catalogoDataset } from './dataset'
+import { DATASET_BACKTEST, entradaDataset } from './dataset-source'
 import {
   RESUMEN_BACKTEST, varianteBacktest,
   ETIQUETA_CAPA, ETIQUETA_CRITERIO, ETIQUETA_ROBUSTEZ,
@@ -91,15 +93,51 @@ describe('resumen publicado del backtest', () => {
     expect(descargas.some(d => d.fichero === 'metricas-backtest.csv')).toBe(true)
   })
 
-  it('enlaza ficheros que existen en public/ y no están vacíos', () => {
-    // El enlace de descarga es estático: si el fichero no se generó, el usuario
-    // se lleva un 404 y la pantalla no tiene forma de avisarlo en tiempo real.
+  it('enlaza ficheros que la ruta de API sabe construir', () => {
+    // Si el catálogo y el resumen se desincronizan, el enlace da un 404 que la
+    // pantalla no tiene forma de detectar hasta que alguien lo pulsa.
     for (const d of RESUMEN_BACKTEST.descargas) {
-      expect(d.ruta).toBe(`/descargas/backtest/${d.fichero}`)
-      const enDisco = path.join(process.cwd(), 'public', d.ruta)
-      expect(existsSync(enDisco), `falta ${d.ruta}`).toBe(true)
-      expect(statSync(enDisco).size).toBe(d.bytes)
+      expect(d.ruta).toBe(`/api/backtest/dataset?fichero=${encodeURIComponent(d.fichero)}`)
+      const entrada = entradaDataset(d.fichero)
+      expect(entrada, `el catálogo no sirve ${d.fichero}`).toBeDefined()
+      expect(entrada!.formato).toBe(d.formato)
     }
+  })
+
+  it('construye cada descarga con el tamaño que anuncia', () => {
+    for (const d of RESUMEN_BACKTEST.descargas) {
+      const contenido = entradaDataset(d.fichero)!.construir()
+      const bytes = typeof contenido === 'string' ? Buffer.byteLength(contenido) : contenido.byteLength
+      expect(bytes, `${d.fichero} pesa distinto de lo anunciado`).toBe(d.bytes)
+    }
+  })
+
+  it('no sirve ficheros fuera del catálogo', () => {
+    // El nombre llega por parámetro de consulta: si el catálogo no lo filtrara,
+    // sería la puerta natural a un recorrido de directorios.
+    expect(entradaDataset('../../.env.local')).toBeUndefined()
+    expect(entradaDataset('backtest-peter.xlsx/../../secreto')).toBeUndefined()
+    expect(entradaDataset('')).toBeUndefined()
+  })
+
+  it('cubre en el dataset las mismas variantes que la pantalla', () => {
+    expect(DATASET_BACKTEST.variantes.map(v => v.id)).toEqual(variantes.map(v => v.id))
+    for (const v of DATASET_BACKTEST.variantes) {
+      const enPantalla = variantes.find(x => x.id === v.id)!
+      expect(v.operaciones.length).toBe(enPantalla.base.nOperaciones)
+    }
+    expect(catalogoDataset(DATASET_BACKTEST)).toHaveLength(RESUMEN_BACKTEST.descargas.length)
+  })
+
+  it('mantiene el dataset pesado fuera de lo que importa la pantalla', () => {
+    // `dataset-publicado.json` ronda el medio mega. Si algún componente llegara
+    // a importarlo, viajaría al navegador entero en cada visita a la pantalla.
+    const cliente = readFileSync(
+      path.join(process.cwd(), 'src/app/(dashboard)/agentes/backtest/_components/BacktestClient.tsx'),
+      'utf8',
+    )
+    expect(cliente).not.toContain('dataset-source')
+    expect(cliente).not.toContain('dataset-publicado')
   })
 
   it('localiza una variante por su identificador', () => {

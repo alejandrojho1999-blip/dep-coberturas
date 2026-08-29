@@ -1,5 +1,5 @@
 {
-  "generado": "2026-08-29T15:08:52.597Z",
+  "generado": "2026-08-29T15:21:30.264Z",
   "ventana": {
     "desde": "2024-04-30",
     "hasta": "2026-08-26",
@@ -1924,59 +1924,59 @@
   "descargas": [
     {
       "fichero": "backtest-peter.xlsx",
+      "ruta": "/api/backtest/dataset?fichero=backtest-peter.xlsx",
       "formato": "xlsx",
-      "bytes": 379849,
+      "bytes": 361169,
       "etiqueta": "Agente Peter · libro completo",
-      "descripcion": "Métricas, operaciones, tramos, atribución, robustez, curvas y paridad de sus dos variantes, en hojas separadas.",
-      "ruta": "/descargas/backtest/backtest-peter.xlsx"
+      "descripcion": "Métricas, operaciones, tramos, atribución, robustez, curvas y paridad de sus dos variantes, en hojas separadas."
     },
     {
       "fichero": "backtest-small.xlsx",
+      "ruta": "/api/backtest/dataset?fichero=backtest-small.xlsx",
       "formato": "xlsx",
-      "bytes": 646653,
+      "bytes": 611926,
       "etiqueta": "Agente Small · libro completo",
-      "descripcion": "Métricas, operaciones, tramos, atribución, robustez, curvas y paridad de sus dos variantes, en hojas separadas.",
-      "ruta": "/descargas/backtest/backtest-small.xlsx"
+      "descripcion": "Métricas, operaciones, tramos, atribución, robustez, curvas y paridad de sus dos variantes, en hojas separadas."
     },
     {
       "fichero": "operaciones-peter.csv",
+      "ruta": "/api/backtest/dataset?fichero=operaciones-peter.csv",
       "formato": "csv",
-      "bytes": 16553,
+      "bytes": 13385,
       "etiqueta": "Operaciones · Peter · cascada",
-      "descripcion": "116 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una.",
-      "ruta": "/descargas/backtest/operaciones-peter.csv"
+      "descripcion": "116 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una."
     },
     {
       "fichero": "operaciones-peter-lynch.csv",
+      "ruta": "/api/backtest/dataset?fichero=operaciones-peter-lynch.csv",
       "formato": "csv",
-      "bytes": 59755,
+      "bytes": 47790,
       "etiqueta": "Operaciones · Peter · solo Lynch",
-      "descripcion": "441 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una.",
-      "ruta": "/descargas/backtest/operaciones-peter-lynch.csv"
+      "descripcion": "441 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una."
     },
     {
       "fichero": "operaciones-small.csv",
+      "ruta": "/api/backtest/dataset?fichero=operaciones-small.csv",
       "formato": "csv",
-      "bytes": 30623,
+      "bytes": 24106,
       "etiqueta": "Operaciones · Small · cascada",
-      "descripcion": "214 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una.",
-      "ruta": "/descargas/backtest/operaciones-small.csv"
+      "descripcion": "214 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una."
     },
     {
       "fichero": "operaciones-small-lynch.csv",
+      "ruta": "/api/backtest/dataset?fichero=operaciones-small-lynch.csv",
       "formato": "csv",
-      "bytes": 107967,
+      "bytes": 83864,
       "etiqueta": "Operaciones · Small · solo Lynch",
-      "descripcion": "793 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una.",
-      "ruta": "/descargas/backtest/operaciones-small-lynch.csv"
+      "descripcion": "793 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una."
     },
     {
       "fichero": "metricas-backtest.csv",
+      "ruta": "/api/backtest/dataset?fichero=metricas-backtest.csv",
       "formato": "csv",
-      "bytes": 3046,
+      "bytes": 2007,
       "etiqueta": "Métricas · las cuatro variantes",
-      "descripcion": "Una fila por variante con rentabilidad, riesgo, contrastes estadísticos y datos de la muestra.",
-      "ruta": "/descargas/backtest/metricas-backtest.csv"
+      "descripcion": "Una fila por variante con rentabilidad, riesgo, contrastes estadísticos y datos de la muestra."
     }
   ]
 }
