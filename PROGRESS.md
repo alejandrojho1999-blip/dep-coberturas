@@ -290,14 +290,22 @@ a ancho completo, donde su scroll interno sí funciona.
 
 Verificado: lint limpio, tsc sin errores, 614 tests, build correcto.
 
-**Nota sobre la verificación:** no pude medir el desbordamiento en un navegador
-real. La pantalla exige sesión y Playwright no está instalado en el proyecto
-(solo disponible vía `npx` global). Intenté desactivar temporalmente la
-protección de `/agentes` en `src/proxy.ts` para medirla y **el clasificador lo
-bloqueó, con razón**: tocar la autenticación para una prueba de CSS no compensa
-el riesgo de dejarla desactivada por olvido. La comprobación es estructural —que
-ningún panel en rejilla contenga ya una tabla con ancho mínimo—, no una medida
-de píxeles.
+**Verificado en el móvil por el usuario** tras desplegar `4d4fb18`: ya no se
+pierde texto en horizontal.
+
+Sobre cómo se comprobó desde la sesión: no se pudo medir el desbordamiento en un
+navegador real, porque la pantalla exige sesión y Playwright no está instalado en
+el proyecto (solo vía `npx` global). Se intentó desactivar temporalmente la
+protección de `/agentes` en `src/proxy.ts` y **el clasificador lo bloqueó, con
+razón**: tocar la autenticación para una prueba de CSS no compensa el riesgo de
+dejarla desactivada por olvido. La comprobación automática fue estructural —que
+ningún panel en rejilla contenga ya una tabla con ancho mínimo—, y la visual la
+hizo el usuario.
+
+**Para la próxima vez:** si van a tocarse más pantallas protegidas, instalar
+Playwright como dependencia de desarrollo y montar una prueba que inicie sesión
+con un usuario de test evitaría depender de una revisión manual. Es el mismo
+hueco que deja sin verificar la descarga del dataset con sesión iniciada.
 
 
 ### Dataset descargable para Gamma y Theta (2026-08-29)
