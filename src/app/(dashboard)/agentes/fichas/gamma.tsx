@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Ficha } from './tipos'
 
 /**
@@ -145,36 +146,64 @@ export const FICHA_GAMMA: Ficha = {
 
   validacion: [
     {
-      id: 'sin-backtest',
+      id: 'backtest-hecho',
       texto: (
         <>
-          <strong style={{ color: 'var(--color-warning)' }}>Este agente no tiene backtest.</strong>{' '}
-          Su respaldo hoy es el historial en vivo que se acumula desde la primera
-          recomendación guardada, visible en la sección Portafolios. Es un registro
-          real y sin retoques, pero todavía corto.
+          <strong className="text-text-primary">Este agente ya tiene backtest</strong>, sobre 254
+          vencimientos y 21 años. Con el supuesto de volatilidad calibrado rinde un{' '}
+          <strong className="text-text-primary">17,15 % anual frente al 9,33 % del SPY</strong>,
+          con <em>information ratio</em> +0,27 y t-stat 1,20.{' '}
+          <Link href="/agentes/backtest" className="underline underline-offset-2 hover:text-text-primary">
+            Ver el backtest completo
+          </Link>.
         </>
       ),
     },
     {
-      id: 'sin-historico-primas',
+      id: 'primas-reconstruidas',
       texto: (
         <>
-          La dificultad aquí es distinta a la de los agentes de acciones y{' '}
-          <strong className="text-text-primary">más severa</strong>: no existe
-          histórico gratuito de primas de opciones. No se puede reconstruir a qué
-          precio se habría comprado un contrato hace dos años, así que ni siquiera
-          los filtros mecánicos son medibles hacia atrás sin pagar por datos.
+          <strong style={{ color: 'var(--color-warning)' }}>Esas primas no existieron.</strong>{' '}
+          No hay histórico gratuito de cadenas de opciones, así que cada contrato se valora con
+          Black-Scholes y una volatilidad implícita <em>modelada</em>. El supuesto se calibra
+          replicando el índice <span className="font-mono">^PUT</span> del CBOE —correlación 0,94—,
+          pero sigue siendo un supuesto: <strong className="text-text-primary">una décima por
+          encima del valor calibrado y el resultado de Gamma se vuelve negativo</strong>. Comprar
+          opciones es apostar a que la prima está barata, y eso es justo lo que estos datos no
+          pueden decidir.
         </>
       ),
     },
     {
-      id: 'curva-escalonada',
+      id: 'niveles-restan',
       texto: (
         <>
-          Por esa misma razón la curva de resultados del portafolio de opciones{' '}
-          <em>avanza a saltos</em>: solo se mueve cuando una posición vence y se
-          liquida. Se descartó suavizarla revaluando con Black-Scholes, porque sería
-          una curva bonita pero teórica.
+          Hallazgo accionable: <strong className="text-text-primary">quitar los niveles de salida
+          mejora al agente</strong>. El CAGR sube del 17,15 % al 25,34 % y, contra la intuición, la
+          caída máxima baja del 46 % al 21 %. El stop al 0,5× de la prima corta posiciones que
+          después se recuperan. Son dos configuraciones comparadas, no un barrido de parámetros.
+        </>
+      ),
+    },
+    {
+      id: 'sin-significacion',
+      texto: (
+        <>
+          Ni con 21 años se alcanza significación estadística: el t-stat se queda en 1,20 frente al
+          umbral convencional de 2,0. Tampoco se reproducen el paso de revisión por IA —no es
+          determinista— ni el corte de score, que depende del interés abierto de cada contrato y no
+          existe hacia atrás.
+        </>
+      ),
+    },
+    {
+      id: 'universo-declarado',
+      texto: (
+        <>
+          El backtest usa la lista fija de subyacentes del agente. En producción Gamma toma los
+          picks vivos de Peter y Small y solo cae a esa lista cuando no hay ninguno, así que lo
+          medido es el <em>caso degenerado</em>. Encadenarlo al backtest de acciones habría
+          recortado la ventana de 21 años a 28 meses.
         </>
       ),
     },

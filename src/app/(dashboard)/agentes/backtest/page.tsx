@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { RESUMEN_BACKTEST } from '@/lib/backtest/publicado'
+import { RESUMEN_OPCIONES } from '@/lib/backtest/opciones-publicado'
 import BacktestClient from './_components/BacktestClient'
 
 export const metadata: Metadata = {
@@ -24,5 +25,5 @@ export default async function BacktestAgentesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  return <BacktestClient resumen={RESUMEN_BACKTEST} />
+  return <BacktestClient resumen={RESUMEN_BACKTEST} opciones={RESUMEN_OPCIONES} />
 }
