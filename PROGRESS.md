@@ -33,6 +33,46 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ## Pendiente
 
+### PARA EL LUNES 2026-08-31 — activar el archivo de cadenas
+> Aplazado a propósito el 2026-08-29 (sábado). El **lunes 31 es día de mercado**,
+> que es cuando se puede verificar de verdad: la guarda de calendario impide
+> probar la captura en fin de semana.
+>
+> El código está desplegado y en producción desde el commit `f0f6797`, pero
+> **no graba nada todavía** porque falta la tabla. Nada se rompe mientras tanto:
+> el cron responde 500 y el job de GitHub sale en rojo, sin tocar ninguna otra
+> parte de la aplicación.
+
+**1. Aplicar la migración 019 — bloqueante.**
+`supabase/migrations/019_options_chain_snapshots.sql`, desde el SQL Editor de
+Supabase o con la CLI. Solo crea la tabla `options_chain_snapshots` y sus
+políticas; no toca ni una fila existente. No pude aplicarla desde la sesión
+porque el MCP de Supabase no estaba conectado.
+
+**2. Confirmar `CRON_SECRET` y la variable `APP_URL`** en la configuración del
+repositorio en GitHub. El workflow de `review-exits` ya los usa, así que deberían
+estar — pero si aquel llevara tiempo fallando en silencio, este heredaría el
+problema sin avisar.
+
+**3. Verificar la primera captura real.** El camino completo —descargar, filtrar,
+escribir— **no está probado de extremo a extremo**: en sábado solo pude
+comprobar la autorización (401 sin cabecera y con secreto inválido) y la guarda
+de fin de semana. Qué mirar:
+- GitHub → Actions → «Archivo diario de cadenas de opciones». Se puede forzar con
+  *Run workflow* sin esperar al horario, **pero tiene que caer entre las 16:00 y
+  las 19:00 de Nueva York** o responderá `ejecutado: false` sin error.
+- La respuesta debe traer `archivados` cerca de 36, con `contratos` y `kb`.
+- En Supabase, `select count(*) from options_chain_snapshots where fecha = ...`
+  debe dar ~36 filas.
+- Si algún ticker aparece en `vacios` o `fallidos` de forma **sistemática** varios
+  días seguidos, mirarlo: uno suelto es normal (Yahoo tiene huecos), uno fijo
+  significa que ese subyacente no se está archivando.
+
+**Referencia de tamaño**, para detectar a tiempo que algo se desmadra: ~0,5 MB al
+día, 10 MB al mes, 125 MB al año. Si un día pasa mucho de 1 MB, el filtro dejó de
+aplicarse.
+
+
 ### DEUDA ABIERTA — activar el cron y la cartera única
 > Estado a 2026-08-23: **el código está desplegado y en producción, pero
 > inactivo a propósito**. Falta configuración manual que solo puede hacer el
@@ -189,6 +229,22 @@ La carpeta `Emporium/` pertenece a **lriofrio915@gmail.com**; con
 Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ### Decisiones abiertas
+- **Las capas técnicas de Peter y Small.** Quitarlas mejora CAGR, Sharpe, IR y
+  t-stat en los dos agentes de forma consistente, pero la ventana honesta son 28
+  meses de un solo régimen de mercado y el t-stat se queda en 0,82. No es base
+  suficiente para tocar producción, al contrario que en Gamma, donde había 21
+  años y la ventaja aguantaba en 10 de 12 supuestos. Se decide con datos
+  point-in-time o con forward-test real, no alargando la interpretación de esta
+  muestra.
+- **Qué aporta el Agente Theta frente a comprar el índice.** No bate a `^PUT` en
+  ninguna corrida que no arruine la cartera: IR negativo con el supuesto
+  calibrado. Seleccionar 36 subyacentes no mejora a vender puts sobre el índice
+  sin seleccionar nada. Merece decidir si el agente cambia o si el capital que
+  tiene asignado está mejor en otro sitio.
+- **Verificar una descarga del dataset con sesión iniciada.** Que devuelva 401
+  sin sesión está comprobado en producción; que el fichero llegue bien a quien sí
+  tiene derecho, solo por pruebas unitarias. Se cierra abriendo
+  `/agentes/backtest` y pulsando un enlace del panel de descargas.
 - Qué hacer con `/dashboard` y `/ergos-quant`: siguen vivas pero sin entrada de
   menú.
 - `OPENROUTER_API_KEY` y `FRED_API_KEY` están vacías en `.env.local`. En Vercel
