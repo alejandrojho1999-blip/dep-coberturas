@@ -10,6 +10,11 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    // Los scripts de `scripts/**` corren con `node --experimental-strip-types`,
+    // que exige la extensión explícita en los imports relativos. Es seguro
+    // habilitarlo porque este proyecto compila con `noEmit`: el compilador nunca
+    // escribe esas rutas a disco.
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,

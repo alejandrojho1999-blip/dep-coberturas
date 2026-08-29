@@ -199,6 +199,46 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Dataset descargable y responsive de la atribución por capa (2026-08-29)
+
+**Descargas.** La pantalla enseñaba conclusiones pero no dejaba llevarse los
+datos. Ahora `npm run backtest:publicar` genera también, en la misma pasada,
+`public/descargas/backtest/`: un `.xlsx` por agente con nueve hojas (métricas,
+operaciones, tramos, atribución por capa, por criterio y por score, robustez,
+curvas y paridad) y CSV sueltos con las operaciones de cada variante más las
+métricas de las cuatro. 1.564 operaciones en total, 1,3 MB versionados.
+
+Se generan en la misma pasada a propósito: si el dataset se exportara con otro
+comando, pantalla y descargas podrían acabar publicando corridas distintas.
+
+Dos formatos por decisión: el `.xlsx` lleva los números como números y se abre
+igual en cualquier configuración regional; el `.csv` va separado por comas con
+punto decimal, que es lo que esperan pandas y R —y lo que un Excel en español
+descoloca—. La pantalla lo explica en vez de dejar que el usuario lo descubra.
+
+No hay ruta de API detrás: `data/backtest/` no existe en producción, así que un
+endpoint que leyera de ahí funcionaría en local y daría 404 en Vercel. Los
+ficheros son estáticos servidos desde `public/`, verificado con `npm start` y
+curl: 200 y el `content-type` correcto en los cuatro comprobados.
+
+**Responsive.** El panel «Qué aporta cada capa» era una tabla de cuatro columnas
+dentro de media columna de rejilla: en móvil los nombres de capa se partían letra
+a letra y pedía scroll horizontal para tres números. Sustituido por tarjetas con
+el nombre encima y las tres métricas en `grid-cols-3`, que caben en 320 px sin
+desbordar. La tarjeta de la capa que coincide con la variante en pantalla va
+resaltada con el color de acento.
+
+Verificado: lint limpio, tsc sin errores, 506 tests (2 nuevos que comprueban que
+cada descarga enlazada existe en `public/` y que su tamaño coincide con el
+declarado — un enlace roto sería un 404 que la pantalla no puede detectar sola),
+build correcto.
+
+**Nota de mantenimiento:** tras cada `npm run backtest:run` hay que ejecutar
+`npm run backtest:publicar` y commitear tanto `resumen-publicado.json` como
+`public/descargas/backtest/`, o la pantalla y las descargas seguirán mostrando la
+corrida anterior.
+
+
 ### Pantalla `/agentes/backtest` y fichas actualizadas (2026-08-29)
 Los resultados del backtest existían solo como markdown en `data/backtest/`, que
 no se versiona. Ahora están en la aplicación.

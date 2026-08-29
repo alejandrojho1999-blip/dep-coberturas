@@ -1,5 +1,5 @@
 {
-  "generado": "2026-08-29T14:38:58.425Z",
+  "generado": "2026-08-29T15:08:52.597Z",
   "ventana": {
     "desde": "2024-04-30",
     "hasta": "2026-08-26",
@@ -1919,6 +1919,64 @@
           "market_cap": 0.9922
         }
       }
+    }
+  ],
+  "descargas": [
+    {
+      "fichero": "backtest-peter.xlsx",
+      "formato": "xlsx",
+      "bytes": 379849,
+      "etiqueta": "Agente Peter · libro completo",
+      "descripcion": "Métricas, operaciones, tramos, atribución, robustez, curvas y paridad de sus dos variantes, en hojas separadas.",
+      "ruta": "/descargas/backtest/backtest-peter.xlsx"
+    },
+    {
+      "fichero": "backtest-small.xlsx",
+      "formato": "xlsx",
+      "bytes": 646653,
+      "etiqueta": "Agente Small · libro completo",
+      "descripcion": "Métricas, operaciones, tramos, atribución, robustez, curvas y paridad de sus dos variantes, en hojas separadas.",
+      "ruta": "/descargas/backtest/backtest-small.xlsx"
+    },
+    {
+      "fichero": "operaciones-peter.csv",
+      "formato": "csv",
+      "bytes": 16553,
+      "etiqueta": "Operaciones · Peter · cascada",
+      "descripcion": "116 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una.",
+      "ruta": "/descargas/backtest/operaciones-peter.csv"
+    },
+    {
+      "fichero": "operaciones-peter-lynch.csv",
+      "formato": "csv",
+      "bytes": 59755,
+      "etiqueta": "Operaciones · Peter · solo Lynch",
+      "descripcion": "441 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una.",
+      "ruta": "/descargas/backtest/operaciones-peter-lynch.csv"
+    },
+    {
+      "fichero": "operaciones-small.csv",
+      "formato": "csv",
+      "bytes": 30623,
+      "etiqueta": "Operaciones · Small · cascada",
+      "descripcion": "214 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una.",
+      "ruta": "/descargas/backtest/operaciones-small.csv"
+    },
+    {
+      "fichero": "operaciones-small-lynch.csv",
+      "formato": "csv",
+      "bytes": 107967,
+      "etiqueta": "Operaciones · Small · solo Lynch",
+      "descripcion": "793 operaciones con entrada, salida, retorno, motivo de cierre y los criterios que cumplía cada una.",
+      "ruta": "/descargas/backtest/operaciones-small-lynch.csv"
+    },
+    {
+      "fichero": "metricas-backtest.csv",
+      "formato": "csv",
+      "bytes": 3046,
+      "etiqueta": "Métricas · las cuatro variantes",
+      "descripcion": "Una fila por variante con rentabilidad, riesgo, contrastes estadísticos y datos de la muestra.",
+      "ruta": "/descargas/backtest/metricas-backtest.csv"
     }
   ]
 }
