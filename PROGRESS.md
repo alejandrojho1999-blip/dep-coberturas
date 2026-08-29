@@ -199,6 +199,67 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Archivo diario de cadenas de opciones (2026-08-29)
+El backtest de Gamma y Theta tuvo que **reconstruir** las primas con
+Black-Scholes porque no existe histórico gratuito de cadenas. Eso obligó a
+modelar la volatilidad implícita, y ese supuesto es justo la capa que decide si
+los agentes ganan — con lo cual el estudio no puede responder si la selección de
+volatilidad aporta algo. Esta es la salida de ese callejón: grabando la cadena
+cada día, en doce o dieciocho meses habrá un histórico **real**, sin proxies ni
+sesgo de reconstrucción.
+
+**Coste medido, no estimado.** La primera cifra que di —30 MB al mes— estaba mal.
+Medido contra Yahoo: ~400 bytes por contrato y 1.677 contratos solo en SPY, o sea
+~235 MB al mes sin filtrar, que agotaría el plan de Supabase en dos meses. Con el
+filtro y el formato compacto queda en **10 MB/mes y 125 MB/año**: unos cuatro
+años de margen, y JSONB comprime por encima de eso.
+
+Las dos decisiones que lo consiguen:
+- **Tuplas, no objetos.** El nombre de cada campo se repetía en cada contrato.
+  Guardar `[tipo, strike, vencimiento, bid, ask, iv, delta, OI, volumen]` baja
+  SPY de 647 kB a 40 kB, un 94 % menos. El orden **no se puede cambiar**: las
+  filas archivadas son posicionales y reordenar reinterpretaría lo ya grabado.
+  Hay un test que lo congela.
+- **Filtro DTE 7-120 y |Δ| 0,05-0,80**, deliberadamente más ancho que lo que
+  usan los agentes hoy (Gamma pide 21-90 y 0,30-0,65; Theta 21-45 y 0,15-0,35),
+  para que un estudio futuro pueda mover los umbrales sin descubrir que el dato
+  no se guardó. Otro test comprueba esa holgura.
+
+**Cuándo corre.** Después del cierre, entre las 16:00 y las 19:00 de Nueva York.
+Durante la sesión la horquilla se mueve y el interés abierto todavía es el de
+ayer, así que dos capturas del mismo día no serían comparables. La fecha la manda
+Nueva York y no el servidor: un cron a las 21:15 UTC ya está en el día siguiente
+en Europa y archivaría la sesión con fecha equivocada.
+
+**Estructura.** Una fila por ticker y sesión, con los contratos en un array
+JSONB. En filas por contrato serían decenas de millones al año para un dato que
+siempre se lee entero y por ticker. Clave única `(fecha, ticker)` con `upsert`:
+repetir la ejecución sobrescribe en vez de acumular duplicados.
+
+**Piezas**
+- `supabase/migrations/019_options_chain_snapshots.sql` — tabla y RLS (lectura
+  para autenticados, escritura solo admin, mismo criterio que la 018).
+- `src/lib/options/chain-archive.ts` — puro: filtro, formato y snapshot.
+- `src/lib/options/chain-archive-run.ts` — descarga en lotes de 4 y escritura.
+- `src/app/api/cron/archive-chains/route.ts` — endpoint con `authorizeCron`.
+- `.github/workflows/archive-chains.yml` — 21:15 y 22:15 UTC de lunes a viernes,
+  para cubrir horario de verano e invierno; el endpoint descarta la que cae
+  fuera de ventana.
+
+Verificado: lint limpio, tsc sin errores, **608 tests** (26 nuevos), build con la
+ruta presente. Probado contra un servidor real: 401 sin cabecera y con secreto
+inválido, y la guarda de fin de semana responde `ejecutado: false`.
+
+**PENDIENTE — sin esto el cron falla:**
+1. **Aplicar la migración 019** en Supabase. No pude hacerlo desde aquí: el MCP
+   de Supabase no está conectado en esta sesión.
+2. Comprobar que `CRON_SECRET` y la variable `APP_URL` existen en el repositorio
+   de GitHub (el workflow de `review-exits` ya los usa, así que deberían estar).
+3. La primera ejecución en día de mercado no está verificada de extremo a
+   extremo: la guarda de calendario impidió probarla en sábado. Conviene mirar
+   el primer job en verde y confirmar que la tabla recibe ~36 filas.
+
+
 ### Gamma deja de usar niveles de salida (2026-08-29)
 Decisión tomada a partir del backtest de opciones. Gamma mantiene ahora cada
 contrato **hasta el vencimiento** y lo liquida a valor intrínseco; Theta conserva

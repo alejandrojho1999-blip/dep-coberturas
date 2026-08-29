@@ -1,0 +1,54 @@
+name: Archivo diario de cadenas de opciones
+
+# Graba la cadena de opciones del universo de Gamma y Theta una vez por sesión.
+#
+# No es una función del sistema de trading: no lee ni escribe posiciones. Es
+# recolección de datos. El backtest de opciones tuvo que reconstruir las primas
+# con Black-Scholes porque no existe histórico gratuito de cadenas, y ese
+# supuesto es justo la capa que decide si los agentes ganan. Con doce o dieciocho
+# meses de este archivo habrá datos reales para responderlo.
+#
+# Corre **después del cierre**. Las horas van en UTC y el mercado en Nueva York,
+# así que la hora del cierre se desplaza una entre invierno y verano: se cubren
+# las dos y el propio endpoint descarta la que cae fuera de ventana, respondiendo
+# `ejecutado: false` sin tocar nada.
+#
+# Perder un día no rompe nada: el valor de este archivo está en la serie larga,
+# no en ninguna sesión concreta. Por eso no hay reintentos agresivos ni alertas.
+
+on:
+  schedule:
+    # 21:15 UTC = 16:15 ET en horario de verano (EDT)
+    # 22:15 UTC = 16:15 ET en horario de invierno (EST)
+    - cron: '15 21,22 * * 1-5'
+  workflow_dispatch:
+
+# Dos capturas simultáneas del mismo día se pisarían escribiendo la misma fila.
+concurrency:
+  group: archive-chains
+  cancel-in-progress: false
+
+jobs:
+  archivar:
+    runs-on: ubuntu-latest
+    # La captura son ~36 tickers en lotes de 4 con pausas: unos 2 minutos.
+    timeout-minutes: 10
+    steps:
+      - name: Llamar al endpoint de archivo
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$APP_URL" ]; then
+            echo "Falta el secreto CRON_SECRET o la variable APP_URL"
+            exit 1
+          fi
+
+          # --fail-with-body pone el job en rojo si el endpoint devuelve error.
+          # El endpoint solo devuelve 500 cuando NO se archivó ni una cadena;
+          # que fallen algunos tickers sueltos es normal y responde 200.
+          curl --silent --show-error --fail-with-body \
+               --max-time 300 \
+               --retry 1 --retry-delay 30 --retry-connrefused \
+               -H "Authorization: Bearer $CRON_SECRET" \
+               "$APP_URL/api/cron/archive-chains"
