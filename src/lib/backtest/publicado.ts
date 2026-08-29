@@ -128,12 +128,25 @@ export interface VariantePublicada {
   } | null
 }
 
+/** Un fichero descargable del dataset, servido como estático desde `public/`. */
+export interface DescargaPublicada {
+  fichero: string
+  /** Ruta pública ya montada; la pantalla la usa tal cual en el enlace. */
+  ruta: string
+  formato: 'xlsx' | 'csv'
+  bytes: number
+  etiqueta: string
+  descripcion: string
+}
+
 export interface ResumenPublicado {
   /** Cuándo se ejecutó el script de publicación. */
   generado: string
   /** Ventana común a todas las variantes, en meses de rebalanceo. */
   ventana: { desde: string; hasta: string; nMeses: number }
   variantes: VariantePublicada[]
+  /** Ficheros que la pantalla ofrece para descargar el dataset completo. */
+  descargas: DescargaPublicada[]
 }
 
 export const RESUMEN_BACKTEST = datos as ResumenPublicado

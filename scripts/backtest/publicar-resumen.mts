@@ -20,6 +20,7 @@ import type {
   CorteMetricas, IndicePublicado, MetricasPublicadas, ResumenPublicado,
   VariantePublicada,
 } from '@/lib/backtest/publicado'
+import { exportarDataset, rutaPublica, type BrutoExportable } from './dataset.mts'
 
 /** Variantes que se publican, en el orden en que aparecen en pantalla. */
 const VARIANTES = [
@@ -229,6 +230,7 @@ function publicar(id: string, b: Bruto): VariantePublicada {
 
 async function main() {
   const variantes: VariantePublicada[] = []
+  const brutos: BrutoExportable[] = []
 
   for (const v of VARIANTES) {
     const ruta = path.join(DATA_DIR, v.fichero)
@@ -244,6 +246,7 @@ async function main() {
       process.exit(1)
     }
     variantes.push(publicar(v.id, bruto))
+    brutos.push({ ...(bruto as unknown as BrutoExportable), id: v.id })
     console.log(`· ${v.id.padEnd(12)} ${bruto.muestra.nRebalanceos} rebalanceos, CAGR ${(bruto.base.cagr * 100).toFixed(2)} %`)
   }
 
@@ -253,10 +256,16 @@ async function main() {
   const hasta = variantes.map(v => v.muestra.hasta).sort()[0]
   const nMeses = Math.min(...variantes.map(v => v.base.nPeriodos))
 
+  // El dataset descargable sale de la misma pasada: si se generara aparte,
+  // pantalla y descargas podrían acabar contando corridas distintas.
+  const exportados = await exportarDataset(brutos)
+  for (const f of exportados) console.log(`· ${f.fichero.padEnd(30)} ${(f.bytes / 1024).toFixed(0)} kB`)
+
   const resumen: ResumenPublicado = {
     generado: new Date().toISOString(),
     ventana: { desde, hasta, nMeses },
     variantes,
+    descargas: exportados.map(f => ({ ...f, ruta: rutaPublica(f.fichero) })),
   }
 
   await writeFile(SALIDA, JSON.stringify(resumen, null, 2) + '\n', 'utf8')

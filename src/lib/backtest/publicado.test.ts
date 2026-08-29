@@ -1,3 +1,5 @@
+import { existsSync, statSync } from 'node:fs'
+import path from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   RESUMEN_BACKTEST, varianteBacktest,
@@ -77,6 +79,26 @@ describe('resumen publicado del backtest', () => {
     for (const s of tramosVacios) {
       expect(s.retornoAcumulado).toBeNull()
       expect(s.retornoActivoMedio).toBeNull()
+    }
+  })
+
+  it('publica un dataset descargable por variante y por agente', () => {
+    const { descargas } = RESUMEN_BACKTEST
+    // Un libro por agente y un CSV de operaciones por variante, más el CSV de
+    // métricas que compara las cuatro.
+    expect(descargas.filter(d => d.formato === 'xlsx')).toHaveLength(2)
+    expect(descargas.filter(d => d.fichero.startsWith('operaciones-'))).toHaveLength(variantes.length)
+    expect(descargas.some(d => d.fichero === 'metricas-backtest.csv')).toBe(true)
+  })
+
+  it('enlaza ficheros que existen en public/ y no están vacíos', () => {
+    // El enlace de descarga es estático: si el fichero no se generó, el usuario
+    // se lleva un 404 y la pantalla no tiene forma de avisarlo en tiempo real.
+    for (const d of RESUMEN_BACKTEST.descargas) {
+      expect(d.ruta).toBe(`/descargas/backtest/${d.fichero}`)
+      const enDisco = path.join(process.cwd(), 'public', d.ruta)
+      expect(existsSync(enDisco), `falta ${d.ruta}`).toBe(true)
+      expect(statSync(enDisco).size).toBe(d.bytes)
     }
   })
 

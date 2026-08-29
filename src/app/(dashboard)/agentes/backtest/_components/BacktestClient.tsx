@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, FlaskConical, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, FlaskConical, AlertTriangle, Download, FileSpreadsheet, FileText } from 'lucide-react'
 import { AGENT_COLORS } from '@/components/charts/chart-theme'
 import {
   ETIQUETA_CAPA, ETIQUETA_CRITERIO, ETIQUETA_ROBUSTEZ,
@@ -14,6 +14,9 @@ import { CurvaBacktest } from './CurvaBacktest'
 
 const pct = (x: number | null, d = 2) => (x == null ? '—' : `${(x * 100).toFixed(d)} %`)
 const num = (x: number | null, d = 2) => (x == null ? '—' : x.toFixed(d))
+/** Tamaño de fichero legible; los del dataset van de kilobytes a un mega. */
+const tamano = (bytes: number) =>
+  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.round(bytes / 1024)} kB`
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString('es-ES', { year: 'numeric', month: 'short' })
 
@@ -109,23 +112,64 @@ function FilaCorte({ nombre, corte, referencia }: {
   nombre: string
   corte: CorteMetricas
   /** CAGR contra el que se compara, para colorear la diferencia. */
-  referencia?: number
+  referencia: number
 }) {
-  const delta = referencia == null ? null : corte.cagr - referencia
+  const delta = corte.cagr - referencia
   return (
     <tr className="border-b border-border-subtle last:border-0">
       <td className="px-2 py-2 text-text-primary">{nombre}</td>
       <Celda>{pct(corte.cagr)}</Celda>
-      {delta != null && (
-        <Celda>
-          <span style={{ color: tono(delta) }}>{delta > 0 ? '+' : ''}{pct(delta)}</span>
-        </Celda>
-      )}
+      <Celda>
+        <span style={{ color: tono(delta) }}>{delta > 0 ? '+' : ''}{pct(delta)}</span>
+      </Celda>
       <Celda>{num(corte.sharpe)}</Celda>
       <Celda>
         <span style={{ color: tono(corte.informationRatio) }}>{num(corte.informationRatio)}</span>
       </Celda>
     </tr>
+  )
+}
+
+/**
+ * Una capa del embudo, en tarjeta en vez de en fila de tabla.
+ *
+ * Este panel ocupa media columna en escritorio y toda la pantalla en un móvil.
+ * Con cuatro columnas los nombres de capa se partían letra a letra y la tabla
+ * pedía scroll horizontal propio para tres números. Apilar el nombre sobre sus
+ * métricas cabe en 320 px sin desbordar y sigue leyéndose en escritorio.
+ */
+function TarjetaCapa({ nombre, corte, destacada }: {
+  nombre: string
+  corte: CorteMetricas
+  /** La capa que coincide con la variante en pantalla. */
+  destacada?: boolean
+}) {
+  return (
+    <div
+      className="rounded-lg border bg-surface-raised px-3 py-2.5"
+      style={{
+        borderColor: destacada ? 'var(--color-accent)' : 'var(--color-border-subtle)',
+      }}
+    >
+      <p className="text-xs font-semibold text-text-primary">{nombre}</p>
+      <dl className="mt-2 grid grid-cols-3 gap-2">
+        {[
+          { k: 'CAGR', v: pct(corte.cagr), color: undefined },
+          { k: 'Sharpe', v: num(corte.sharpe), color: undefined },
+          { k: 'IR', v: num(corte.informationRatio), color: tono(corte.informationRatio) },
+        ].map(m => (
+          <div key={m.k} className="min-w-0">
+            <dt className="font-mono text-[9px] uppercase tracking-[0.12em] text-text-muted">{m.k}</dt>
+            <dd
+              className="mt-0.5 font-mono text-sm font-semibold leading-none"
+              style={{ color: m.color ?? 'var(--color-text-primary)' }}
+            >
+              {m.v}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   )
 }
 
@@ -149,6 +193,9 @@ export default function BacktestClient({ resumen }: { resumen: ResumenPublicado 
   const color = COLOR_VARIANTE[v.id] ?? AGENT_COLORS.Peter
 
   const excesoCagr = v.base.cagr - v.benchmark.cagr
+  // Las operaciones del estudio completo, no las de la variante en pantalla:
+  // el dataset descargable las lleva todas.
+  const totalOperaciones = resumen.variantes.reduce((a, x) => a + x.base.nOperaciones, 0)
 
   return (
     <div className="space-y-6">
@@ -333,11 +380,19 @@ export default function BacktestClient({ resumen }: { resumen: ResumenPublicado 
           titulo="Qué aporta cada capa"
           descripcion="El embudo de producción encadena screener fundamental, proyección y momentum. Corriendo cada capa por separado se ve cuál sostiene el resultado."
         >
-          <Tabla cabeceras={['Capa', 'CAGR', 'Sharpe', 'IR']} min={360}>
+          <div className="space-y-2">
             {Object.entries(v.porCapa).map(([k, corte]) => (
-              <FilaCorte key={k} nombre={ETIQUETA_CAPA[k] ?? k} corte={corte} />
+              <TarjetaCapa
+                key={k}
+                nombre={ETIQUETA_CAPA[k] ?? k}
+                corte={corte}
+                destacada={
+                  (k === 'solo_lynch' && v.capas === 'lynch') ||
+                  (k === 'cascada' && v.capas === 'lynch+tecnico')
+                }
+              />
             ))}
-          </Tabla>
+          </div>
           {v.capas !== 'lynch+tecnico' && (
             <p className="mt-3 text-[11px] leading-relaxed text-text-muted">
               La fila de la cascada completa se publica solo en la corrida que la simula. Cámbiate
@@ -493,6 +548,54 @@ export default function BacktestClient({ resumen }: { resumen: ResumenPublicado 
           </Panel>
         )}
       </div>
+
+      {/* Descargas */}
+      <Panel
+        titulo="Descargar el dataset"
+        descripcion={
+          <>
+            Las {totalOperaciones.toLocaleString('es-ES')} operaciones del estudio, una a una, con
+            todas las métricas que hay detrás de esta pantalla. Son ficheros estáticos: lo que se
+            descarga es exactamente lo que se publicó, no una consulta que pueda dar otra cosa
+            mañana.
+          </>
+        }
+      >
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {resumen.descargas.map(d => (
+            <li key={d.fichero}>
+              <a
+                href={d.ruta}
+                download
+                className="flex h-full gap-2.5 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2.5 transition-colors hover:border-accent hover:bg-surface"
+              >
+                {d.formato === 'xlsx'
+                  ? <FileSpreadsheet size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--color-positive)' }} />
+                  : <FileText size={15} className="mt-0.5 shrink-0 text-text-muted" />}
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-xs font-semibold text-text-primary">{d.etiqueta}</span>
+                    <span className="font-mono text-[9px] uppercase tracking-wide text-text-muted">
+                      {d.formato} · {tamano(d.bytes)}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-[11px] leading-relaxed text-text-secondary">
+                    {d.descripcion}
+                  </span>
+                </span>
+                <Download size={13} className="mt-0.5 shrink-0 text-text-muted" />
+              </a>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[11px] leading-relaxed text-text-muted">
+          Los <span className="font-mono">.xlsx</span> llevan los números como números, así que se
+          abren igual en cualquier configuración regional. Los{' '}
+          <span className="font-mono">.csv</span> van separados por comas y con punto decimal —el
+          formato que esperan pandas y R—, así que un Excel en español los descoloca: para Excel,
+          el libro.
+        </p>
+      </Panel>
 
       {/* Conclusiones */}
       <Panel titulo="Qué se concluye" descripcion="Y qué no.">
