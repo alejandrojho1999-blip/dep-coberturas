@@ -8,7 +8,9 @@ import {
   ETIQUETA_CAPA, ETIQUETA_CRITERIO, ETIQUETA_ROBUSTEZ,
   type CorteMetricas, type ResumenPublicado, type VariantePublicada,
 } from '@/lib/backtest/publicado'
+import type { ResumenOpciones } from '@/lib/backtest/opciones-publicado'
 import { CurvaBacktest } from './CurvaBacktest'
+import { OpcionesSeccion } from './OpcionesSeccion'
 
 /* ── Formato ─────────────────────────────────────────────────────────────── */
 
@@ -187,7 +189,14 @@ function nombreVariante(v: VariantePublicada): string {
   return `${v.agente} · ${v.capas === 'lynch' ? 'solo Lynch' : 'cascada'}`
 }
 
-export default function BacktestClient({ resumen }: { resumen: ResumenPublicado }) {
+export default function BacktestClient({ resumen, opciones }: {
+  resumen: ResumenPublicado
+  opciones: ResumenOpciones
+}) {
+  // Acciones y opciones son dos estudios distintos, con ventanas, benchmarks y
+  // supuestos que no se parecen. Se separan en familias para que nadie compare
+  // un CAGR de 28 meses con uno de 21 años como si midieran lo mismo.
+  const [familia, setFamilia] = useState<'acciones' | 'opciones'>('acciones')
   const [id, setId] = useState(resumen.variantes[0]?.id ?? '')
   const v = resumen.variantes.find(x => x.id === id) ?? resumen.variantes[0]
   const color = COLOR_VARIANTE[v.id] ?? AGENT_COLORS.Peter
@@ -243,6 +252,28 @@ export default function BacktestClient({ resumen }: { resumen: ResumenPublicado 
           </p>
         </div>
       </div>
+
+      {/* Selector de familia */}
+      <div className="flex flex-wrap gap-1 rounded-xl border border-border-subtle bg-background p-1 w-fit">
+        {([
+          { k: 'acciones' as const, label: 'ACCIONES', sub: 'Peter · Small' },
+          { k: 'opciones' as const, label: 'OPCIONES', sub: 'Gamma · Theta' },
+        ]).map(f => (
+          <button
+            key={f.k}
+            onClick={() => setFamilia(f.k)}
+            className={[
+              'rounded-lg px-4 py-2 text-left transition-all',
+              familia === f.k ? 'bg-accent text-on-accent' : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary',
+            ].join(' ')}
+          >
+            <span className="block font-mono text-xs font-semibold">{f.label}</span>
+            <span className="block text-[10px] leading-tight opacity-80">{f.sub}</span>
+          </button>
+        ))}
+      </div>
+
+      {familia === 'opciones' ? <OpcionesSeccion resumen={opciones} /> : <>
 
       {/* Selector de variante */}
       <div className="flex flex-wrap gap-1 rounded-xl border border-border-subtle bg-background p-1 w-fit">
@@ -639,6 +670,8 @@ export default function BacktestClient({ resumen }: { resumen: ResumenPublicado 
           ))}
         </ul>
       </Panel>
+
+      </>}
 
       <p className="text-[10px] text-text-muted">
         Cifras de la ejecución del {new Date(v.generado).toLocaleDateString('es-ES', {

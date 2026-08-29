@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Ficha } from './tipos'
 
 /**
@@ -150,37 +151,65 @@ export const FICHA_THETA: Ficha = {
 
   validacion: [
     {
-      id: 'sin-backtest',
+      id: 'backtest-hecho',
       texto: (
         <>
-          <strong style={{ color: 'var(--color-warning)' }}>Este agente no tiene backtest.</strong>{' '}
-          Su respaldo hoy es el historial en vivo que se acumula desde la primera
-          recomendación guardada, visible en la sección Portafolios. Es un registro
-          real y sin retoques, pero todavía corto.
+          <strong className="text-text-primary">Este agente ya tiene backtest</strong>, sobre 254
+          vencimientos y 21 años, medido contra <span className="font-mono">^PUT</span> —el índice
+          PutWrite del CBOE, que vende puts sobre el S&amp;P 500 de forma mecánica—. Es la
+          comparación justa: medirlo contra el SPY compararía vender opciones con comprar acciones.{' '}
+          <Link href="/agentes/backtest" className="underline underline-offset-2 hover:text-text-primary">
+            Ver el backtest completo
+          </Link>.
         </>
       ),
     },
     {
-      id: 'sin-historico-primas',
+      id: 'no-bate-su-indice',
       texto: (
         <>
-          Como en el Agente Gamma, no existe histórico gratuito de primas, así que
-          la estrategia no se puede medir hacia atrás sin pagar por datos. Y la
-          carencia{' '}
-          <strong className="text-text-primary">duele especialmente aquí</strong>:
-          una estrategia de venta de primas necesita justamente haber atravesado un
-          desplome para saber qué es capaz de perder, y eso es lo que ningún
-          historial corto puede enseñar.
+          <strong style={{ color: 'var(--color-warning)' }}>El resultado no respalda al agente.</strong>{' '}
+          Con el supuesto calibrado rinde un <strong className="text-text-primary">3,84 % anual
+          frente al 7,78 % de <span className="font-mono">^PUT</span></strong>, con{' '}
+          <em>information ratio</em> −0,31. El signo se repite en las tres corridas que no arruinan
+          la cartera. Seleccionar 36 subyacentes no mejora a vender puts sobre el índice sin
+          seleccionar nada.
         </>
       ),
     },
     {
-      id: 'curva-escalonada',
+      id: 'niveles-evitan-ruina',
       texto: (
         <>
-          La curva del portafolio de opciones{' '}
-          <em>avanza a saltos</em>, porque solo se mueve cuando una posición vence y
-          se liquida. Entre vencimientos, una posición que va mal no se refleja.
+          <strong className="text-text-primary">Los niveles de salida son lo que impide la
+          ruina.</strong> Sin ellos la cartera llega a cero: pierde el 100 %. Vender opciones puede
+          costar mucho más que la prima cobrada, y cuando el subyacente se desploma la obligación de
+          recomprar supera la caja. Con los niveles activos sobrevive los 21 años con una caída
+          máxima del 26 %. Es el argumento más fuerte a favor de la revisión de niveles que se
+          implementó en agosto de 2026.
+        </>
+      ),
+    },
+    {
+      id: 'primas-reconstruidas',
+      texto: (
+        <>
+          Las primas están reconstruidas con Black-Scholes: no hay histórico gratuito de cadenas de
+          opciones. El supuesto de volatilidad se calibra replicando{' '}
+          <span className="font-mono">^PUT</span> con correlación 0,94, pero conviene saber en qué
+          dirección empuja: <strong className="text-text-primary">cuanto más caras se suponen las
+          primas, mejor sale Theta</strong>, porque su ventaja <em>es</em> vender caro. Por eso el
+          informe publica el resultado como curva sobre el supuesto y no como una cifra.
+        </>
+      ),
+    },
+    {
+      id: 'sin-significacion',
+      texto: (
+        <>
+          El corte de score ≥ 60 no se reproduce: pondera sobre todo el interés abierto y el volumen
+          de cada contrato, que no existen hacia atrás. Tampoco el paso de revisión por IA. Y en 49
+          de los 254 vencimientos el agente no encontró ningún contrato que pasara sus filtros.
         </>
       ),
     },

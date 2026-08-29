@@ -199,6 +199,93 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Backtest de los agentes de opciones: Gamma y Theta (2026-08-29)
+Los cuatro agentes tienen ya backtest. Este era el difícil, por una razón que
+conviene entender antes que cualquier cifra.
+
+**No hay cadenas de opciones históricas.** `yahoo-options.ts:131` pega contra un
+endpoint que solo devuelve la cadena **viva**; no hay archivo en el repositorio
+ni tabla en Supabase. No se puede reproducir lo que los agentes vieron: hay que
+reconstruirlo con Black-Scholes.
+
+**A cambio la ventana es larga.** Gamma y Theta no usan fundamentales, así que no
+heredan los 28 meses que limitaron a Peter y Small: son **254 vencimientos y 21
+años** (2005-2026), con 2008 y 2020 dentro.
+
+**El problema de fondo y cómo se resolvió.** Reconstruir primas exige una
+volatilidad implícita que no existe hacia atrás. Si se modela `IV = realizada × k`,
+entonces `k` decide por sí solo si Theta gana: ponerlo alto la hace ganar, bajo
+la hace perder. Eso no es medir. La solución fue **calibrar `k` contra `^PUT`**,
+el índice PutWrite del CBOE, que vende puts sobre el S&P 500 con precios reales
+desde 2005. La réplica sintética alcanza **correlación 0,94** con el índice real
+y error de seguimiento del 4 %, así que el parámetro queda ajustado contra el
+mercado en vez de elegido a dedo. Aun así el resultado se publica **como curva
+sobre el supuesto**, nunca como cifra única.
+
+**Ojo con interpretar `k`.** Ajusta en 0,80, por debajo de 1, pero eso **no**
+significa que la implícita cotice barata: la prima de varianza real (VIX sobre
+realizada) tiene mediana **1,31** en estos 21 años. Lo que `k` absorbe es el
+sesgo de valorar una opción a 30 días con la volatilidad de los 20 días
+anteriores — la volatilidad revierte a la media y tras un susto la pasada
+sobreestima a la futura. Es una constante de ajuste, no una medida del mercado, y
+la pantalla lo dice con la prima observada al lado.
+
+**Resultados (254 vencimientos, `k` calibrado)**
+
+| Variante | Índice | CAGR | Índice | Sharpe | IR | t-stat | Caída máx. |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Gamma | SPY | 17,15 % | 9,33 % | 0,54 | +0,27 | 1,20 | 45,6 % |
+| Theta | ^PUT | 3,84 % | 7,78 % | 0,26 | −0,31 | −1,40 | 25,7 % |
+| Gamma sin niveles | SPY | **25,34 %** | 9,33 % | 0,62 | +0,38 | 1,49 | **21,5 %** |
+| Theta sin niveles | ^PUT | **−100 %** | 7,78 % | −0,09 | −0,49 | −2,13 | 100 % |
+
+**Los dos hallazgos que importan**
+
+1. **Los niveles de salida son lo que impide la ruina de Theta.** Sin ellos la
+   cartera llega a cero. Vender opciones puede costar mucho más que la prima
+   cobrada. Es el argumento más fuerte a favor de haber implementado
+   `review-exits` en agosto.
+2. **A Gamma los niveles le restan.** Quitarlos sube el CAGR del 17,15 % al
+   25,34 % y **reduce** la caída máxima del 46 % al 21 %: el stop al 0,5× corta
+   posiciones que después se recuperan. Son dos configuraciones comparadas, no un
+   barrido de parámetros, así que no hay sobreajuste de por medio.
+
+**Tres bugs del propio motor, corregidos al escribirlo**
+1. El dimensionado usaba el capital **inicial** en vez del patrimonio vivo: una
+   cartera que perdía seguía abriendo como si no hubiera perdido, la caja se iba
+   a negativo y el CAGR salía `NaN` con caídas del 235 %.
+2. La réplica de `^PUT` usaba margen del 20 %, así que estaba **apalancada cinco
+   veces** y no seguía al índice ni con el `k` correcto. El índice está
+   totalmente colateralizado; ahora el margen es un parámetro del motor.
+3. El dimensionado no reservaba para comisiones: gastar el 100 % del capital en
+   prima dejaba la caja en negativo desde el primer día y la cartera se declaraba
+   arruinada al decaer la prima, que era un artefacto y no un resultado.
+
+**Qué NO responde este backtest**, y el informe lo dice: si la selección de IV
+añade valor (con IV sintética lo decide el modelo), si el corte de score aporta
+(depende del interés abierto por contrato, inexistente hacia atrás) y si la
+revisión por IA aporta (no es determinista).
+
+**Piezas nuevas**
+- `scripts/backtest/{fetch-options-data,run-opciones,publicar-opciones}.mts` y
+  tres scripts de npm.
+- `src/lib/backtest/opciones/{config,volatilidad,cadena,motor}.ts` con 54 tests.
+- `src/lib/backtest/opciones-publicado.ts` + `opciones-resumen-publicado.json`
+  (123 kB versionados) y 12 tests que vigilan que siga siendo dibujable.
+- `/agentes/backtest` gana pestañas ACCIONES / OPCIONES; las fichas de Gamma y
+  Theta dejan de decir que no tienen backtest.
+- Se reutilizan sin tocar `lib/options/{blackScholes,exit-levels,settlement}.ts`,
+  `lib/agentes/signals.ts` y `lib/backtest/stats.ts`.
+
+Verificado: lint limpio, tsc sin errores, **576 tests** en 39 archivos, build con
+la ruta presente.
+
+**Nota de mantenimiento:** tras cambiar el motor hay que correr las cuatro
+variantes (`npm run backtest:opciones` con `--modo=regimen`, `--skew` y
+`--sin-niveles`) y después `npm run backtest:publicar-opciones`, o la pantalla
+seguirá enseñando la corrida anterior.
+
+
 ### Las descargas pasan por una ruta de API autenticada (2026-08-29)
 Los ficheros vivían en `public/descargas/backtest/`, y ahí Next los sirve como
 estáticos: **cualquiera con la URL se los llevaba sin iniciar sesión**, aunque la
