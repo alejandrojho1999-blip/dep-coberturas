@@ -78,6 +78,12 @@ export function FichaEstrategia({ ficha, backtest, codigo, documentos }: Props) 
             ayuda="Cuántas veces cabe el peor drawdown dentro del beneficio total."
           />
           <KpiCard
+            label="Calmar"
+            value={r.calmar?.toFixed(2) ?? '—'}
+            sub={`${fmtUsd(r.netoPorAnio, 0)} al año`}
+            ayuda="Beneficio de un año medio dividido por el peor drawdown. El Net/DD crece solo por alargar el backtest; el Calmar está normalizado por tiempo y sí se puede comparar entre estrategias."
+          />
+          <KpiCard
             label="t-stat"
             value={r.tStat?.toFixed(2) ?? '—'}
             sub="significancia del edge"

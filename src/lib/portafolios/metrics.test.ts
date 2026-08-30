@@ -150,6 +150,31 @@ describe('computeCurveMetrics', () => {
     expect(m.beta).toBeNull()
     expect(m.cagr).toBeNull()
     expect(m.maxDrawdown).toBe(0)
+    expect(m.calmar).toBeNull()
+  })
+
+  it('el Calmar es el CAGR dividido por la peor caída', () => {
+    // Un año exacto: sube a 120.000, cae a 108.000 (−10 % desde máximos) y
+    // cierra en 110.000. CAGR 10 %, drawdown 10 %, Calmar 1.
+    const m = computeCurveMetrics([
+      { date: '2025-01-01', portafolio: 100_000, benchmark: null },
+      { date: '2025-06-01', portafolio: 120_000, benchmark: null },
+      { date: '2025-09-01', portafolio: 108_000, benchmark: null },
+      { date: '2026-01-01', portafolio: 110_000, benchmark: null },
+    ])
+    expect(m.maxDrawdown).toBeCloseTo(10, 6)
+    expect(m.cagr).toBeCloseTo(10, 1)
+    expect(m.calmar).toBeCloseTo(1, 1)
+  })
+
+  it('devuelve null cuando la curva nunca cayó, en vez de infinito', () => {
+    const m = computeCurveMetrics([
+      { date: '2025-01-01', portafolio: 100_000, benchmark: null },
+      { date: '2025-07-01', portafolio: 105_000, benchmark: null },
+      { date: '2026-01-01', portafolio: 110_000, benchmark: null },
+    ])
+    expect(m.maxDrawdown).toBe(0)
+    expect(m.calmar).toBeNull()
   })
 
   it('una beta de 1 sale de un portafolio que replica al índice', () => {

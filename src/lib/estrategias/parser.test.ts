@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aniosCubiertos,
+  calmar,
   concentracion,
   curva,
   parseFecha,
@@ -165,5 +167,55 @@ describe('concentracion', () => {
     expect(top1.suma).toBe(100)
     expect(top1.porcentajeDelNeto).toBe(100)
     expect(top1.resto).toBe(0)
+  })
+})
+
+describe('aniosCubiertos', () => {
+  it('mide la duración de punta a punta, no los años naturales distintos', () => {
+    // Del 14 de enero de 2015 al 14 de agosto de 2026 hay 11,58 años, aunque
+    // aparezcan doce etiquetas de año en las fechas.
+    const diario = [{ fecha: '2015-01-14', pnl: 0 }, { fecha: '2026-08-14', pnl: 0 }]
+    expect(aniosCubiertos(diario)).toBeCloseTo(11.58, 2)
+  })
+
+  it('devuelve 0 con menos de dos días, para no dividir por casi nada', () => {
+    expect(aniosCubiertos([{ fecha: '2020-01-01', pnl: 10 }])).toBe(0)
+    expect(aniosCubiertos([])).toBe(0)
+  })
+})
+
+describe('calmar', () => {
+  it('divide el beneficio de un año medio entre el peor drawdown', () => {
+    // Las cifras de la cartera del expediente: 89.341 en 11,58 años contra un
+    // drawdown de -4.099 dan 1,88.
+    expect(calmar(89_340.54, 11.581, -4099.45)).toBe(1.88)
+  })
+
+  it('es indiferente al signo con que venga el drawdown', () => {
+    expect(calmar(1000, 2, -500)).toBe(1)
+    expect(calmar(1000, 2, 500)).toBe(1)
+  })
+
+  it('devuelve null sin drawdown o sin duración, en vez de infinito', () => {
+    expect(calmar(1000, 5, 0)).toBeNull()
+    expect(calmar(1000, 0, -100)).toBeNull()
+  })
+})
+
+describe('curva + calmar sobre una serie completa', () => {
+  it('sale la misma cifra que calculando a mano', () => {
+    // Sube 300, cae 100, recupera: neto 300, peor caída -100, dos años justos.
+    const diario = [
+      { fecha: '2020-01-01', pnl: 200 },
+      { fecha: '2020-06-01', pnl: -100 },
+      { fecha: '2021-06-01', pnl: 200 },
+      { fecha: '2021-12-31', pnl: 0 },
+    ]
+    const c = curva(diario)
+    expect(c.neto).toBe(300)
+    expect(c.maxDrawdown).toBe(-100)
+
+    const anios = aniosCubiertos(diario)
+    expect(calmar(c.neto, anios, c.maxDrawdown)).toBe(1.5)
   })
 })

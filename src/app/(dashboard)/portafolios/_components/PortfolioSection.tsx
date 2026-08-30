@@ -134,6 +134,13 @@ export function PortfolioSection({
             ayuda="La mayor pérdida que habría sufrido quien entrase en el peor momento."
           />
           <KpiCard
+            label="Calmar"
+            value={curva.calmar != null ? curva.calmar.toFixed(2) : '—'}
+            sub={curva.cagr != null ? `CAGR ${fmtPct(curva.cagr)}` : 'sin historia suficiente'}
+            acento={acento}
+            ayuda="Rendimiento anualizado dividido por la peor caída. Mide cuánto se cobra por cada punto de dolor, sin castigar la volatilidad al alza como hace el Sharpe."
+          />
+          <KpiCard
             label="Sharpe"
             value={curva.sharpe != null ? curva.sharpe.toFixed(2) : '—'}
             sub={curva.sortino != null ? `Sortino ${curva.sortino.toFixed(2)}` : 'sin historia suficiente'}

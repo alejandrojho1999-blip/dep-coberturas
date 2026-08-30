@@ -23,6 +23,15 @@ export interface ResumenBacktest {
   drawdown: number
   fechaDrawdown: string | null
   netoSobreDrawdown: number | null
+  /** Duración del backtest en años, medida de punta a punta. */
+  anios: number
+  netoPorAnio: number
+  /**
+   * Beneficio de un año medio dividido por el peor drawdown. A diferencia del
+   * Net/DD, no crece solo por alargar el backtest: se puede comparar entre
+   * estrategias y contra la industria.
+   */
+  calmar: number | null
   profitFactor: number | null
   tStat: number | null
   aciertos: number
@@ -98,8 +107,16 @@ export interface ComponenteCartera {
   neto: number
   drawdown: number
   netoSobreDrawdown: number | null
+  calmar: number | null
   operaciones: number
   porcentajeDelNeto: number
+}
+
+export interface BloqueRegimenCartera {
+  neto: number
+  drawdown: number
+  netoSobreDrawdown: number | null
+  calmar: number | null
 }
 
 export interface BacktestCartera {
@@ -110,6 +127,7 @@ export interface BacktestCartera {
     drawdown: number
     fechaDrawdown: string | null
     netoSobreDrawdown: number
+    calmar: number | null
     tStat: number | null
     sumaDrawdownsIndividuales: number
     reduccionDrawdown: number
@@ -127,8 +145,8 @@ export interface BacktestCartera {
   curvasIndividuales: { slug: string; nombre: string; equity: PuntoCurva[] }[]
   regimen: {
     corte: string
-    anterior: { neto: number; drawdown: number; netoSobreDrawdown: number | null } | null
-    posterior: { neto: number; drawdown: number; netoSobreDrawdown: number | null } | null
+    anterior: BloqueRegimenCartera | null
+    posterior: BloqueRegimenCartera | null
   }
 }
 

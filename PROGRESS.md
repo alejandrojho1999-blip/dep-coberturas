@@ -255,6 +255,59 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Calmar en la cartera de futuros (2026-08-30)
+
+La sección publicaba **Net/DD** (21,79) como ratio principal. Esa cifra es neto
+*total* sobre drawdown, así que crece sola con la longitud del backtest: 11,6
+años la inflan y no es comparable con la de ningún otro gestor. Se añade el
+**Calmar** —beneficio de un año medio sobre el peor drawdown— que sí está
+normalizado por tiempo.
+
+Se calcula de forma **aritmética** (`neto / años / |maxDD|`) porque la cartera
+opera a tamaño fijo, un contrato por bot: no hay reinversión que un CAGR pudiera
+capturar. El resultado es idéntico se mida en dólares o en porcentaje de la
+cuenta, ya que ambos términos se escalan por la misma base. En acciones y
+opciones (`CurveMetrics`) sí se usa `cagr / maxDrawdown`, porque allí la curva
+compone sobre capital. Son dos definiciones y está dicho en el `ayuda` de cada
+tarjeta.
+
+**Bug corregido de paso.** `porAnio` contaba *etiquetas de año distintas* en las
+fechas: del 14/01/2015 al 14/08/2026 salían 12 años cuando son 11,58. El
+beneficio anual publicado era **7.445 $** y el expediente dice **7.714 $** — un
+3,6 % de menos. `aniosCubiertos()` ahora mide de punta a punta y las dos cifras
+cuadran. Cualquier captura anterior de la pantalla lleva el número viejo.
+
+Lo que sale, y es el argumento entero de la cartera en un solo número:
+
+| | Calmar | Net/DD |
+|---|---|---|
+| **Cartera** | **1,88** | 21,79 |
+| RSI2 Reversion | 0,86 | 9,23 |
+| Weekend Effect | 0,59 | 6,63 |
+| Momentum de Apertura | 0,56 | 6,48 |
+| Overnight Drift | 0,54 | 5,82 |
+| ZigZag Breakout | 0,40 | 4,67 |
+| IBS Reversion | 0,23 | 2,43 |
+
+Ninguna estrategia suelta llega a 1. Juntas, 1,88.
+
+Por escenario, derivado al render del drawdown medido (no se guarda, así no
+puede desincronizarse): régimen actual **3,10**, media histórica **1,88**,
+régimen antiguo **0,52**.
+
+**Tocado:** `scripts/build-estrategias.mjs` (`aniosCubiertos`, `calmar`),
+`src/lib/estrategias/types.ts` (`anios`, `netoPorAnio`, `calmar`,
+`BloqueRegimenCartera`), `src/lib/portafolios/{metrics,types}.ts`,
+`QuantPortfolioSection.tsx` (KPI + tabla de componentes + régimen + escenarios),
+`EstrategiasClient.tsx`, `FichaEstrategia.tsx`, `PortfolioSection.tsx`.
+Verificado: lint 0, tsc 0, **622 tests**, build OK, y el script imprime
+`Calmar 1.88 (expediente: 1,88)`.
+
+**Pendiente relacionado:** `MetricasCurva` en `src/lib/backtest/stats.ts` (Peter,
+Small, Gamma, Theta) no lleva Calmar. Ahí ya están `cagr` y `maxDrawdown`, así
+que es una línea — pero obliga a republicar `resumen-publicado.json` y
+`opciones-resumen-publicado.json` y a regenerar los datasets descargables.
+
 ### Responsive de /agentes/backtest: la causa real era `min-width: auto` (2026-08-29)
 El panel «Qué aporta cada capa» ya se había pasado a tarjetas, pero el problema
 seguía: se perdía texto en horizontal. La causa no estaba en esos paneles sino
