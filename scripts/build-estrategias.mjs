@@ -253,6 +253,35 @@ export function tStat(valores) {
   return redondear(media / (desviacion / Math.sqrt(n)), 2)
 }
 
+/**
+ * Duración de una serie diaria, en años.
+ *
+ * Se mide de punta a punta y no contando años naturales distintos: la cartera
+ * arranca el 14 de enero de 2015 y termina el 14 de agosto de 2026, que son
+ * 11,58 años y no 12. Contar etiquetas de año inflaba el denominador un 3,6 % y
+ * hundía el beneficio anual publicado por debajo del que fija el expediente.
+ */
+export function aniosCubiertos(diario) {
+  if (diario.length < 2) return 0
+  const dias = (new Date(`${diario.at(-1).fecha}T00:00:00Z`) - new Date(`${diario[0].fecha}T00:00:00Z`)) / 86_400_000
+  return dias / 365.25
+}
+
+/**
+ * Calmar: cuántas veces cabe el peor drawdown en el beneficio de un año medio.
+ *
+ * A diferencia del Net/DD, que crece solo con la longitud del backtest, esta
+ * cifra está normalizada por tiempo y sí se puede comparar con la de fuera.
+ * Se calcula de forma aritmética —beneficio anual medio sobre drawdown— porque
+ * la cartera opera a tamaño fijo: no hay reinversión que un CAGR pudiera
+ * capturar. El resultado es el mismo se mida en dólares o en porcentaje de la
+ * cuenta, ya que ambos términos se escalan por la misma base.
+ */
+export function calmar(neto, anios, maxDrawdown) {
+  if (anios === 0 || maxDrawdown === 0) return null
+  return redondear(Math.abs(neto / anios / maxDrawdown), 2)
+}
+
 /** Profit factor: cuánto gana el sistema por cada dólar que pierde. */
 export function profitFactor(trades) {
   const ganado = trades.filter(t => t.pnl > 0).reduce((s, t) => s + t.pnl, 0)
@@ -329,6 +358,7 @@ export function construir(trades) {
   const { equity, drawdown, maxDrawdown, fechaMaxDrawdown, neto } = curva(diario)
   const pnls = trades.map(t => t.pnl)
   const ganadoras = trades.filter(t => t.pnl > 0)
+  const anios = aniosCubiertos(diario)
 
   return {
     resumen: {
@@ -337,6 +367,9 @@ export function construir(trades) {
       drawdown: redondear(maxDrawdown),
       fechaDrawdown: fechaMaxDrawdown,
       netoSobreDrawdown: maxDrawdown === 0 ? null : redondear(Math.abs(neto / maxDrawdown), 2),
+      anios: redondear(anios, 2),
+      netoPorAnio: anios === 0 ? 0 : redondear(neto / anios),
+      calmar: calmar(neto, anios, maxDrawdown),
       profitFactor: profitFactor(trades),
       tStat: tStat(pnls),
       aciertos: redondear((ganadoras.length / trades.length) * 100, 1),
@@ -421,6 +454,7 @@ function main() {
       neto: datos.resumen.neto,
       drawdown: datos.resumen.drawdown,
       netoSobreDrawdown: datos.resumen.netoSobreDrawdown,
+      calmar: datos.resumen.calmar,
       operaciones: datos.resumen.operaciones,
     })
   }
@@ -449,7 +483,7 @@ function main() {
   const meses = [...porMes.values()]
   const mesesPositivos = meses.filter(v => v > 0).length
 
-  const anios = new Set(diarioCartera.map(d => d.fecha.slice(0, 4))).size
+  const anios = aniosCubiertos(diarioCartera)
 
   const datosCartera = {
     resumen: {
@@ -459,6 +493,7 @@ function main() {
       drawdown: redondear(cartera.maxDrawdown),
       fechaDrawdown: cartera.fechaMaxDrawdown,
       netoSobreDrawdown: redondear(Math.abs(netoTotal / cartera.maxDrawdown), 2),
+      calmar: calmar(netoTotal, anios, cartera.maxDrawdown),
       tStat: tStat(diarioCartera.map(d => d.pnl)),
       sumaDrawdownsIndividuales: redondear(sumaDrawdowns),
       reduccionDrawdown: redondear((1 - Math.abs(cartera.maxDrawdown / sumaDrawdowns)) * 100, 1),
@@ -503,6 +538,7 @@ function main() {
           neto: redondear(c.neto),
           drawdown: redondear(c.maxDrawdown),
           netoSobreDrawdown: c.maxDrawdown === 0 ? null : redondear(Math.abs(c.neto / c.maxDrawdown), 2),
+          calmar: calmar(c.neto, aniosCubiertos(subset), c.maxDrawdown),
         }
       }
       return {
@@ -521,6 +557,8 @@ function main() {
   console.log(`    neto               ${datosCartera.resumen.neto}   (expediente: 89341)`)
   console.log(`    drawdown           ${datosCartera.resumen.drawdown}   (expediente: -4099)`)
   console.log(`    Net/DD             ${datosCartera.resumen.netoSobreDrawdown}   (expediente: 21,79)`)
+  console.log(`    por año            ${datosCartera.resumen.porAnio}   (expediente: 7714)`)
+  console.log(`    Calmar             ${datosCartera.resumen.calmar}   (expediente: 1,88)`)
   console.log(`    suma de DD indiv.  ${datosCartera.resumen.sumaDrawdownsIndividuales}   (expediente: -15994)`)
   console.log(`    reducción del DD   ${datosCartera.resumen.reduccionDrawdown} %   (expediente: 74 %)`)
   console.log(`    meses positivos    ${datosCartera.resumen.mesesPositivos} %`)

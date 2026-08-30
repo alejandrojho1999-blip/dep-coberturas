@@ -203,12 +203,19 @@ export function computeCurveMetrics(serie: EquitySeriesPoint[]): CurveMetrics {
     if (primero > 0) rendimientoBenchmark = (benchCurva[benchCurva.length - 1].valor / primero - 1) * 100
   }
 
+  const maxDD = maxDrawdown(curva)
+
   return {
-    maxDrawdown: maxDrawdown(curva),
+    maxDrawdown: maxDD,
     volatilidadAnualizada: volAnual != null ? volAnual * 100 : null,
     sharpe,
     sortino,
     cagr,
+    // Calmar: cuánto rinde al año por cada punto de la peor caída. Aquí la
+    // curva sí compone sobre capital, así que se usa el CAGR; en la cartera de
+    // futuros, que opera a tamaño fijo, el mismo ratio se calcula de forma
+    // aritmética sobre el beneficio anual medio.
+    calmar: cagr != null && maxDD > 0 ? cagr / maxDD : null,
     beta,
     alpha,
     trackingError,

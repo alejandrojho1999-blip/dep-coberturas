@@ -86,6 +86,7 @@ export default function EstrategiasClient({ backtests }: Props) {
                 <Th alinear="right">Neto</Th>
                 <Th alinear="right">Max DD</Th>
                 <Th alinear="right">Net/DD</Th>
+                <Th alinear="right">Calmar</Th>
                 <Th alinear="right">t-stat</Th>
                 <Th alinear="right">PF</Th>
                 <Th alinear="right">Ops</Th>
@@ -117,6 +118,9 @@ export default function EstrategiasClient({ backtests }: Props) {
                     </Td>
                     <Td alinear="right" mono className="text-text-primary">
                       {r?.netoSobreDrawdown?.toFixed(2) ?? '—'}
+                    </Td>
+                    <Td alinear="right" mono className="text-text-primary">
+                      {r?.calmar?.toFixed(2) ?? '—'}
                     </Td>
                     <Td alinear="right" mono className="text-text-secondary">
                       {r?.tStat?.toFixed(2) ?? '—'}

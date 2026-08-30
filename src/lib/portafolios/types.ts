@@ -107,6 +107,8 @@ export interface CurveMetrics {
   sharpe: number | null
   sortino: number | null
   cagr: number | null
+  /** CAGR dividido por el máximo drawdown. Null si no hay caída medida. */
+  calmar: number | null
   beta: number | null
   alpha: number | null
   trackingError: number | null

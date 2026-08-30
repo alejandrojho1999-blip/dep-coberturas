@@ -19,7 +19,7 @@ import {
   REGLAS_OPERATIVAS,
   RIESGO_ESTRUCTURAL,
 } from '@/lib/estrategias/cartera'
-import type { BacktestCartera } from '@/lib/estrategias/types'
+import type { BacktestCartera, BloqueRegimenCartera } from '@/lib/estrategias/types'
 import { KpiCard, KpiRow } from './KpiCard'
 
 /**
@@ -113,6 +113,12 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
               label="Net / DD"
               value={r.netoSobreDrawdown.toFixed(2)}
               sub="mejor que cualquier bot solo"
+            />
+            <KpiCard
+              label="Calmar"
+              value={r.calmar?.toFixed(2) ?? '—'}
+              sub={`${fmtUsd(r.porAnio, 0)} al año / ${fmtUsd(Math.abs(r.drawdown), 0)} de caída`}
+              ayuda="Beneficio de un año medio dividido por el peor drawdown. A diferencia del Net/DD, que crece solo por alargar el backtest, esta cifra está normalizada por tiempo y sí se puede comparar con la de otros gestores."
             />
             <KpiCard
               label="t-stat del conjunto"
@@ -239,13 +245,14 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
                 titulo="Contribución directa"
                 descripcion="Lo que aporta cada una medida en solitario."
               >
-                <Tabla minimo="42rem">
+                <Tabla minimo="48rem">
                   <thead>
                     <tr className="border-b border-border-subtle">
                       <Th>Estrategia</Th>
                       <Th alinear="right">Neto</Th>
                       <Th alinear="right">Max DD</Th>
                       <Th alinear="right">Net/DD</Th>
+                      <Th alinear="right">Calmar</Th>
                       <Th alinear="right">Ops</Th>
                       <Th alinear="right">% del neto</Th>
                     </tr>
@@ -269,6 +276,9 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
                         </Td>
                         <Td alinear="right" mono className="text-text-secondary">
                           {c.netoSobreDrawdown?.toFixed(2) ?? '—'}
+                        </Td>
+                        <Td alinear="right" mono className="text-text-secondary">
+                          {c.calmar?.toFixed(2) ?? '—'}
                         </Td>
                         <Td alinear="right" mono className="text-text-secondary">
                           {c.operaciones.toLocaleString('es-ES')}
@@ -295,6 +305,9 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
                       <Td alinear="right" mono className="text-text-muted">
                         —
                       </Td>
+                      <Td alinear="right" mono className="text-text-muted">
+                        —
+                      </Td>
                     </tr>
                     <tr className="bg-accent-muted font-bold">
                       <Td className="text-text-primary">Cartera</Td>
@@ -306,6 +319,9 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
                       </Td>
                       <Td alinear="right" mono className="text-text-primary">
                         {r.netoSobreDrawdown.toFixed(2)}
+                      </Td>
+                      <Td alinear="right" mono className="text-text-primary">
+                        {r.calmar?.toFixed(2) ?? '—'}
                       </Td>
                       <Td alinear="right" mono className="text-text-primary">
                         {r.operaciones.toLocaleString('es-ES')}
@@ -509,13 +525,14 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
 
             {datos.regimen.anterior && datos.regimen.posterior && (
               <div className="mt-4">
-                <Tabla minimo="30rem">
+                <Tabla minimo="36rem">
                   <thead>
                     <tr className="border-b border-warning/20">
                       <Th>Periodo</Th>
                       <Th alinear="right">Neto</Th>
                       <Th alinear="right">Max DD</Th>
                       <Th alinear="right">Net/DD</Th>
+                      <Th alinear="right">Calmar</Th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-warning/10">
@@ -527,6 +544,7 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
                         neto: r.neto,
                         drawdown: r.drawdown,
                         netoSobreDrawdown: r.netoSobreDrawdown,
+                        calmar: r.calmar,
                       }}
                       destacada
                     />
@@ -603,6 +621,11 @@ export function QuantPortfolioSection({ datos }: { datos: BacktestCartera | null
                     {fmtUsd(e.dolares, 0)}
                   </p>
                   <p className="text-[10px] text-text-muted">{e.porcentaje} % sobre la cuenta</p>
+                  {/* El Calmar del escenario se deriva del drawdown medido, no
+                      se guarda: así nunca puede quedar desincronizado. */}
+                  <p className="text-[10px] text-text-muted">
+                    Calmar {(e.dolares / Math.abs(r.drawdown)).toFixed(2)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -816,7 +839,7 @@ function FilaRegimen({
   destacada,
 }: {
   etiqueta: string
-  bloque: { neto: number; drawdown: number; netoSobreDrawdown: number | null }
+  bloque: BloqueRegimenCartera
   destacada?: boolean
 }) {
   return (
@@ -830,6 +853,9 @@ function FilaRegimen({
       </Td>
       <Td alinear="right" mono className="text-text-primary">
         {bloque.netoSobreDrawdown?.toFixed(2) ?? '—'}
+      </Td>
+      <Td alinear="right" mono className="text-text-primary">
+        {bloque.calmar?.toFixed(2) ?? '—'}
       </Td>
     </tr>
   )
