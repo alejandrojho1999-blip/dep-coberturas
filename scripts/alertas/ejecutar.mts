@@ -161,8 +161,23 @@ async function main(): Promise<number> {
       `✅ Prueba del sistema de alerta temprana\nEnviado ${ahoraTexto()} UTC desde dep-coberturas.`,
       'prueba',
     )
-    log(envio.ok ? 'mensaje de prueba entregado al puente' : `fallo: ${envio.error}`)
-    return envio.ok ? 0 : 1
+    // Se distinguen los tres desenlaces porque los tres se ven distintos en el
+    // teléfono: llega, no llega, o llegará cuando WhatsApp vuelva.
+    if (!envio.aceptado) {
+      log(`el puente rechazó el mensaje: ${envio.error}`)
+      return 1
+    }
+    if (envio.canal === 'caido') {
+      log(`encolado, PERO NO ENTREGADO: ${envio.canalDetalle}`)
+      log('reconecta la sesión: openclaw channels login --channel whatsapp --account nexus')
+      return 1
+    }
+    log(
+      envio.canal === 'vivo'
+        ? 'mensaje entregado al puente con la sesión de WhatsApp viva'
+        : `mensaje entregado al puente; estado del canal indeterminado (${envio.canalDetalle})`,
+    )
+    return 0
   }
 
   // En seco no se toca la base: el cliente de servicio ni siquiera se crea, así

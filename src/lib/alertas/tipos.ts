@@ -41,7 +41,10 @@ export interface SenalFila {
     motivoLlm?: string
     [k: string]: unknown
   }
-  enviado_at: string | null
+  /** El puente aceptó el mensaje. No implica entrega: ver `canal_estado`. */
+  aceptado_at: string | null
+  canal_estado: 'vivo' | 'caido' | 'desconocido' | null
+  canal_detalle: string | null
   error_envio: string | null
   created_at: string
 }
