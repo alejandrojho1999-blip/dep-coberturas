@@ -1,0 +1,34 @@
+# Sistema de alerta temprana de dep-coberturas.
+#
+# El motor vive aquí y no en la aplicación desplegada porque el puente de Nexus
+# hacia WhatsApp solo escucha en 127.0.0.1: exponerlo a internet sería publicar
+# un disparador de mensajes. Además, el planificador de Vercel no baja de una
+# resolución diaria y GitHub Actions arrastra varios minutos de retraso.
+#
+# Instalación:
+#   crontab -e            # pegar los bloques de abajo al final
+#   tail -f /var/log/dep-alertas.log
+#
+# Comprobación previa:
+#   /var/www/dep-coberturas/scripts/alertas/run.sh diagnostico
+#
+# Requiere en /var/www/dep-coberturas/.env.local: OPENROUTER_API_KEY,
+# FRED_API_KEY, SUPABASE_SERVICE_ROLE_KEY, NEXUS_WEBHOOK_URL y NEXUS_WEBHOOK_TOKEN.
+
+# Escalada Rusia–OTAN: cada 2 minutos. Es el único que compite con el precio.
+*/2 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh guerra >> /var/log/dep-alertas.log 2>&1
+
+# Calendario de tasas: avisos a 24 h, 1 h y 15 min, y disparo al publicarse el
+# dato. La tolerancia de los hitos es de 5 minutos, así que este es el periodo
+# máximo al que se puede espaciar sin perder un aviso.
+*/5 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh calendario >> /var/log/dep-alertas.log 2>&1
+
+# Pulso Fed vs Tesoro: cada 15 minutos. Las declaraciones no se mueven tan rápido.
+*/15 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh macro >> /var/log/dep-alertas.log 2>&1
+
+# Foto macro: cada hora. Guarda siempre; solo avisa a las 08:00 y 16:00 de
+# Ecuador, o cuando la probabilidad de subida salta 10 puntos o más.
+0 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh snapshot >> /var/log/dep-alertas.log 2>&1
+
+# Rotación del log, para que no crezca sin fin.
+0 3 * * 0 [ -f /var/log/dep-alertas.log ] && tail -n 5000 /var/log/dep-alertas.log > /var/log/dep-alertas.log.tmp && mv /var/log/dep-alertas.log.tmp /var/log/dep-alertas.log
