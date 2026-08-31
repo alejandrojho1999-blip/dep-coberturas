@@ -29,8 +29,10 @@ export interface SenalAGuardar {
   mercadoAbierto?: boolean | null
   mensaje: string
   payload?: Record<string, unknown>
-  enviadoAt?: string | null
+  aceptadoAt?: string | null
   errorEnvio?: string | null
+  canalEstado?: 'vivo' | 'caido' | 'desconocido' | null
+  canalDetalle?: string | null
 }
 
 export async function estadoDeEvento(
@@ -53,7 +55,13 @@ export async function estadoDeEvento(
   }
 }
 
-/** Cuántos mensajes se enviaron de verdad en la última hora. */
+/**
+ * Cuántos mensajes aceptó el puente en la última hora.
+ *
+ * Cuenta los aceptados, no los entregados: es el tope de ruido que se le mete
+ * al teléfono, y un mensaje encolado con la sesión caída acabará llegando
+ * cuando WhatsApp vuelva.
+ */
 export async function enviadosUltimaHora(
   admin: SupabaseClient,
   ahora = new Date(),
@@ -62,8 +70,8 @@ export async function enviadosUltimaHora(
   const { count, error } = await admin
     .from('alert_signals')
     .select('id', { count: 'exact', head: true })
-    .not('enviado_at', 'is', null)
-    .gte('enviado_at', desde)
+    .not('aceptado_at', 'is', null)
+    .gte('aceptado_at', desde)
 
   if (error) throw new Error(`alert_signals (conteo): ${error.message}`)
   return count ?? 0
@@ -87,8 +95,10 @@ export async function registrarSenal(admin: SupabaseClient, senal: SenalAGuardar
     mercado_abierto: senal.mercadoAbierto ?? null,
     mensaje: senal.mensaje,
     payload: senal.payload ?? {},
-    enviado_at: senal.enviadoAt ?? null,
+    aceptado_at: senal.aceptadoAt ?? null,
     error_envio: senal.errorEnvio ?? null,
+    canal_estado: senal.canalEstado ?? null,
+    canal_detalle: senal.canalDetalle ?? null,
   })
 
   if (error) throw new Error(`alert_signals (insert): ${error.message}`)

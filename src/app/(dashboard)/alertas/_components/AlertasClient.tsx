@@ -81,7 +81,10 @@ export function AlertasClient({ proximoEventoIso, proximoEventoEtiqueta }: {
     [datos, filtro],
   )
 
-  const fallidas = (datos?.senales ?? []).filter((s) => !s.enviado_at).length
+  // Una señal encolada con la sesión de WhatsApp caída no llegó a ningún sitio,
+  // así que cuenta como fallida igual que una que el puente rechazó.
+  const fallidas = (datos?.senales ?? [])
+    .filter((s) => !s.aceptado_at || s.canal_estado === 'caido').length
   const ultimas24h = (datos?.senales ?? []).filter(
     (s) => Date.now() - Date.parse(s.created_at) < 86_400_000,
   ).length
@@ -137,10 +140,11 @@ export function AlertasClient({ proximoEventoIso, proximoEventoEtiqueta }: {
         />
         <KpiCard label="Señales 24 h" value={ultimas24h} sub={`${datos?.senales.length ?? 0} en el registro`} />
         <KpiCard
-          label="Envíos fallidos"
+          label="No entregados"
+          ayuda="Señales que el puente rechazó, o que quedaron encoladas con la sesión de WhatsApp caída."
           value={fallidas}
           signo={fallidas > 0 ? -1 : 0}
-          sub={fallidas > 0 ? 'revisar el puente de Nexus' : 'todo entregado'}
+          sub={fallidas > 0 ? 'revisar la sesión de WhatsApp de Nexus' : 'todo entregado'}
         />
       </KpiRow>
 
@@ -210,6 +214,27 @@ export function AlertasClient({ proximoEventoIso, proximoEventoEtiqueta }: {
   )
 }
 
+/**
+ * Estado de entrega de una señal.
+ *
+ * Tres desenlaces distintos, y hace falta distinguirlos: el puente acepta el
+ * mensaje (202) antes de intentar enviarlo, así que «aceptado» con la sesión de
+ * WhatsApp caída significa que no llegó a ningún teléfono.
+ */
+function ChipEntrega({ senal }: { senal: SenalFila }) {
+  if (!senal.aceptado_at) return <Chip tono="aviso">no enviado</Chip>
+
+  if (senal.canal_estado === 'caido') {
+    return <Chip tono="aviso">encolado · WhatsApp caído</Chip>
+  }
+
+  if (senal.canal_estado === 'desconocido' || senal.canal_estado == null) {
+    return <Chip tono="neutro">aceptado {fechaCorta(senal.aceptado_at)}</Chip>
+  }
+
+  return <Chip tono="positivo">entregado {fechaCorta(senal.aceptado_at)}</Chip>
+}
+
 function FilaSenal({ senal }: { senal: SenalFila }) {
   const niveles = senal.payload?.niveles
     ?? [...(senal.payload?.nivelesVenta ?? []), ...(senal.payload?.nivelesCompra ?? [])]
@@ -220,9 +245,7 @@ function FilaSenal({ senal }: { senal: SenalFila }) {
         <span className="font-mono text-xs">{SEMAFORO[senal.severidad] ?? '⚪'}</span>
         <Chip tono="neutro">{ETIQUETA_TIPO[senal.tipo]}</Chip>
         <Chip tono={senal.severidad >= 4 ? 'aviso' : 'neutro'}>sev {senal.severidad}/5</Chip>
-        {senal.enviado_at
-          ? <Chip tono="positivo">enviado {fechaCorta(senal.enviado_at)}</Chip>
-          : <Chip tono="aviso">no enviado</Chip>}
+        <ChipEntrega senal={senal} />
         <span className="ml-auto font-mono text-[10px] text-text-muted">{fechaCorta(senal.created_at)}</span>
       </div>
 

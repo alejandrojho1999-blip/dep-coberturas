@@ -119,17 +119,21 @@ async function despachar(params: {
   if (dryRun) { resultado.enviados++; return }
 
   const envio = await enviarNexus(mensaje, senal.tipo)
-  if (!envio.ok) resultado.errores.push(`envío: ${envio.error}`)
+  if (envio.error) resultado.errores.push(`envío: ${envio.error}`)
 
   await registrarSenal(admin, {
     ...senal,
     mensaje,
-    enviadoAt: envio.ok ? new Date().toISOString() : null,
+    aceptadoAt: envio.aceptado ? new Date().toISOString() : null,
     errorEnvio: envio.error,
+    canalEstado: envio.canal,
+    canalDetalle: envio.canalDetalle,
   })
   await tocarEvento(admin, senal.eventoKey, senal.severidad, estadoPrevio)
 
-  if (envio.ok) resultado.enviados++
+  // Solo cuenta como enviado lo que el puente aceptó **y** salió por un canal
+  // vivo. Un mensaje encolado con la sesión caída no ha llegado a nadie.
+  if (envio.aceptado && envio.canal !== 'caido') resultado.enviados++
   else resultado.omitidos++
 }
 
@@ -361,7 +365,7 @@ export async function cicloSnapshot(
   if (dryRun) { resultado.enviados++; return resultado }
 
   const envio = await enviarNexus(mensaje, 'debasement')
-  if (!envio.ok) resultado.errores.push(`envío: ${envio.error}`)
+  if (envio.error) resultado.errores.push(`envío: ${envio.error}`)
 
   await registrarSenal(admin, {
     tipo: 'debasement',
@@ -371,11 +375,13 @@ export async function cicloSnapshot(
     resumen: probabilidad.nota,
     mensaje,
     payload: { probabilidad, metricas: debasement.metricas, motivoEnvio: decision.motivo },
-    enviadoAt: envio.ok ? new Date().toISOString() : null,
+    aceptadoAt: envio.aceptado ? new Date().toISOString() : null,
     errorEnvio: envio.error,
+    canalEstado: envio.canal,
+    canalDetalle: envio.canalDetalle,
   })
 
-  if (envio.ok) resultado.enviados++
+  if (envio.aceptado && envio.canal !== 'caido') resultado.enviados++
   else resultado.omitidos++
 
   return resultado
