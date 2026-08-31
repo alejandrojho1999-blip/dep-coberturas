@@ -34,28 +34,29 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ## Pendiente
 
-### Activar el sistema de alerta temprana (2026-08-31)
-> El código está completo y probado, pero **no envía nada todavía**: faltan tres
-> credenciales y la migración de base de datos. Nada más se rompe mientras
-> tanto; los ciclos fallan solos y lo dicen en el log.
+### Terminar de activar el sistema de alerta temprana (2026-08-31)
+> Credenciales puestas, migración 022 aplicada y el motor **escribe de verdad**
+> en Supabase: `alert_signals` y `macro_snapshots` tienen datos en vivo y el
+> diagnóstico sale 15/15 en verde. Lo que **no** funciona es el último tramo:
+> el mensaje no llega al WhatsApp.
 
-1. **Rellenar en `/var/www/dep-coberturas/.env.local`** (las tres están vacías):
-   - ~~`OPENROUTER_API_KEY`~~ — **hecho** el 2026-08-31. Ojo: la clave de
-     `liberty-trading-new` está revocada (401 «User not found»); se copió la de
-     `/var/www/omaria/.env`, verificada contra `GET /api/v1/key`.
-   - `FRED_API_KEY` — tasa efectiva y series de debasement. Gratis en
-     fred.stlouisfed.org/docs/api/api_key.html. No está en ningún otro proyecto.
-   - `SUPABASE_SERVICE_ROLE_KEY` — sin ella el motor no puede escribir el
-     registro. supabase.com → proyecto `replbokusvrqdbzuhulm` → Settings → API.
-2. **Aplicar la migración 022** (`supabase/migrations/022_alertas_tempranas.sql`)
-   desde el editor SQL de Supabase, sobre el proyecto `replbokusvrqdbzuhulm`.
-   Crea `alert_signals`, `alert_dedupe` y `macro_snapshots`.
-3. **Comprobar**: `scripts/alertas/run.sh diagnostico` debe salir todo en verde.
+1. **Relinkear la sesión de WhatsApp de `nexus` — bloqueante.**
+   `openclaw channels login --channel whatsapp --account nexus` y escanear el
+   QR. Ahora mismo la cuenta figura como *not linked* y `openclaw-gateway` está
+   en bucle de reinicio; `stefy` sí está sana, así que el problema es de esa
+   cuenta, no del puente. Mientras siga caída, el puente responde `202 queued`
+   y el mensaje se queda encolado sin entregarse.
+2. **Aplicar la migración 023**
+   (`supabase/migrations/023_alertas_entrega_honesta.sql`) desde el editor SQL
+   de Supabase, proyecto `replbokusvrqdbzuhulm`. **Renombra `enviado_at` a
+   `aceptado_at`**, que está en uso: hay que aplicarla a la vez que se
+   despliega el PR #12, o el panel leerá una columna que ya no existe.
+3. **Verificar la entrega de extremo a extremo**: `npm run alertas:prueba` y
+   confirmar el WhatsApp en el teléfono. Con el fix del PR #12, si el canal
+   está caído la fila lo dirá (`canal_estado = 'caido'`) en vez de fingir que
+   se envió.
 4. **Dar de alta el cron**: pegar `scripts/alertas/crontab.txt` en `crontab -e`.
-5. **Verificar la entrega**: `npm run alertas:prueba` y confirmar el WhatsApp.
-   Ojo: la sesión de WhatsApp de `nexus` se cae cada tanto; si el log del puente
-   dice `No active WhatsApp Web listener`, hay que relinkear con
-   `openclaw channels login --channel whatsapp --account nexus`.
+   Sin esto los ciclos solo corren a mano.
 
 
 ### PARA EL LUNES 2026-08-31 — activar el archivo de cadenas
@@ -279,6 +280,32 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### El registro de alertas distingue aceptación de entrega (2026-09-01)
+
+PR #12, rama `fix/registro-entrega-honesto`. Pendiente de mergear y de aplicar
+la migración 023.
+
+El puente de Nexus responde `202 queued` en cuanto recibe la petición y hace el
+envío a WhatsApp después. Con la sesión caída sigue devolviendo 202 y el fallo
+solo sale en su log medio minuto más tarde, así que `enviado_at` se rellenaba
+con mensajes que nunca llegaron al teléfono. Pasó el 2026-08-31: dos alertas
+figuraban como enviadas con la cuenta `nexus` desvinculada.
+
+- `src/lib/alertas/canal.ts` consulta el estado de la sesión en OpenClaw justo
+  antes de cada envío: `vivo` / `caido` / `desconocido` más una línea de
+  detalle auditable. 8 tests para los casos límite (CLI ausente, timeout,
+  salida inesperada).
+- `ResultadoEnvio.ok` pasa a `aceptado` y acarrea `canal` y `canalDetalle`. Un
+  202 con el canal caído devuelve error explícito en vez de silencio.
+- La contabilidad de `enviados` en `motor.ts` exige canal vivo; el resto cuenta
+  como omitido.
+- Migración 023: `enviado_at` → `aceptado_at`, más `canal_estado` y
+  `canal_detalle`. Las filas anteriores quedan como `'desconocido'`.
+- Panel: chip de entrega con los cuatro estados y el KPI «Envíos fallidos»
+  renombrado a «No entregados» con tooltip.
+
+Lint 0, `tsc --noEmit` 0, 730/730 tests.
 
 ### Aprobación, cobro de comisión y track record de las rechazadas (2026-08-31)
 
@@ -1662,6 +1689,18 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
   informa del recuento. Contarlas inventaría rendimiento en el track record.
 - **Cifras brutas**, sin comisión de rendimiento ni costes de transacción.
 - **Benchmark SPY** en las tres carteras en vivo, normalizado al capital de cada una.
+
+### Alertas
+- **«Aceptado» y «entregado» no son lo mismo.** El puente de Nexus es asíncrono
+  y su 202 solo dice que recibió la petición. El registro nombra lo que de
+  verdad sabe (`aceptado_at`) y guarda aparte el estado del canal, que es lo
+  más cerca que se puede estar de saber si llegará.
+- **Con el canal caído se envía igual**: el puente encola y OpenClaw reintenta
+  al volver. Lo que cambia es que la fila lo dice, en vez de contarlo como un
+  envío bueno.
+- **Las filas anteriores a la migración 023 quedan como `desconocido`**, no como
+  `vivo`. Marcarlas de otro modo repetiría la misma mentira que se está
+  corrigiendo.
 
 ### Congelado
 - Todo lo de Render y las vulnerabilidades de `npm audit`, documentado en
