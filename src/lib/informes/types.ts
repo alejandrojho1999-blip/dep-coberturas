@@ -111,4 +111,12 @@ export interface HistoryEntry {
   precio_objetivo_personal: number | null
   estado: 'Comprar' | 'Mantener' | 'Vender' | 'Observacion' | null
   precio_venta: number | null
+  /** Decisión del CEO. Distinta de `estado`, que es el estado de la posición. */
+  aprobacion: 'Revision' | 'Aprobada' | 'Rechazada' | 'Observacion' | null
+  /** Cuándo se registró esa decisión: origen del rendimiento de las rechazadas. */
+  aprobacion_at: string | null
+  comision_cobrada: boolean | null
+  comision_cobrada_at: string | null
+  /** Importe congelado al marcar el cobro; null en las filas históricas. */
+  comision_cobrada_monto: number | null
 }

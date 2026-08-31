@@ -5,7 +5,9 @@ export const runtime = 'nodejs'
 
 const ADMIN_EMAILS = new Set(['lriofrio915@gmail.com', 'walletserick123@gmail.com'])
 
-const HISTORY_FIELDS = 'id, user_id, user_email, ticker, empresa, bolsa, solicitante, filename, informe_numero, fecha_generacion, content_json, custom_docx_path, precio_compra, cantidad_acciones, precio_objetivo_personal, estado, precio_venta'
+const APROBACION_VALUES = new Set(['Revision', 'Aprobada', 'Rechazada', 'Observacion'])
+
+const HISTORY_FIELDS = 'id, user_id, user_email, ticker, empresa, bolsa, solicitante, filename, informe_numero, fecha_generacion, content_json, custom_docx_path, precio_compra, cantidad_acciones, precio_objetivo_personal, estado, precio_venta, aprobacion, aprobacion_at, comision_cobrada, comision_cobrada_at, comision_cobrada_monto'
 
 export async function GET(): Promise<Response> {
   const supabase = await createClient()
@@ -37,12 +39,21 @@ export async function PATCH(request: Request): Promise<Response> {
   const { id, ...updates } = body
   if (!id) return Response.json({ error: 'Missing id' }, { status: 400 })
 
-  const ALLOWED_FIELDS = new Set(['precio_compra', 'cantidad_acciones', 'precio_objetivo_personal', 'estado', 'precio_venta'])
+  const ALLOWED_FIELDS = new Set([
+    'precio_compra', 'cantidad_acciones', 'precio_objetivo_personal', 'estado', 'precio_venta',
+    'aprobacion', 'aprobacion_at', 'comision_cobrada', 'comision_cobrada_at', 'comision_cobrada_monto',
+  ])
   const safeUpdates = Object.fromEntries(
     Object.entries(updates).filter(([k]) => ALLOWED_FIELDS.has(k))
   )
   if (Object.keys(safeUpdates).length === 0) {
     return Response.json({ error: 'No valid fields to update' }, { status: 400 })
+  }
+
+  // El CHECK de la base de datos también lo rechazaría, pero con un error de
+  // Postgres que no dice nada útil a quien llama a la API.
+  if ('aprobacion' in safeUpdates && !APROBACION_VALUES.has(safeUpdates.aprobacion as string)) {
+    return Response.json({ error: 'Invalid aprobacion' }, { status: 400 })
   }
 
   const isAdmin = ADMIN_EMAILS.has(user.email ?? '')
