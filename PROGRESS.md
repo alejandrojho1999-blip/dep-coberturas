@@ -40,8 +40,9 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 > tanto; los ciclos fallan solos y lo dicen en el log.
 
 1. **Rellenar en `/var/www/dep-coberturas/.env.local`** (las tres están vacías):
-   - `OPENROUTER_API_KEY` — clasifica los titulares. La misma clave ya está en
-     `/var/www/liberty-trading-new/.env` y otros proyectos del servidor.
+   - ~~`OPENROUTER_API_KEY`~~ — **hecho** el 2026-08-31. Ojo: la clave de
+     `liberty-trading-new` está revocada (401 «User not found»); se copió la de
+     `/var/www/omaria/.env`, verificada contra `GET /api/v1/key`.
    - `FRED_API_KEY` — tasa efectiva y series de debasement. Gratis en
      fred.stlouisfed.org/docs/api/api_key.html. No está en ningún otro proyecto.
    - `SUPABASE_SERVICE_ROLE_KEY` — sin ella el motor no puede escribir el
@@ -1490,6 +1491,11 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
 - **Todo mensaje queda registrado con su resultado de envío.** Un aviso que nadie
   puede auditar después no vale nada: cuando el oro se mueva un 2% hay que poder
   responder qué se avisó, a qué hora y con qué precio de referencia.
+- **El agrupamiento de sucesos está verificado con titulares reales.**
+  `scripts/alertas/run.sh claves` clasifica lo que hay publicado en ese momento
+  y enseña qué clave asigna a cada titular. En la prueba del 2026-08-31, dos
+  medios distintos contando la interceptación del avión espía ruso sobre el
+  Báltico produjeron la misma clave, que es justo lo que evita el duplicado.
 - **`/alertas` es solo lectura y solo admin**, protegida por RLS (`is_admin()`)
   además de por la guarda de la API: un cliente puede hablar con Supabase sin
   pasar por la aplicación.

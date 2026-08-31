@@ -8,6 +8,7 @@
  *   npm run alertas -- calendario        # avisos previos y publicación de tasas
  *   npm run alertas -- prueba            # mensaje de prueba por Nexus
  *   npm run alertas -- diagnostico       # comprueba credenciales y fuentes
+ *   npm run alertas -- claves            # qué clave de suceso asigna el LLM
  *   npm run alertas -- guerra --dry-run  # compone pero no envía ni guarda
  *
  * Es el binario que llama el cron del servidor. Toda la lógica vive en
@@ -28,10 +29,11 @@ import { atr as calcularAtr } from '@/lib/alertas/atr'
 import { cotizarVarios } from '@/lib/alertas/precios'
 import { simbolosDe } from '@/lib/alertas/simbolos'
 import { FUENTES_GUERRA, leerFuentes } from '@/lib/alertas/rss'
+import { clasificarTitulares } from '@/lib/alertas/clasificador'
 import { formatearFalta, proximoEvento } from '@/lib/alertas/calendario'
 import { probabilidadProximaReunion } from '@/lib/alertas/fedwatch'
 
-const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'prueba', 'diagnostico'] as const
+const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'prueba', 'diagnostico', 'claves'] as const
 type Ciclo = (typeof CICLOS)[number]
 
 function ahoraTexto(): string {
@@ -101,6 +103,41 @@ async function diagnostico(): Promise<number> {
   return filas.every(([, ok]) => ok) ? 0 : 1
 }
 
+/**
+ * Inspección de las claves de suceso sobre los titulares reales del momento.
+ *
+ * Es la comprobación que decide si el freno anti-repetición sirve: dos medios
+ * contando el mismo hecho tienen que producir la misma clave. Si aquí salen
+ * claves distintas para el mismo suceso, el teléfono recibirá duplicados y hay
+ * que endurecer el prompt del clasificador.
+ */
+async function claves(): Promise<number> {
+  const titulares = await leerFuentes(FUENTES_GUERRA, 180)
+  if (!titulares.length) {
+    console.log('No hay titulares recientes que inspeccionar.')
+    return 0
+  }
+
+  const { clasificados, errores } = await clasificarTitulares(titulares, 'guerra', 12)
+  for (const e of errores) console.error(`error: ${e}`)
+
+  const porClave = new Map<string, string[]>()
+  for (const t of clasificados) {
+    const { clasificacion: c } = t
+    const clave = c.relevante ? c.eventoKey : '(descartado)'
+    console.log(`${clave.padEnd(46)} sev ${c.severidad}  ${t.titulo.slice(0, 62)}`)
+    porClave.set(clave, [...(porClave.get(clave) ?? []), t.titulo])
+  }
+
+  const agrupados = [...porClave.entries()].filter(([k, v]) => k !== '(descartado)' && v.length > 1)
+  console.log(
+    `\n${clasificados.length} titulares → ${porClave.size - (porClave.has('(descartado)') ? 1 : 0)} sucesos distintos` +
+    `; ${agrupados.length} suceso(s) contados por más de un medio y agrupados correctamente.`,
+  )
+
+  return errores.length ? 1 : 0
+}
+
 async function main(): Promise<number> {
   const args = process.argv.slice(2)
   const ciclo = args.find((a) => !a.startsWith('--')) as Ciclo | undefined
@@ -113,6 +150,7 @@ async function main(): Promise<number> {
   }
 
   if (ciclo === 'diagnostico') return diagnostico()
+  if (ciclo === 'claves') return claves()
 
   if (ciclo === 'prueba') {
     if (!nexusConfigurado()) {
