@@ -15,6 +15,7 @@ import {
   Settings2,
   Terminal,
   Cpu,
+  Siren,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { icon: Cpu,       label: 'Agentes',           href: '/agentes' },
   { icon: LineChart, label: 'Estrategias',       href: '/estrategias' },
   { icon: FileText,  label: 'Recomendaciones',   href: '/recomendaciones' },
+  { icon: Siren,     label: 'Alerta temprana',   href: '/alertas' },
 ] as const
 
 const STORAGE_KEY = 'sidebar-collapsed'

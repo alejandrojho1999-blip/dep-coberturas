@@ -29,7 +29,14 @@ function resampleToQuarterly(observations: FREDObservation[]): FREDObservation[]
   return Array.from(quarterMap.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
-export async function fetchFREDSeries(
+/**
+ * Observaciones tal y como las publica FRED, sin remuestrear.
+ *
+ * El análisis causal trabaja en trimestres, pero las alertas necesitan el dato
+ * diario: la tasa efectiva de ayer, no la media del trimestre. Esta es la
+ * lectura cruda; `fetchFREDSeries` la remuestrea encima.
+ */
+export async function fetchFREDObservations(
   seriesId: string,
   startDate: string,
   endDate: string,
@@ -64,7 +71,15 @@ export async function fetchFREDSeries(
     .filter((obs) => obs.value !== '.')
     .map((obs) => ({ date: obs.date, value: parseFloat(obs.value) }))
 
-  return resampleToQuarterly(observations)
+  return observations
+}
+
+export async function fetchFREDSeries(
+  seriesId: string,
+  startDate: string,
+  endDate: string,
+): Promise<FREDObservation[]> {
+  return resampleToQuarterly(await fetchFREDObservations(seriesId, startDate, endDate))
 }
 
 // VIX comes from Yahoo Finance (^VIX) — avoids FRED VIXCLS 500 errors

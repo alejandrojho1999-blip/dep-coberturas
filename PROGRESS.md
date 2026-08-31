@@ -7,13 +7,13 @@
 
 ## Estado actual
 
-**Último commit:** `a6ec1a3` (cartera única del admin y cron por GitHub Actions)
+**Último commit:** `da0bc28` (aprobación del CEO, cobro de comisión y track record de las rechazadas)
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **415/415** |
+| `npm run test:run` | **722/722** |
 | `npm run build` | exit 0 |
 | `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
@@ -25,6 +25,7 @@
 | 2 | Agentes | `/agentes` | Agentes IA para Acciones y Opciones |
 | 3 | Estrategias | `/estrategias` | Seis sistemas algorítmicos de futuros sobre el Nasdaq |
 | 4 | Recomendaciones | `/recomendaciones` | Panel de Recomendaciones |
+| 5 | Alerta temprana | `/alertas` | Escalada Rusia–OTAN, pulso Fed vs Tesoro y tasas EEUU (solo admin) |
 
 Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 `/perfil` y `/fincept-terminal` (estas dos bajo Configuración).
@@ -32,6 +33,29 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ---
 
 ## Pendiente
+
+### Activar el sistema de alerta temprana (2026-08-31)
+> El código está completo y probado, pero **no envía nada todavía**: faltan tres
+> credenciales y la migración de base de datos. Nada más se rompe mientras
+> tanto; los ciclos fallan solos y lo dicen en el log.
+
+1. **Rellenar en `/var/www/dep-coberturas/.env.local`** (las tres están vacías):
+   - `OPENROUTER_API_KEY` — clasifica los titulares. La misma clave ya está en
+     `/var/www/liberty-trading-new/.env` y otros proyectos del servidor.
+   - `FRED_API_KEY` — tasa efectiva y series de debasement. Gratis en
+     fred.stlouisfed.org/docs/api/api_key.html. No está en ningún otro proyecto.
+   - `SUPABASE_SERVICE_ROLE_KEY` — sin ella el motor no puede escribir el
+     registro. supabase.com → proyecto `replbokusvrqdbzuhulm` → Settings → API.
+2. **Aplicar la migración 022** (`supabase/migrations/022_alertas_tempranas.sql`)
+   desde el editor SQL de Supabase, sobre el proyecto `replbokusvrqdbzuhulm`.
+   Crea `alert_signals`, `alert_dedupe` y `macro_snapshots`.
+3. **Comprobar**: `scripts/alertas/run.sh diagnostico` debe salir todo en verde.
+4. **Dar de alta el cron**: pegar `scripts/alertas/crontab.txt` en `crontab -e`.
+5. **Verificar la entrega**: `npm run alertas:prueba` y confirmar el WhatsApp.
+   Ojo: la sesión de WhatsApp de `nexus` se cae cada tanto; si el log del puente
+   dice `No active WhatsApp Web listener`, hay que relinkear con
+   `openclaw channels login --channel whatsapp --account nexus`.
+
 
 ### PARA EL LUNES 2026-08-31 — activar el archivo de cadenas
 > Aplazado a propósito el 2026-08-29 (sábado). El **lunes 31 es día de mercado**,
@@ -1430,6 +1454,46 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
 ---
 
 ## Decisiones tomadas
+
+### Alerta temprana (2026-08-31)
+- **El motor corre como cron del VPS, no en la aplicación.** El puente de Nexus
+  hacia WhatsApp escucha solo en `127.0.0.1:9091`, y la app se despliega fuera
+  del servidor. Publicar ese puente en internet sería exponer un disparador de
+  mensajes a quien encontrase el token. Además GitHub Actions no baja de cinco
+  minutos de resolución y una escalada bélica se cotiza en segundos.
+- **No se tocó el puente.** Se usa la ruta que ya exponía (`/webhook/liberty-trading`);
+  lo que identifica a este proyecto en su log es el campo `event`. Cero cambios
+  fuera del repositorio.
+- **El nivel de la orden es medio ATR(14), no un porcentaje fijo.** Medio ATR
+  del oro son unos 38 dólares y el de bitcoin más de mil: un porcentaje único
+  trataría por igual a activos que respiran distinto. Se implementó el ATR de
+  Wilder en `src/lib/alertas/atr.ts` porque no existía en el repositorio.
+- **La probabilidad de subida se calcula, no se copia.** CME FedWatch no tiene
+  API pública y su página es JS pesado con términos de uso restrictivos. Se
+  descompone el contrato ZQ del mes de la reunión con su misma metodología
+  (`100 − P` es la tasa media del mes; se despeja la posterior a la reunión).
+  Contratos verificados en Yahoo: `ZQU26.CBT`, `ZQV26.CBT`, `ZQZ26.CBT`.
+- **Sin nivel antes que con un nivel inventado.** Si falta historia para el ATR
+  o el contrato no cotiza, el mensaje sale diciendo qué activo se quedó sin
+  nivel, y la foto macro se marca como aproximada. Una cifra inventada en una
+  orden stop cuesta dinero real.
+- **La OTAN retiró sus feeds RSS** (todas las rutas conocidas dan 404, verificado
+  el 2026-08-31) y Reuters cerró los suyos. La cobertura bélica se apoya en
+  consultas dirigidas de Google News; la macro sí tiene fuente primaria con feed
+  vivo: comunicados, política monetaria y discursos de la Reserva Federal, y el
+  IPC del BLS.
+- **Dedupe por suceso, no por titular.** El LLM asigna una clave del hecho
+  (`dron-ruso-derribado-polonia-2026-08-31`), así veinte medios contando lo mismo
+  generan un solo mensaje. Enfriamiento de 45 minutos y tope de 6 mensajes por
+  hora, ambos rotos por una **escalada de severidad**: si el incidente empeora,
+  el aviso sale igual.
+- **Todo mensaje queda registrado con su resultado de envío.** Un aviso que nadie
+  puede auditar después no vale nada: cuando el oro se mueva un 2% hay que poder
+  responder qué se avisó, a qué hora y con qué precio de referencia.
+- **`/alertas` es solo lectura y solo admin**, protegida por RLS (`is_admin()`)
+  además de por la guarda de la API: un cliente puede hablar con Supabase sin
+  pasar por la aplicación.
+
 
 ### Backtest
 - **Yahoo gratis primero, datos de pago después.** `fundamentalsTimeSeries`
