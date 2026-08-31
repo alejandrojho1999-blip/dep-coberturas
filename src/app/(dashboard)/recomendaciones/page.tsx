@@ -289,6 +289,7 @@ export default function RecomendacionesPage() {
   const toastId                               = useRef(0)
   const [pendingDuplicate, setPendingDuplicate] = useState<string | null>(null)
   const [comisionPct, setComisionPct]           = useState(20)
+  const [showRechazadas, setShowRechazadas]     = useState(false)
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   // Las recomendaciones de los agentes son una cartera única: todos la ven,
   // solo el administrador la edita. Empieza en false hasta que se resuelve la
@@ -594,6 +595,54 @@ export default function RecomendacionesPage() {
     await saveField(entry.id, updates)
   }
 
+  /**
+   * Comisión que le corresponde al operador por esta fila.
+   *
+   * No se guarda en base de datos: depende del porcentaje que el usuario teclea
+   * en la cabecera, así que se recalcula siempre. Solo hay comisión cuando la
+   * posición gana: de las pérdidas no se cobra nada.
+   */
+  const comisionDe = (entry: HistoryEntry): number | null => {
+    const g = calcGananciaUSD(entry)
+    if (g == null || g <= 0) return null
+    return g * (comisionPct / 100)
+  }
+
+  /**
+   * Las que el CEO rechazó y aun así podían medirse.
+   *
+   * El precio de partida es el `precio_compra` que el operador puso sobre la
+   * mesa, y el rendimiento corre en abierto contra el precio de mercado de hoy:
+   * es el coste acumulado de haber dicho que no. Sin `precio_compra` no hay
+   * nada contra lo que comparar, así que esas filas quedan fuera del recuento.
+   */
+  const rechazadas = displayed
+    .filter((e) => e.aprobacion === 'Rechazada' && e.precio_compra != null)
+    .map((e) => ({ entry: e, rend: calcRendimiento(e), gp: calcGananciaUSD(e) }))
+    .filter((r): r is { entry: HistoryEntry; rend: number; gp: number | null } => r.rend != null)
+
+  const handleAprobacionChange = async (entry: HistoryEntry, nueva: string) => {
+    await saveField(entry.id, { aprobacion: nueva, aprobacion_at: new Date().toISOString() })
+  }
+
+  /**
+   * Marca o desmarca el cobro de la comisión.
+   *
+   * Al cobrar se congela el importe: si mañana se baja el porcentaje del 20% al
+   * 15%, lo que ya se cobró no puede cambiar sola. Al desmarcar se limpia, para
+   * que no quede un importe fantasma de un cobro que se deshizo.
+   */
+  const toggleComisionCobrada = async (entry: HistoryEntry) => {
+    const cobrada = !entry.comision_cobrada
+    await saveField(entry.id, cobrada
+      ? {
+          comision_cobrada: true,
+          comision_cobrada_at: new Date().toISOString(),
+          comision_cobrada_monto: comisionDe(entry),
+        }
+      : { comision_cobrada: false, comision_cobrada_at: null, comision_cobrada_monto: null })
+  }
+
   function calcRendimiento(entry: HistoryEntry): number | null {
     const compra = entry.precio_compra
     if (compra == null || compra === 0) return null
@@ -667,6 +716,20 @@ export default function RecomendacionesPage() {
     if (inFlight !== undefined) return inFlight
     const v = rec[field]
     return v != null ? String(v) : ''
+  }
+
+  /**
+   * Color de la decisión del CEO. Deliberadamente el mismo lenguaje visual que
+   * `estadoBadge`: son dos clasificaciones distintas, pero se leen en columnas
+   * contiguas y alternar dos paletas ahí solo confundiría.
+   */
+  function aprobacionBadge(aprobacion: string | null) {
+    switch (aprobacion) {
+      case 'Aprobada':    return { bg: 'rgba(16, 185, 129,0.15)', border: 'rgba(16, 185, 129,0.35)', text: 'var(--color-positive)' }
+      case 'Rechazada':   return { bg: 'rgba(240, 68, 56,0.15)',  border: 'rgba(240, 68, 56,0.35)',  text: 'var(--color-negative)' }
+      case 'Observacion': return { bg: 'rgba(245, 165, 36,0.15)', border: 'rgba(245, 165, 36,0.35)', text: 'var(--color-warning)' }
+      default:            return { bg: 'rgba(100,116,139,0.12)',  border: 'rgba(100,116,139,0.3)',   text: 'var(--color-text-secondary)' }
+    }
   }
 
   function estadoBadge(estado: string | null) {
@@ -881,25 +944,41 @@ export default function RecomendacionesPage() {
                 {/* Summary: total commission and net company gain from closed positions */}
                 {(() => {
                   let totalGanancia = 0
-                  let totalComision = 0
+                  let comisionCobrada = 0
+                  let comisionPendiente = 0
                   displayed.forEach((entry) => {
                     if (entry.precio_venta == null) return
                     const g = calcGananciaUSD(entry)
                     if (g == null) return
                     totalGanancia += g
-                    if (g > 0) totalComision += g * (comisionPct / 100)
+                    const com = comisionDe(entry)
+                    if (com == null) return
+                    // Lo ya cobrado vale por su importe congelado; las filas
+                    // anteriores a esa columna caen al cálculo derivado.
+                    if (entry.comision_cobrada) comisionCobrada += entry.comision_cobrada_monto ?? com
+                    else comisionPendiente += com
                   })
-                  const netoEmpresa = totalGanancia - totalComision
+                  const netoEmpresa = totalGanancia - (comisionCobrada + comisionPendiente)
                   return (
                     <>
                       <div
                         className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
-                        style={{ background: 'rgba(245, 165, 36,0.08)', border: '1px solid rgba(245, 165, 36,0.2)' }}
-                        title="Suma de comisiones cobradas (operaciones cerradas con precio de venta)"
+                        style={{ background: 'rgba(16, 185, 129,0.08)', border: '1px solid rgba(16, 185, 129,0.2)' }}
+                        title="Comisiones que el operador ya ha cobrado, por el importe registrado el día del cobro"
                       >
-                        <span className="text-[10px] text-text-secondary">Comisión total</span>
+                        <span className="text-[10px] text-text-secondary">Comisión cobrada</span>
+                        <span className="text-xs font-semibold font-mono" style={{ color: 'var(--color-positive)' }}>
+                          ${fmtNum(comisionCobrada)}
+                        </span>
+                      </div>
+                      <div
+                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+                        style={{ background: 'rgba(245, 165, 36,0.08)', border: '1px solid rgba(245, 165, 36,0.2)' }}
+                        title="Comisiones devengadas en operaciones cerradas que siguen pendientes de pago"
+                      >
+                        <span className="text-[10px] text-text-secondary">Comisión pendiente</span>
                         <span className="text-xs font-semibold font-mono" style={{ color: 'var(--color-warning)' }}>
-                          ${fmtNum(totalComision)}
+                          ${fmtNum(comisionPendiente)}
                         </span>
                       </div>
                       <div
@@ -959,7 +1038,7 @@ export default function RecomendacionesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-xs">
+              <table className="w-full min-w-[980px] text-xs">
                 <thead>
                   <tr className="border-b border-border-subtle" style={{ background: 'var(--color-background)' }}>
                     <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Ticker</th>
@@ -976,6 +1055,8 @@ export default function RecomendacionesPage() {
                     <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Rendim.</th>
                     <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">G/P ($)</th>
                     <th className="hidden px-3 py-2.5 text-right font-medium text-text-secondary xl:table-cell">Comisión</th>
+                    <th className="hidden px-3 py-2.5 text-left font-medium text-text-secondary xl:table-cell">Cobro</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Aprobación</th>
                     <th className="px-3 py-2.5 text-left font-medium text-text-secondary">Estado</th>
                     <th className="px-3 py-2.5 text-right font-medium text-text-secondary">Acc.</th>
                   </tr>
@@ -1097,10 +1178,54 @@ export default function RecomendacionesPage() {
                       {/* Comisión */}
                       <td className="hidden px-3 py-2.5 text-right font-mono text-xs xl:table-cell">
                         {(() => {
-                          const g = calcGananciaUSD(entry)
-                          if (g == null || g <= 0) return <span className="text-text-muted">—</span>
-                          const com = g * (comisionPct / 100)
+                          const com = comisionDe(entry)
+                          if (com == null) return <span className="text-text-muted">—</span>
                           return <span style={{ color: 'var(--color-warning)' }}>${fmtNum(com)}</span>
+                        })()}
+                      </td>
+                      {/* Cobro de la comisión */}
+                      <td className="hidden px-3 py-2.5 xl:table-cell">
+                        {(() => {
+                          if (comisionDe(entry) == null) {
+                            return <span className="text-text-muted">—</span>
+                          }
+                          const cobrada = entry.comision_cobrada === true
+                          return (
+                            <button
+                              onClick={() => void toggleComisionCobrada(entry)}
+                              title={
+                                cobrada
+                                  ? `Cobrada${entry.comision_cobrada_at ? ` el ${formatDate(entry.comision_cobrada_at)}` : ''}${entry.comision_cobrada_monto != null ? ` · $${fmtNum(entry.comision_cobrada_monto)}` : ''}. Clic para marcarla como pendiente.`
+                                  : 'Pendiente de pago. Clic para marcarla como cobrada.'
+                              }
+                              className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium transition-colors"
+                              style={cobrada
+                                ? { background: 'rgba(16, 185, 129,0.15)', borderColor: 'rgba(16, 185, 129,0.35)', color: 'var(--color-positive)' }
+                                : { background: 'rgba(100,116,139,0.12)', borderColor: 'rgba(100,116,139,0.3)', color: 'var(--color-text-secondary)' }}
+                            >
+                              {cobrada ? '✓ Cobrada' : '● Pendiente'}
+                            </button>
+                          )
+                        })()}
+                      </td>
+                      {/* Aprobación del CEO */}
+                      <td className="px-3 py-2.5">
+                        {(() => {
+                          const badge = aprobacionBadge(entry.aprobacion)
+                          return (
+                            <select
+                              value={entry.aprobacion ?? 'Revision'}
+                              onChange={(e) => void handleAprobacionChange(entry, e.target.value)}
+                              title={entry.aprobacion_at ? `Decidida el ${formatDate(entry.aprobacion_at)}` : 'Pendiente de la decisión del CEO'}
+                              className="cursor-pointer rounded border px-1.5 py-0.5 text-xs font-medium outline-none transition-colors"
+                              style={{ background: badge.bg, borderColor: badge.border, color: badge.text }}
+                            >
+                              <option value="Revision">En revisión</option>
+                              <option value="Aprobada">Aprobada</option>
+                              <option value="Rechazada">Rechazada</option>
+                              <option value="Observacion">En observación</option>
+                            </select>
+                          )
                         })()}
                       </td>
                       {/* Estado */}
@@ -1187,6 +1312,126 @@ export default function RecomendacionesPage() {
               </table>
             </div>
           )}
+
+          {/* ── Track record de las rechazadas ───────────────────── */}
+          {rechazadas.length > 0 && (() => {
+            const aciertos = rechazadas.filter((r) => r.rend > 0).length
+            const rendMedio = rechazadas.reduce((acc, r) => acc + r.rend, 0) / rechazadas.length
+            const ordenadas = [...rechazadas].sort((a, b) => b.rend - a.rend)
+            const mejor = ordenadas[0]
+            const peor  = ordenadas[ordenadas.length - 1]
+            const conCantidad = rechazadas.filter((r) => r.gp != null)
+            const gpHipotetico = conCantidad.reduce((acc, r) => acc + (r.gp ?? 0), 0)
+            const color = (v: number) => v >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'
+            return (
+              <div className="border-t border-border-subtle">
+                <button
+                  onClick={() => setShowRechazadas((v) => !v)}
+                  className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-raised"
+                >
+                  <span className="flex items-center gap-2">
+                    <BarChart2 size={13} className="text-text-muted" />
+                    <span className="text-xs font-semibold text-text-primary">CARTERA RECHAZADA</span>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          style={{ background: 'rgba(240, 68, 56,0.1)', color: 'var(--color-negative)' }}>
+                      {rechazadas.length}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs font-semibold font-mono" style={{ color: color(rendMedio) }}>
+                      {rendMedio >= 0 ? '+' : ''}{fmtNum(rendMedio)}%
+                    </span>
+                    <span className="text-[10px] text-text-muted">{showRechazadas ? 'ocultar' : 'ver detalle'}</span>
+                  </span>
+                </button>
+
+                {showRechazadas && (
+                  <div className="px-5 pb-4">
+                    <p className="mb-3 text-[11px] leading-relaxed text-text-secondary">
+                      Rendimiento que habrían tenido las recomendaciones que no se aprobaron, medido
+                      desde su precio de compra propuesto hasta el precio de mercado actual.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                      <div className="rounded-lg border border-border-subtle bg-background px-3 py-2">
+                        <p className="text-[10px] text-text-secondary">Aciertos</p>
+                        <p className="text-sm font-semibold font-mono text-text-primary">
+                          {aciertos}/{rechazadas.length}
+                          <span className="ml-1 text-[10px] font-normal text-text-muted">
+                            ({Math.round((aciertos / rechazadas.length) * 100)}%)
+                          </span>
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border-subtle bg-background px-3 py-2">
+                        <p className="text-[10px] text-text-secondary">Rend. medio</p>
+                        <p className="text-sm font-semibold font-mono" style={{ color: color(rendMedio) }}>
+                          {rendMedio >= 0 ? '+' : ''}{fmtNum(rendMedio)}%
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border-subtle bg-background px-3 py-2">
+                        <p className="text-[10px] text-text-secondary">Mejor</p>
+                        <p className="text-sm font-semibold font-mono" style={{ color: color(mejor.rend) }}>
+                          <span className="text-text-primary">{mejor.entry.ticker}</span>{' '}
+                          {mejor.rend >= 0 ? '+' : ''}{fmtNum(mejor.rend)}%
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border-subtle bg-background px-3 py-2">
+                        <p className="text-[10px] text-text-secondary">Peor</p>
+                        <p className="text-sm font-semibold font-mono" style={{ color: color(peor.rend) }}>
+                          <span className="text-text-primary">{peor.entry.ticker}</span>{' '}
+                          {peor.rend >= 0 ? '+' : ''}{fmtNum(peor.rend)}%
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border-subtle bg-background px-3 py-2">
+                        <p className="text-[10px] text-text-secondary">G/P hipotético</p>
+                        {conCantidad.length === 0 ? (
+                          <p className="text-sm font-semibold font-mono text-text-muted">N/D</p>
+                        ) : (
+                          <p className="text-sm font-semibold font-mono" style={{ color: color(gpHipotetico) }}>
+                            {gpHipotetico >= 0 ? '+' : ''}${fmtNum(gpHipotetico)}
+                            <span className="ml-1 text-[10px] font-normal text-text-muted">
+                              ({conCantidad.length} de {rechazadas.length})
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 overflow-x-auto">
+                      <table className="w-full min-w-[420px] text-xs">
+                        <thead>
+                          <tr className="border-b border-border-subtle">
+                            <th className="px-2 py-1.5 text-left font-medium text-text-secondary">Ticker</th>
+                            <th className="px-2 py-1.5 text-left font-medium text-text-secondary">Rechazada</th>
+                            <th className="px-2 py-1.5 text-right font-medium text-text-secondary">P.Compra</th>
+                            <th className="px-2 py-1.5 text-right font-medium text-text-secondary">P.Actual</th>
+                            <th className="px-2 py-1.5 text-right font-medium text-text-secondary">Rendim.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ordenadas.map(({ entry, rend }) => (
+                            <tr key={entry.id} className="border-b border-border-subtle">
+                              <td className="px-2 py-1.5 font-semibold text-text-primary">{entry.ticker}</td>
+                              <td className="px-2 py-1.5 text-text-secondary">
+                                {entry.aprobacion_at ? formatDate(entry.aprobacion_at) : '—'}
+                              </td>
+                              <td className="px-2 py-1.5 text-right font-mono text-text-secondary">
+                                ${fmtNum(entry.precio_compra)}
+                              </td>
+                              <td className="px-2 py-1.5 text-right font-mono text-text-secondary">
+                                {livePrices[entry.ticker] != null ? `$${fmtNum(livePrices[entry.ticker])}` : '—'}
+                              </td>
+                              <td className="px-2 py-1.5 text-right font-mono font-semibold" style={{ color: color(rend) }}>
+                                {rend >= 0 ? '+' : ''}{fmtNum(rend)}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         {/* ── AGENTE PETER recommendations ──────────────────────── */}

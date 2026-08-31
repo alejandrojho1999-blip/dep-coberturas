@@ -255,6 +255,57 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Aprobación, cobro de comisión y track record de las rechazadas (2026-08-31)
+
+La tabla **RECOMENDACIONES DE {usuario}** (`informes_history`) no registraba la
+decisión del CEO ni si la comisión llegó a cobrarse, y las recomendaciones
+rechazadas desaparecían del análisis.
+
+**Flujo que ahora refleja el sistema:** el usuario genera el informe, escribe
+`P.Compra` y la fila queda **En revisión**; cuando el CEO se pronuncia de
+palabra, el usuario la pasa a Aprobada, Rechazada o En observación.
+
+- Migración `020_informes_history_aprobacion_comision.sql`: `aprobacion` (con
+  `CHECK`, por defecto `'Revision'`), `aprobacion_at`, `comision_cobrada`,
+  `comision_cobrada_at`, `comision_cobrada_monto`.
+- Columna **Aprobación** (`select` estilo badge, junto a Estado) y columna
+  **Cobro** a la derecha de Comisión (botón Pendiente ⇄ Cobrada).
+- El chip «Comisión total» de la cabecera se parte en **Comisión cobrada** y
+  **Comisión pendiente**; «Neto empresa» no cambia de fórmula.
+- Panel plegable **CARTERA RECHAZADA**: aciertos, rendimiento medio, mejor,
+  peor, G/P hipotético y el detalle fila a fila. Mide desde `precio_compra`
+  contra el precio de mercado actual, en abierto desde la fecha del rechazo.
+
+**Decisiones tomadas:**
+- `aprobacion` es una columna nueva, **no** se reutiliza `estado`: ahí `Vender`
+  cierra la posición y fija `precio_venta`, así que rechazar una recomendación
+  habría cerrado operaciones.
+- `comision_cobrada_monto` congela el importe el día del cobro. `comisionPct`
+  es un input volátil y bajarlo del 20% al 15% no puede reescribir lo ya
+  cobrado.
+- Solo se toca la tabla del usuario. `agent_recommendations` queda intacta.
+- Las rechazadas sin `precio_compra` quedan fuera del panel: no hay base contra
+  la que medirlas.
+
+**Verificado:** lint 0, `tsc --noEmit` 0, 622/622 tests, build de producción OK.
+
+**Migraciones aplicadas en Supabase el 2026-08-31** y verificadas contra la base
+de datos: la **018** (cartera de agentes compartida) y la **019** (tabla
+`options_chain_snapshots`), que arrastraban pendientes desde el 23 y el 29 de
+agosto, más la **020** de esta sesión.
+
+**Hallazgo al verificar → migración 021.** `public.admin_user_ids()` respondía
+200 con el uuid de la cuenta de administrador a quien llamara con la clave
+anónima. El `REVOKE ALL ... FROM public` de la 018 no bastaba: Supabase concede
+`EXECUTE` de forma nominal a `anon` y `authenticated` sobre cada función nueva
+del esquema `public`, y revocar del pseudo-rol PUBLIC no toca esas concesiones.
+`021_revoke_admin_functions_from_anon.sql` revoca de `anon` en las dos
+funciones; ya devuelven `permission denied`. No era escalable a acceso —RLS
+compara contra `auth.uid()` de un JWT firmado—, pero era un identificador
+interno expuesto sin necesidad.
+
+**Pendiente:** probar el flujo en el navegador con una cuenta real.
+
 ### Calmar en la cartera de futuros (2026-08-30)
 
 La sección publicaba **Net/DD** (21,79) como ratio principal. Esa cifra es neto
