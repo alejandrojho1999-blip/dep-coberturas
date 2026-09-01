@@ -7,13 +7,13 @@
 
 ## Estado actual
 
-**Último commit:** `da0bc28` (aprobación del CEO, cobro de comisión y track record de las rechazadas)
+**Último commit:** `b8f5b57` (el test de los libros de Excel fallaba por un plazo mal puesto), rama `feat/pulso-ingesta`
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **722/722** |
+| `npm run test:run` | **798/798** (59 ficheros) |
 | `npm run build` | exit 0 |
 | `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
@@ -34,29 +34,37 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ## Pendiente
 
-### Terminar de activar el sistema de alerta temprana (2026-09-01)
-> Credenciales puestas, migraciones 022 y 023 aplicadas, PR #12 mergeado en
-> `main`. El motor **escribe de verdad** en Supabase: `alert_signals` y
-> `macro_snapshots` tienen datos en vivo y el diagnóstico sale 15/15 en verde.
-> Lo que **no** funciona es el último tramo: el mensaje no llega al WhatsApp.
+### Alerta temprana viva (Fases 1–4) — esperando el merge del PR #13
+> Todo el código está escrito, probado y subido a `feat/pulso-ingesta`. El
+> PR #13 «Alerta temprana viva: pulso público, palabras clave y curvas de
+> probabilidad» está **MERGEABLE / CLEAN**, sin revisión bloqueante y con los
+> dos checks de Vercel en verde. Lo único que falta es apretar el botón.
 
-1. **Relinkear la sesión de WhatsApp de `nexus` — bloqueante.**
-   `openclaw channels login --channel whatsapp --account nexus` y escanear el
-   QR **con el teléfono 593978815129**, que es la cuenta emisora. Ahora mismo
-   figura como *not linked, stopped, disconnected*; `stefy` sí está sana, así
-   que el problema es de esa cuenta, no del puente. Mientras siga caída, el
-   puente responde `202 queued` y el mensaje se queda encolado sin entregarse.
+Lo que entra con el PR:
+- **Fase 1** — ingesta del pulso público desde seis fuentes (trends, hn,
+  youtube, news, wikipedia, mastodon).
+- **Fase 2** — de ese ruido diario salen los doce términos que importan.
+- **Fase 3** — dos curvas de probabilidad (`mercado` y `geopolitico`) que se
+  reentrenan solas cada noche.
+- **Fase 4** — la UI: endpoint `/api/alertas/pulso`, contrato `tipos-ui.ts`,
+  `RiesgoChart.tsx` y `PulsoPublico.tsx`, montado dentro de `AlertasClient`.
 
-   El gateway **no** hay que reiniciarlo: corre fuera de systemd (pid 867,
-   desde hace semanas) y el unit `openclaw-gateway` figura en `failed` porque
-   intentó bindear un puerto ya ocupado (`status=78`). Reiniciarlo por systemd
-   no arregla nada y puede tumbar también a `stefy`.
-2. **Verificar la entrega de extremo a extremo**: `npm run alertas:prueba` y
-   confirmar el WhatsApp en el teléfono. Con el fix del PR #12, si el canal
-   está caído la fila lo dirá (`canal_estado = 'caido'`) en vez de fingir que
-   se envió.
-3. **Dar de alta el cron**: pegar `scripts/alertas/crontab.txt` en `crontab -e`.
-   Sin esto los ciclos solo corren a mano.
+**Los modelos están en calibración, y eso es lo esperado.** Al 2026-09-01 hay
+**5 días** de features acumuladas de los **60** que exige `MINIMO_DIAS`, cero
+predicciones y cero palabras clave con relevancia ≥ 3. La UI enseña el estado
+«sin activar» con la cuenta atrás; no hay nada que arreglar hasta **~1 de
+noviembre de 2026**, que es cuando el histórico alcanza el mínimo. A partir de
+ahí toca comprobar que `alert_predictions` empieza a llenarse.
+
+#### Cerrado el 2026-09-01
+- ~~**Relinkear la sesión de WhatsApp de `nexus`**~~ — hecho. `nexus` y `stefy`
+  quedan vinculadas y sanas. El gateway nunca se tocó por systemd, tal y como
+  estaba anotado.
+- ~~**Verificar la entrega de extremo a extremo**~~ — hecho: `npm run alertas --
+  prueba` devuelve *«mensaje entregado al puente con la sesión de WhatsApp
+  viva»* y sale con código 0.
+- ~~**Dar de alta el cron**~~ — hecho: el crontab tiene las **9 entradas** de
+  alertas activas.
 
 
 ### PARA EL LUNES 2026-08-31 — activar el archivo de cadenas
@@ -83,7 +91,15 @@ variable del repositorio y `CRON_USER_ID` está en Vercel. El resto de este punt
 queda obsoleto:
 problema sin avisar.
 
-**3. Verificar la primera captura real.** El camino completo —descargar, filtrar,
+**3. Verificar la primera captura real — sigue siendo lo único abierto.**
+Al 2026-09-01 el workflow ya **no falla**: el disparo manual de las 16:27 UTC
+salió en verde y los dos runs previos en rojo se explican por las variables que
+faltaban, no por el código. Pero las 16:27 UTC son las **12:27 de Nueva York**,
+o sea **fuera** de la ventana 16:00–19:00, así que ese run no prueba la captura:
+como mucho respondió `ejecutado: false`. Queda pendiente forzarlo dentro de
+ventana en un día de mercado (o esperar al cron nocturno) y contar las filas.
+
+El camino completo —descargar, filtrar,
 escribir— **no está probado de extremo a extremo**: en sábado solo pude
 comprobar la autorización (401 sin cabecera y con secreto inválido) y la guarda
 de fin de semana. Qué mirar:
