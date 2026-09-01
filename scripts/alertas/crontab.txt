@@ -37,5 +37,11 @@
 # día, suficientes para ver un pico dentro de la jornada.
 */30 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh pulso >> /var/log/dep-alertas.log 2>&1
 
+# Palabras clave del día: una vez, a las 06:10. Compara el recuento de hoy con
+# la costumbre de las últimas cuatro semanas y hace juzgar al modelo los doce
+# términos que más se salen. Es el único ciclo del pulso que cuesta llamadas al
+# LLM, y por eso corre una vez y no cuarenta y ocho.
+10 6 * * * /var/www/dep-coberturas/scripts/alertas/run.sh keywords >> /var/log/dep-alertas.log 2>&1
+
 # Rotación del log, para que no crezca sin fin.
 0 3 * * 0 [ -f /var/log/dep-alertas.log ] && tail -n 5000 /var/log/dep-alertas.log > /var/log/dep-alertas.log.tmp && mv /var/log/dep-alertas.log.tmp /var/log/dep-alertas.log

@@ -162,6 +162,91 @@ export async function documentosDesde(admin: SupabaseClient, dias: number): Prom
   }))
 }
 
+/**
+ * Palabras clave del día, con el juicio del modelo si ya lo tienen.
+ *
+ * `upsert` por `(dia, termino)`: si el ciclo se repite, el juicio se actualiza
+ * en lugar de duplicar la fila. Es la única escritura del pulso que puede
+ * cambiar un dato ya guardado, y lo hace porque el juicio es una opinión
+ * revisable, no una medición.
+ */
+export async function guardarKeywords(
+  admin: SupabaseClient,
+  keywords: Array<{
+    dia: string
+    termino: string
+    fuentes: FuentePulso[]
+    menciones: number
+    zScore: number
+    relevancia: number | null
+    tema: string | null
+    resumen: string | null
+    ejemploUrl: string | null
+  }>,
+): Promise<number> {
+  if (!keywords.length) return 0
+
+  const filas = keywords.map((k) => ({
+    dia: k.dia,
+    termino: k.termino,
+    fuentes: k.fuentes,
+    menciones: k.menciones,
+    z_score: k.zScore,
+    relevancia: k.relevancia,
+    tema: k.tema,
+    resumen: k.resumen,
+    ejemplo_url: k.ejemploUrl,
+  }))
+
+  const { error, count } = await admin
+    .from('pulse_keywords')
+    .upsert(filas, { onConflict: 'dia,termino', count: 'exact' })
+  if (error) throw new Error(`pulse_keywords: ${error.message}`)
+  return count ?? filas.length
+}
+
+export interface FilaKeyword {
+  dia: string
+  termino: string
+  fuentes: string[]
+  menciones: number
+  zScore: number
+  relevancia: number | null
+  tema: string | null
+  resumen: string | null
+  ejemploUrl: string | null
+}
+
+/** Palabras clave de los últimos días, ya juzgadas, para la interfaz. */
+export async function keywordsDesde(
+  admin: SupabaseClient,
+  dias: number,
+  minRelevancia = 1,
+): Promise<FilaKeyword[]> {
+  const desde = new Date(Date.now() - dias * 24 * 3_600_000).toISOString().slice(0, 10)
+  const { data, error } = await admin
+    .from('pulse_keywords')
+    .select('dia, termino, fuentes, menciones, z_score, relevancia, tema, resumen, ejemplo_url')
+    .gte('dia', desde)
+    .gte('relevancia', minRelevancia)
+    .order('dia', { ascending: false })
+    .order('z_score', { ascending: false })
+
+  if (error) throw new Error(`pulse_keywords (lectura): ${error.message}`)
+
+  return (data ?? []).map((r) => ({
+    dia: r.dia as string,
+    termino: r.termino as string,
+    fuentes: (r.fuentes as string[]) ?? [],
+    menciones: Number(r.menciones),
+    zScore: Number(r.z_score),
+    relevancia: r.relevancia === null ? null : Number(r.relevancia),
+    tema: (r.tema as string | null) ?? null,
+    resumen: (r.resumen as string | null) ?? null,
+    ejemploUrl: (r.ejemplo_url as string | null) ?? null,
+  }))
+}
+
 /** Última captura por fuente: es lo que la interfaz enseña como «fuentes vivas». */
 export async function ultimaCapturaPorFuente(
   admin: SupabaseClient,

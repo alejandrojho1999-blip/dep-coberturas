@@ -7,6 +7,7 @@
  *   npm run alertas -- snapshot          # FedWatch + debasement
  *   npm run alertas -- calendario        # avisos previos y publicación de tasas
  *   npm run alertas -- pulso             # atención pública: búsquedas, foros, redes
+ *   npm run alertas -- keywords          # términos que hoy se salen de su normal
  *   npm run alertas -- prueba            # mensaje de prueba por Nexus
  *   npm run alertas -- diagnostico       # comprueba credenciales y fuentes
  *   npm run alertas -- claves            # qué clave de suceso asigna el LLM
@@ -34,9 +35,11 @@ import { clasificarTitulares } from '@/lib/alertas/clasificador'
 import { formatearFalta, proximoEvento } from '@/lib/alertas/calendario'
 import { probabilidadProximaReunion } from '@/lib/alertas/fedwatch'
 import { recolectarPulso } from '@/lib/pulso/recolector'
-import { guardarDocumentos, guardarObservaciones } from '@/lib/pulso/persistencia'
+import { documentosDesde, guardarDocumentos, guardarKeywords, guardarObservaciones } from '@/lib/pulso/persistencia'
+import { detectarEmergentes } from '@/lib/pulso/keywords'
+import { juzgarEmergentes } from '@/lib/pulso/juez'
 
-const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'pulso', 'prueba', 'diagnostico', 'claves'] as const
+const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'pulso', 'keywords', 'prueba', 'diagnostico', 'claves'] as const
 type Ciclo = (typeof CICLOS)[number]
 
 function ahoraTexto(): string {
@@ -180,6 +183,57 @@ async function pulso(dryRun: boolean): Promise<number> {
   return 0
 }
 
+/**
+ * Palabras clave del día.
+ *
+ * Corre una vez al día y no cada media hora porque la comparación es contra la
+ * costumbre de las últimas semanas: repetirla dentro del mismo día daría el
+ * mismo resultado y costaría otra tanda de llamadas al modelo.
+ */
+async function keywords(dryRun: boolean): Promise<number> {
+  const admin = createAdminClient()
+  const documentos = await documentosDesde(admin, 28)
+  const dia = new Date().toISOString().slice(0, 10)
+
+  const emergentes = detectarEmergentes(documentos, dia)
+  log(`keywords: ${documentos.length} documentos en 28 días → ${emergentes.length} términos emergentes el ${dia}`)
+
+  if (!emergentes.length) {
+    log('keywords: nada se salió de su línea base hoy')
+    return 0
+  }
+
+  const { juzgados, errores } = await juzgarEmergentes(emergentes)
+  for (const e of errores) log(`  error: ${e}`)
+
+  for (const j of juzgados) {
+    console.log(
+      `  ${String(j.juicio.relevancia)}/5 ${j.termino.padEnd(28)} z=${j.zScore.toFixed(1)} ` +
+      `${j.menciones} menciones · ${j.juicio.tema ?? 'sin tema'} · ${j.juicio.resumen.slice(0, 70)}`,
+    )
+  }
+
+  if (dryRun) return 0
+
+  const guardadas = await guardarKeywords(
+    admin,
+    juzgados.map((j) => ({
+      dia: j.dia,
+      termino: j.termino,
+      fuentes: j.fuentes,
+      menciones: j.menciones,
+      zScore: j.zScore,
+      relevancia: j.juicio.relevancia,
+      tema: j.juicio.tema,
+      resumen: j.juicio.resumen,
+      ejemploUrl: j.ejemploUrl,
+    })),
+  )
+  log(`keywords: ${guardadas} términos guardados`)
+
+  return errores.length ? 1 : 0
+}
+
 async function main(): Promise<number> {
   const args = process.argv.slice(2)
   const ciclo = args.find((a) => !a.startsWith('--')) as Ciclo | undefined
@@ -194,6 +248,7 @@ async function main(): Promise<number> {
   if (ciclo === 'diagnostico') return diagnostico()
   if (ciclo === 'claves') return claves()
   if (ciclo === 'pulso') return pulso(dryRun)
+  if (ciclo === 'keywords') return keywords(dryRun)
 
   if (ciclo === 'prueba') {
     if (!nexusConfigurado()) {

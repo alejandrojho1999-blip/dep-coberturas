@@ -22,6 +22,7 @@
     "alertas:snapshot": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/alertas/ejecutar.mts snapshot",
     "alertas:calendario": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/alertas/ejecutar.mts calendario",
     "alertas:pulso": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/alertas/ejecutar.mts pulso",
+    "alertas:keywords": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/alertas/ejecutar.mts keywords",
     "alertas:prueba": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/alertas/ejecutar.mts prueba"
   },
   "dependencies": {
