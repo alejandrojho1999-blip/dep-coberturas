@@ -171,6 +171,10 @@ describe('resumen publicado del backtest de opciones', () => {
     expect(primera.length).toBeGreaterThan(0)
   })
 
+  // Timeout ampliado: construir los dos libros y volver a parsearlos ronda los
+  // seis segundos en el servidor, así que con el límite de cinco por defecto
+  // fallaba de forma intermitente según la carga del resto de la suite. El
+  // trabajo es real y no hay nada que optimizar; lo que estaba mal era el plazo.
   it('los libros de Excel se abren y llevan las hojas anunciadas', () => {
     // No basta con que el fichero se genere: tiene que poder abrirse. Se relee
     // con la misma librería para comprobar que no sale un ZIP corrupto.
@@ -193,7 +197,7 @@ describe('resumen publicado del backtest de opciones', () => {
       expect(met).toHaveLength(DATASET_OPCIONES.variantes.length)
       expect(new Set(met.map(m => m.corrida)).size).toBe(DATASET_OPCIONES.variantes.length)
     }
-  })
+  }, 20_000)
 
   it('localiza una corrida por su identificador', () => {
     expect(varianteOpciones('sin-niveles')?.conNivelesDeSalida).toBe(false)

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Panel, Chip } from '@/app/(dashboard)/estrategias/_components/ui'
 import { KpiCard, KpiRow } from '@/app/(dashboard)/portafolios/_components/KpiCard'
+import { PulsoPublico } from '@/app/(dashboard)/alertas/_components/PulsoPublico'
 import {
   ETIQUETA_TIPO,
   type MacroFila,
@@ -99,8 +100,9 @@ export function AlertasClient({ proximoEventoIso, proximoEventoEtiqueta }: {
             Alerta temprana
           </h1>
           <p className="mt-1 text-xs text-text-secondary">
-            Escalada Rusia–OTAN, pulso Fed vs Tesoro y publicación de tasas. Los avisos salen por
-            WhatsApp desde la tarea del servidor; esta pantalla es el registro.
+            Escalada Rusia–OTAN, pulso Fed vs Tesoro y publicación de tasas, más la atención
+            pública medida cada media hora en búsquedas, Wikipedia, foros, redes y prensa. Los
+            avisos salen por WhatsApp desde la tarea del servidor; esta pantalla es el registro.
           </p>
         </div>
         <button
@@ -147,6 +149,8 @@ export function AlertasClient({ proximoEventoIso, proximoEventoEtiqueta }: {
           sub={fallidas > 0 ? 'revisar la sesión de WhatsApp de Nexus' : 'todo entregado'}
         />
       </KpiRow>
+
+      <PulsoPublico />
 
       {metricas.length > 0 && (
         <Panel

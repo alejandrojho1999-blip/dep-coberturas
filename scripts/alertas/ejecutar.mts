@@ -6,6 +6,10 @@
  *   npm run alertas -- macro             # pulso FED vs Tesoro
  *   npm run alertas -- snapshot          # FedWatch + debasement
  *   npm run alertas -- calendario        # avisos previos y publicación de tasas
+ *   npm run alertas -- pulso             # atención pública: búsquedas, foros, redes
+ *   npm run alertas -- keywords          # términos que hoy se salen de su normal
+ *   npm run alertas -- entrenar          # reentrena las dos curvas de riesgo
+ *   npm run alertas -- predecir          # probabilidad de hoy con el modelo activo
  *   npm run alertas -- prueba            # mensaje de prueba por Nexus
  *   npm run alertas -- diagnostico       # comprueba credenciales y fuentes
  *   npm run alertas -- claves            # qué clave de suceso asigna el LLM
@@ -32,8 +36,13 @@ import { FUENTES_GUERRA, leerFuentes } from '@/lib/alertas/rss'
 import { clasificarTitulares } from '@/lib/alertas/clasificador'
 import { formatearFalta, proximoEvento } from '@/lib/alertas/calendario'
 import { probabilidadProximaReunion } from '@/lib/alertas/fedwatch'
+import { recolectarPulso } from '@/lib/pulso/recolector'
+import { documentosDesde, guardarDocumentos, guardarKeywords, guardarObservaciones } from '@/lib/pulso/persistencia'
+import { detectarEmergentes } from '@/lib/pulso/keywords'
+import { juzgarEmergentes } from '@/lib/pulso/juez'
+import { cicloEntrenar, ciclopredecir } from '@/lib/pulso/ciclos'
 
-const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'prueba', 'diagnostico', 'claves'] as const
+const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'pulso', 'keywords', 'entrenar', 'predecir', 'prueba', 'diagnostico', 'claves'] as const
 type Ciclo = (typeof CICLOS)[number]
 
 function ahoraTexto(): string {
@@ -138,6 +147,135 @@ async function claves(): Promise<number> {
   return errores.length ? 1 : 0
 }
 
+/**
+ * Recolección del pulso público.
+ *
+ * No manda nada al teléfono ni compone mensajes: solo mide y guarda. Por eso no
+ * devuelve un `ResultadoCiclo` como los demás ciclos, y por eso puede correr
+ * cada media hora sin gastar ni una llamada al modelo de lenguaje.
+ */
+async function pulso(dryRun: boolean): Promise<number> {
+  const resultado = await recolectarPulso()
+
+  log(
+    `pulso: ${resultado.observaciones.length} observaciones, ${resultado.documentos.length} documentos, ` +
+    `${resultado.fuentesVivas.length}/6 fuentes vivas (${resultado.fuentesVivas.join(', ') || 'ninguna'})`,
+  )
+  for (const e of resultado.errores) log(`  error: ${e}`)
+
+  if (dryRun) {
+    const porFuente = new Map<string, number>()
+    for (const o of resultado.observaciones) porFuente.set(o.fuente, (porFuente.get(o.fuente) ?? 0) + 1)
+    for (const [fuente, n] of porFuente) console.log(`  ${fuente.padEnd(10)} ${n} observaciones`)
+    for (const o of resultado.observaciones.slice(0, 15)) {
+      console.log(`  · ${o.fuente}/${o.geo ?? '—'} ${o.termino} = ${o.valor} ${o.unidad}`)
+    }
+    for (const d of resultado.documentos.slice(0, 10)) {
+      console.log(`  » [${d.fuente}] ${d.titulo.slice(0, 90)}`)
+    }
+    return 0
+  }
+
+  const admin = createAdminClient()
+  const guardadas = await guardarObservaciones(admin, resultado.observaciones)
+  const guardados = await guardarDocumentos(admin, resultado.documentos)
+  log(`pulso: ${guardadas} observaciones nuevas y ${guardados} documentos nuevos guardados`)
+
+  // Que todas las fuentes fallen no es un día flojo, es una avería.
+  if (!resultado.fuentesVivas.length) return 1
+  return 0
+}
+
+/**
+ * Palabras clave del día.
+ *
+ * Corre una vez al día y no cada media hora porque la comparación es contra la
+ * costumbre de las últimas semanas: repetirla dentro del mismo día daría el
+ * mismo resultado y costaría otra tanda de llamadas al modelo.
+ */
+async function keywords(dryRun: boolean): Promise<number> {
+  const admin = createAdminClient()
+  const documentos = await documentosDesde(admin, 28)
+  const dia = new Date().toISOString().slice(0, 10)
+
+  const emergentes = detectarEmergentes(documentos, dia)
+  log(`keywords: ${documentos.length} documentos en 28 días → ${emergentes.length} términos emergentes el ${dia}`)
+
+  if (!emergentes.length) {
+    log('keywords: nada se salió de su línea base hoy')
+    return 0
+  }
+
+  const { juzgados, errores } = await juzgarEmergentes(emergentes)
+  for (const e of errores) log(`  error: ${e}`)
+
+  for (const j of juzgados) {
+    console.log(
+      `  ${String(j.juicio.relevancia)}/5 ${j.termino.padEnd(28)} z=${j.zScore.toFixed(1)} ` +
+      `${j.menciones} menciones · ${j.juicio.tema ?? 'sin tema'} · ${j.juicio.resumen.slice(0, 70)}`,
+    )
+  }
+
+  if (dryRun) return 0
+
+  const guardadas = await guardarKeywords(
+    admin,
+    juzgados.map((j) => ({
+      dia: j.dia,
+      termino: j.termino,
+      fuentes: j.fuentes,
+      menciones: j.menciones,
+      zScore: j.zScore,
+      relevancia: j.juicio.relevancia,
+      tema: j.juicio.tema,
+      resumen: j.juicio.resumen,
+      ejemploUrl: j.ejemploUrl,
+    })),
+  )
+  log(`keywords: ${guardadas} términos guardados`)
+
+  return errores.length ? 1 : 0
+}
+
+/**
+ * Reentrenamiento nocturno de las dos curvas.
+ *
+ * No tiene `--dry-run`: no envía nada y lo que escribe es una fila de modelo
+ * que solo se pone en pie si mejora a la vigente. Verlo sin guardarlo no
+ * ahorraría nada y ocultaría el paso que de verdad importa.
+ */
+async function entrenar(): Promise<number> {
+  const admin = createAdminClient()
+  const r = await cicloEntrenar(admin)
+
+  log(
+    `entrenar: ${r.vectores} días con vector, ${r.etiquetasMercado} etiquetas de mercado, ` +
+    `${r.etiquetasGeopoliticas} geopolíticas`,
+  )
+
+  for (const res of r.resultados) {
+    const detalle = res.metricas
+      ? `AUC ${res.metricas.auc.toFixed(3)} · Brier ${res.metricas.brier.toFixed(3)} · ` +
+        `base ${(res.metricas.tasaBase * 100).toFixed(0)}% · ${res.metricas.nPrueba} días fuera de muestra`
+      : `${res.diasEtiquetados} días etiquetados`
+    log(`  ${res.tipo.padEnd(12)} ${res.nota} (${detalle})`)
+  }
+
+  return 0
+}
+
+async function prediccion(): Promise<number> {
+  const admin = createAdminClient()
+  for (const r of await ciclopredecir(admin)) {
+    log(
+      r.probabilidad === null
+        ? `predecir: ${r.tipo} sin probabilidad — ${r.nota}`
+        : `predecir: ${r.tipo} ${(r.probabilidad * 100).toFixed(1)}% el ${r.dia} — ${r.nota}`,
+    )
+  }
+  return 0
+}
+
 async function main(): Promise<number> {
   const args = process.argv.slice(2)
   const ciclo = args.find((a) => !a.startsWith('--')) as Ciclo | undefined
@@ -151,6 +289,10 @@ async function main(): Promise<number> {
 
   if (ciclo === 'diagnostico') return diagnostico()
   if (ciclo === 'claves') return claves()
+  if (ciclo === 'pulso') return pulso(dryRun)
+  if (ciclo === 'keywords') return keywords(dryRun)
+  if (ciclo === 'entrenar') return entrenar()
+  if (ciclo === 'predecir') return prediccion()
 
   if (ciclo === 'prueba') {
     if (!nexusConfigurado()) {
