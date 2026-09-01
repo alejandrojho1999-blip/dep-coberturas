@@ -34,28 +34,28 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ## Pendiente
 
-### Terminar de activar el sistema de alerta temprana (2026-08-31)
-> Credenciales puestas, migración 022 aplicada y el motor **escribe de verdad**
-> en Supabase: `alert_signals` y `macro_snapshots` tienen datos en vivo y el
-> diagnóstico sale 15/15 en verde. Lo que **no** funciona es el último tramo:
-> el mensaje no llega al WhatsApp.
+### Terminar de activar el sistema de alerta temprana (2026-09-01)
+> Credenciales puestas, migraciones 022 y 023 aplicadas, PR #12 mergeado en
+> `main`. El motor **escribe de verdad** en Supabase: `alert_signals` y
+> `macro_snapshots` tienen datos en vivo y el diagnóstico sale 15/15 en verde.
+> Lo que **no** funciona es el último tramo: el mensaje no llega al WhatsApp.
 
 1. **Relinkear la sesión de WhatsApp de `nexus` — bloqueante.**
    `openclaw channels login --channel whatsapp --account nexus` y escanear el
-   QR. Ahora mismo la cuenta figura como *not linked* y `openclaw-gateway` está
-   en bucle de reinicio; `stefy` sí está sana, así que el problema es de esa
-   cuenta, no del puente. Mientras siga caída, el puente responde `202 queued`
-   y el mensaje se queda encolado sin entregarse.
-2. **Aplicar la migración 023**
-   (`supabase/migrations/023_alertas_entrega_honesta.sql`) desde el editor SQL
-   de Supabase, proyecto `replbokusvrqdbzuhulm`. **Renombra `enviado_at` a
-   `aceptado_at`**, que está en uso: hay que aplicarla a la vez que se
-   despliega el PR #12, o el panel leerá una columna que ya no existe.
-3. **Verificar la entrega de extremo a extremo**: `npm run alertas:prueba` y
+   QR **con el teléfono 593978815129**, que es la cuenta emisora. Ahora mismo
+   figura como *not linked, stopped, disconnected*; `stefy` sí está sana, así
+   que el problema es de esa cuenta, no del puente. Mientras siga caída, el
+   puente responde `202 queued` y el mensaje se queda encolado sin entregarse.
+
+   El gateway **no** hay que reiniciarlo: corre fuera de systemd (pid 867,
+   desde hace semanas) y el unit `openclaw-gateway` figura en `failed` porque
+   intentó bindear un puerto ya ocupado (`status=78`). Reiniciarlo por systemd
+   no arregla nada y puede tumbar también a `stefy`.
+2. **Verificar la entrega de extremo a extremo**: `npm run alertas:prueba` y
    confirmar el WhatsApp en el teléfono. Con el fix del PR #12, si el canal
    está caído la fila lo dirá (`canal_estado = 'caido'`) en vez de fingir que
    se envió.
-4. **Dar de alta el cron**: pegar `scripts/alertas/crontab.txt` en `crontab -e`.
+3. **Dar de alta el cron**: pegar `scripts/alertas/crontab.txt` en `crontab -e`.
    Sin esto los ciclos solo corren a mano.
 
 
@@ -69,11 +69,9 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 > el cron responde 500 y el job de GitHub sale en rojo, sin tocar ninguna otra
 > parte de la aplicación.
 
-**1. Aplicar la migración 019 — bloqueante.**
-`supabase/migrations/019_options_chain_snapshots.sql`, desde el SQL Editor de
-Supabase o con la CLI. Solo crea la tabla `options_chain_snapshots` y sus
-políticas; no toca ni una fila existente. No pude aplicarla desde la sesión
-porque el MCP de Supabase no estaba conectado.
+**1. Migración 019 — ya aplicada.** Verificado el 2026-09-01:
+`options_chain_snapshots` responde con la clave de servicio. Este punto queda
+cerrado; lo que sigue sin verificar es la primera captura en día de mercado.
 
 **2. Confirmar `CRON_SECRET` y la variable `APP_URL`** en la configuración del
 repositorio en GitHub. El workflow de `review-exits` ya los usa, así que deberían
@@ -283,8 +281,10 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ### El registro de alertas distingue aceptación de entrega (2026-09-01)
 
-PR #12, rama `fix/registro-entrega-honesto`. Pendiente de mergear y de aplicar
-la migración 023.
+PR #12, rama `fix/registro-entrega-honesto`, mergeado en `main` con rebase el
+2026-09-01 (`416b214`, `1d9a73e`). La migración 023 está aplicada y verificada:
+`enviado_at` ya no existe, `aceptado_at`, `canal_estado` y `canal_detalle` sí,
+y ninguna fila quedó con `canal_estado` nulo.
 
 El puente de Nexus responde `202 queued` en cuanto recibe la petición y hace el
 envío a WhatsApp después. Con la sesión caída sigue devolviendo 202 y el fallo
@@ -561,8 +561,7 @@ ruta presente. Probado contra un servidor real: 401 sin cabecera y con secreto
 inválido, y la guarda de fin de semana responde `ejecutado: false`.
 
 **PENDIENTE — sin esto el cron falla:**
-1. **Aplicar la migración 019** en Supabase. No pude hacerlo desde aquí: el MCP
-   de Supabase no está conectado en esta sesión.
+1. ~~Aplicar la migración 019 en Supabase.~~ Aplicada; verificado el 2026-09-01.
 2. Comprobar que `CRON_SECRET` y la variable `APP_URL` existen en el repositorio
    de GitHub (el workflow de `review-exits` ya los usa, así que deberían estar).
 3. La primera ejecución en día de mercado no está verificada de extremo a
