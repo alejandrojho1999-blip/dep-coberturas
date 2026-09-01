@@ -73,9 +73,14 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 `options_chain_snapshots` responde con la clave de servicio. Este punto queda
 cerrado; lo que sigue sin verificar es la primera captura en día de mercado.
 
-**2. Confirmar `CRON_SECRET` y la variable `APP_URL`** en la configuración del
-repositorio en GitHub. El workflow de `review-exits` ya los usa, así que deberían
-estar — pero si aquel llevara tiempo fallando en silencio, este heredaría el
+**2. ~~Confirmar `CRON_SECRET` y la variable `APP_URL`~~ — hecho el 2026-09-01.**
+No estaban: ni `CRON_SECRET`, ni `APP_URL`, ni `CRON_USER_ID` existían en ningún
+sitio, y por eso **los dos workflows fallaban en cada ejecución desde el
+2026-08-26**. La suposición de que «el workflow de `review-exits` ya los usa, así
+que deberían estar» era justo al revés: ese workflow llevaba semanas en rojo.
+Ahora `CRON_SECRET` está en el secret de GitHub y en Vercel, `APP_URL` es una
+variable del repositorio y `CRON_USER_ID` está en Vercel. El resto de este punto
+queda obsoleto:
 problema sin avisar.
 
 **3. Verificar la primera captura real.** El camino completo —descargar, filtrar,
@@ -278,6 +283,36 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Los crons programados vuelven a correr (2026-09-01)
+
+Los dos workflows de GitHub —«Revisión de niveles de salida» y «Archivo diario
+de cadenas de opciones»— fallaban en **cada** ejecución desde el 2026-08-26. La
+causa no era la migración 019, que ya estaba aplicada, sino que faltaban tres
+variables de configuración:
+
+- `CRON_SECRET` — no existía en ninguna parte (GitHub, Vercel ni `.env.local`,
+  donde la línea estaba presente pero vacía). El endpoint responde 503 cuando
+  falta, porque `cron-auth.ts` falla cerrado a propósito.
+- `APP_URL` — variable del repositorio en GitHub, sin definir. El job abortaba
+  en 4 segundos sin llegar a llamar a nada.
+- `CRON_USER_ID` — la cuenta sobre la que operan las tareas. Es el UID de
+  `lriofrio915@gmail.com`, el admin según `admin_user_ids()` de la migración 018.
+
+El coste no fue solo tener los jobs en rojo: **ocho posiciones de OPTIONS_THETA
+llevaban seis días con el objetivo tocado sin cerrarse.** Al relanzar el
+workflow se cerraron las ocho de golpe (siete por objetivo, entre +60 % y +94 %;
+una por stop, LCID a -132,6 %), y quedaron persistidas con `precio_venta` y
+`closed_at`.
+
+**Lección para la próxima:** que un workflow exista y esté «activo» no dice nada
+sobre si funciona. Conviene mirar `gh run list` antes de dar por buena una tarea
+programada — el historial estaba a la vista y nadie lo miró en seis días.
+
+**Sigue sin verificarse** la captura real de cadenas: el endpoint solo archiva
+entre las 16:00 y las 19:00 de Nueva York, y la ejecución de prueba respondió
+`fuera-de-ventana` correctamente. `options_chain_snapshots` continúa con 0 filas.
+
 
 ### El registro de alertas distingue aceptación de entrega (2026-09-01)
 
