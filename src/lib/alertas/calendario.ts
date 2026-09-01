@@ -23,6 +23,24 @@ export interface EventoCalendario {
   etiqueta: string
 }
 
+/**
+ * Dónde se publica cada evento.
+ *
+ * Un aviso previo no nace de una noticia, así que no hereda el enlace de
+ * ningún titular: apunta al organismo que publicará el dato, que es lo que uno
+ * quiere abrir cuando llega el aviso.
+ */
+export const FUENTE_EVENTO: Record<TipoEvento, { fuente: string; url: string }> = {
+  fomc: {
+    fuente: 'Reserva Federal',
+    url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm',
+  },
+  cpi: {
+    fuente: 'BLS',
+    url: 'https://www.bls.gov/cpi/',
+  },
+}
+
 /** Decisión de tasas: 14:00 ET del segundo día de la reunión. */
 const HORA_FOMC = 14 * 60
 /** Dato de inflación: 08:30 ET. */

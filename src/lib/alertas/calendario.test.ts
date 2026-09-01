@@ -4,6 +4,7 @@ import {
   EVENTOS,
   eventoEnCurso,
   formatearFalta,
+  FUENTE_EVENTO,
   hitoAlcanzado,
   instanteUtc,
   proximoEvento,
@@ -99,5 +100,25 @@ describe('ventana de publicación', () => {
   it('eventoEnCurso encuentra el evento vivo', () => {
     expect(eventoEnCurso(new Date('2026-09-16T18:10:00Z'))?.tipo).toBe('fomc')
     expect(eventoEnCurso(new Date('2026-09-16T23:00:00Z'))).toBeNull()
+  })
+})
+
+describe('FUENTE_EVENTO', () => {
+  it('cubre todos los tipos de evento del calendario', () => {
+    for (const evento of EVENTOS) {
+      expect(FUENTE_EVENTO[evento.tipo]).toBeDefined()
+    }
+  })
+
+  it('apunta al organismo que publica cada dato', () => {
+    expect(FUENTE_EVENTO.fomc.url).toContain('federalreserve.gov')
+    expect(FUENTE_EVENTO.cpi.url).toContain('bls.gov')
+  })
+
+  it('todas las fuentes son https absolutas', () => {
+    for (const { url, fuente } of Object.values(FUENTE_EVENTO)) {
+      expect(url.startsWith('https://')).toBe(true)
+      expect(fuente.length).toBeGreaterThan(0)
+    }
   })
 })

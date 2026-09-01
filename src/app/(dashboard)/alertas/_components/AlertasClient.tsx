@@ -280,11 +280,21 @@ function FilaSenal({ senal }: { senal: SenalFila }) {
       )}
 
       <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[10px] text-text-muted">
-        {senal.fuente && <span>{senal.fuente}</span>}
-        {senal.url && (
-          <a href={senal.url} target="_blank" rel="noreferrer" className="underline hover:text-text-primary">
-            ver noticia
+        {/* La fuente es el enlace cuando la hay: un rótulo suelto al lado de un
+            «ver noticia» genérico obligaba a leer dos cosas para saber adónde
+            lleva. Las señales calculadas —el pulso macro, los avisos previos—
+            apuntan al organismo que publica el dato, no a un titular. */}
+        {senal.url ? (
+          <a
+            href={senal.url}
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-text-primary"
+          >
+            {senal.fuente ?? 'ver fuente'}
           </a>
+        ) : (
+          senal.fuente && <span>{senal.fuente}</span>
         )}
         {senal.payload?.motivoEnvio && <span>motivo: {senal.payload.motivoEnvio}</span>}
         {senal.error_envio && <span className="text-negative">error: {senal.error_envio}</span>}

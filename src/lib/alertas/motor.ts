@@ -42,6 +42,7 @@ import { medirDebasement } from '@/lib/alertas/debasement'
 import {
   eventoEnCurso,
   formatearFalta,
+  FUENTE_EVENTO,
   hitoAlcanzado,
   proximoEvento,
   type EventoCalendario,
@@ -374,6 +375,11 @@ export async function cicloSnapshot(
     titular: `Pulso macro · subida ${probabilidad.probSubida}%`,
     resumen: probabilidad.nota,
     mensaje,
+    // La probabilidad se calcula aquí con la metodología de CME FedWatch sobre
+    // el futuro ZQ, así que la fuente que procede enlazar es la herramienta que
+    // publica el mismo dato: sirve para contrastar el número del mensaje.
+    fuente: 'CME FedWatch',
+    url: 'https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html',
     payload: { probabilidad, metricas: debasement.metricas, motivoEnvio: decision.motivo },
     aceptadoAt: envio.aceptado ? new Date().toISOString() : null,
     errorEnvio: envio.error,
@@ -446,8 +452,11 @@ export async function cicloCalendario(
           severidad: 5,
           eventoKey,
           titular: `${enCurso.etiqueta} · publicación`,
-          url: comunicado?.url ?? null,
-          fuente: comunicado?.fuente ?? null,
+          // Si el comunicado ya está en el RSS se enlaza el titular concreto;
+          // si aún no ha salido, el organismo que lo publicará, que es donde
+          // hay que mirar en ese momento.
+          url: comunicado?.url ?? FUENTE_EVENTO[enCurso.tipo].url,
+          fuente: comunicado?.fuente ?? FUENTE_EVENTO[enCurso.tipo].fuente,
           mercadoAbierto: marketStatus(ahora).abierto,
           mensaje: '',
           payload: {
@@ -486,6 +495,8 @@ export async function cicloCalendario(
       eventoKey,
       titular: `${proximo.etiqueta} en ${formatearFalta(proximo.faltanMin)}`,
       mensaje: '',
+      fuente: FUENTE_EVENTO[proximo.tipo].fuente,
+      url: FUENTE_EVENTO[proximo.tipo].url,
       payload: { hito, probabilidad },
     },
     estadoPrevio: null,
