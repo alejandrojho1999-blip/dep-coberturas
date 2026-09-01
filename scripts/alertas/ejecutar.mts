@@ -8,6 +8,8 @@
  *   npm run alertas -- calendario        # avisos previos y publicación de tasas
  *   npm run alertas -- pulso             # atención pública: búsquedas, foros, redes
  *   npm run alertas -- keywords          # términos que hoy se salen de su normal
+ *   npm run alertas -- entrenar          # reentrena las dos curvas de riesgo
+ *   npm run alertas -- predecir          # probabilidad de hoy con el modelo activo
  *   npm run alertas -- prueba            # mensaje de prueba por Nexus
  *   npm run alertas -- diagnostico       # comprueba credenciales y fuentes
  *   npm run alertas -- claves            # qué clave de suceso asigna el LLM
@@ -38,8 +40,9 @@ import { recolectarPulso } from '@/lib/pulso/recolector'
 import { documentosDesde, guardarDocumentos, guardarKeywords, guardarObservaciones } from '@/lib/pulso/persistencia'
 import { detectarEmergentes } from '@/lib/pulso/keywords'
 import { juzgarEmergentes } from '@/lib/pulso/juez'
+import { cicloEntrenar, ciclopredecir } from '@/lib/pulso/ciclos'
 
-const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'pulso', 'keywords', 'prueba', 'diagnostico', 'claves'] as const
+const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'pulso', 'keywords', 'entrenar', 'predecir', 'prueba', 'diagnostico', 'claves'] as const
 type Ciclo = (typeof CICLOS)[number]
 
 function ahoraTexto(): string {
@@ -234,6 +237,45 @@ async function keywords(dryRun: boolean): Promise<number> {
   return errores.length ? 1 : 0
 }
 
+/**
+ * Reentrenamiento nocturno de las dos curvas.
+ *
+ * No tiene `--dry-run`: no envía nada y lo que escribe es una fila de modelo
+ * que solo se pone en pie si mejora a la vigente. Verlo sin guardarlo no
+ * ahorraría nada y ocultaría el paso que de verdad importa.
+ */
+async function entrenar(): Promise<number> {
+  const admin = createAdminClient()
+  const r = await cicloEntrenar(admin)
+
+  log(
+    `entrenar: ${r.vectores} días con vector, ${r.etiquetasMercado} etiquetas de mercado, ` +
+    `${r.etiquetasGeopoliticas} geopolíticas`,
+  )
+
+  for (const res of r.resultados) {
+    const detalle = res.metricas
+      ? `AUC ${res.metricas.auc.toFixed(3)} · Brier ${res.metricas.brier.toFixed(3)} · ` +
+        `base ${(res.metricas.tasaBase * 100).toFixed(0)}% · ${res.metricas.nPrueba} días fuera de muestra`
+      : `${res.diasEtiquetados} días etiquetados`
+    log(`  ${res.tipo.padEnd(12)} ${res.nota} (${detalle})`)
+  }
+
+  return 0
+}
+
+async function prediccion(): Promise<number> {
+  const admin = createAdminClient()
+  for (const r of await ciclopredecir(admin)) {
+    log(
+      r.probabilidad === null
+        ? `predecir: ${r.tipo} sin probabilidad — ${r.nota}`
+        : `predecir: ${r.tipo} ${(r.probabilidad * 100).toFixed(1)}% el ${r.dia} — ${r.nota}`,
+    )
+  }
+  return 0
+}
+
 async function main(): Promise<number> {
   const args = process.argv.slice(2)
   const ciclo = args.find((a) => !a.startsWith('--')) as Ciclo | undefined
@@ -249,6 +291,8 @@ async function main(): Promise<number> {
   if (ciclo === 'claves') return claves()
   if (ciclo === 'pulso') return pulso(dryRun)
   if (ciclo === 'keywords') return keywords(dryRun)
+  if (ciclo === 'entrenar') return entrenar()
+  if (ciclo === 'predecir') return prediccion()
 
   if (ciclo === 'prueba') {
     if (!nexusConfigurado()) {
