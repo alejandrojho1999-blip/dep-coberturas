@@ -37,6 +37,7 @@ import {
   mensajeSnapshot,
   type NivelConSimbolo,
 } from '@/lib/alertas/mensajes'
+import { acortarUrl } from '@/lib/alertas/enlace'
 import { probabilidadProximaReunion, type ProbabilidadTasas } from '@/lib/alertas/fedwatch'
 import { medirDebasement } from '@/lib/alertas/debasement'
 import {
@@ -187,7 +188,14 @@ export async function cicloGuerra(
     await despachar({
       admin,
       dryRun,
-      mensaje: mensajeGuerra({ titular, clasificacion, niveles, mercadoAbierto, faltantes }),
+      mensaje: mensajeGuerra({
+        titular,
+        clasificacion,
+        niveles,
+        mercadoAbierto,
+        faltantes,
+        enlace: await acortarUrl(titular.url),
+      }),
       senal: {
         tipo: 'guerra',
         severidad: clasificacion.severidad,
@@ -263,7 +271,12 @@ export async function cicloMacro(
     await despachar({
       admin,
       dryRun,
-      mensaje: mensajeMacro({ titular, clasificacion, probabilidad }),
+      mensaje: mensajeMacro({
+        titular,
+        clasificacion,
+        probabilidad,
+        enlace: await acortarUrl(titular.url),
+      }),
       senal: {
         tipo: 'fed_tesoro',
         severidad: clasificacion.severidad,
@@ -446,6 +459,7 @@ export async function cicloCalendario(
           nivelesCompra: compra.niveles,
           probabilidad,
           titularComunicado: comunicado,
+          enlace: comunicado ? await acortarUrl(comunicado.url) : undefined,
         }),
         senal: {
           tipo: 'tasas',

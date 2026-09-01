@@ -301,6 +301,62 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Sesión del 2026-09-01 (noche) — cierre de la alerta temprana viva
+
+Sesión retomada tras varias desconexiones. El objetivo era averiguar qué había
+quedado a medias y cerrarlo.
+
+**Lo que se hizo:**
+
+1. **Auditoría del estado real.** Buena parte de lo que el cuaderno daba por
+   bloqueante ya estaba resuelto: la sesión de WhatsApp de `nexus` relinkeada,
+   la entrega de extremo a extremo confirmada con `alertas prueba` (exit 0), y
+   el crontab con sus nueve entradas activas. El cuaderno mentía, no el sistema.
+2. **PR #13 mergeado en `main`** (`17c8c5d`, merge commit, los seis commits
+   conservados). Trae las cuatro fases de la alerta temprana viva: ingesta del
+   pulso, extracción de términos, curvas de probabilidad y la UI. Tests en
+   `main` tras el merge: **798/798**. Deploy de producción de Vercel en verde.
+   La migración `024_pulso_publico.sql` ya estaba aplicada.
+3. **Enlaces cortos en los mensajes de WhatsApp** (`src/lib/alertas/enlace.ts`).
+   Ver la entrada siguiente.
+
+**Lo que queda abierto, y por qué no dependía de esta sesión:**
+
+- La **captura de cadenas de opciones** sigue sin probarse dentro de la ventana
+  de Nueva York. El único disparo reciente cayó a las 12:27 ET, fuera de franja.
+- Las **curvas de probabilidad** tienen 5 días de features de los 60 que exige
+  `MINIMO_DIAS`. Es calibración normal: la UI enseña «sin activar» con cuenta
+  atrás hasta ~1 de noviembre. No hay nada que arreglar.
+- La **cartera única** sigue inactiva a propósito (migración 018 sin aplicar).
+
+### Los enlaces de las noticias dejan de ocupar media pantalla (2026-09-01)
+
+Los titulares llegan por el RSS de Google News y su enlace es una cadena opaca
+de varios cientos de caracteres. En el móvil empujaba hacia abajo los niveles de
+la orden, que es lo único que hay que leer con prisa, y encima no decía de qué
+medio venía la noticia.
+
+`src/lib/alertas/enlace.ts` lo resuelve en dos tiempos, y **el segundo puede
+fallar sin consecuencias**:
+
+1. `limpiarUrl` quita los parámetros de campaña (`utm_*`, `oc`, `hl`, `gl`,
+   `ceid`, `fbclid`…), el ancla y la barra final. Es local y siempre funciona.
+2. `acortarUrl` pide un alias a **is.gd** (sin clave, timeout de 4 s). Si el
+   servicio tarda, responde mal o devuelve un texto que no es un enlace suyo,
+   se usa la URL limpia y el mensaje sale igual. Un aviso de escalada militar no
+   se pierde porque un acortador esté de mantenimiento.
+
+Los enlaces que ya son cortos (≤ 70 caracteres) **no** se mandan a is.gd: no
+tiene sentido pagar una llamada de red para no ganar nada.
+
+El formato del mensaje también cambia: el titular va en negrita, el enlace en su
+propia línea precedido del medio (`🔗 reuters.com · https://is.gd/aB3xY9`), y los
+niveles bajo un encabezado `*Niveles*` en vez de sueltos.
+
+`mensajes.ts` sigue siendo **puro y síncrono**: recibe el enlace ya acortado por
+parámetro. El `await` vive en `motor.ts`, que es donde ya se hacía red. Así los
+tests del formato no necesitan tocar la red.
+
 ### Los crons programados vuelven a correr (2026-09-01)
 
 Los dos workflows de GitHub —«Revisión de niveles de salida» y «Archivo diario

@@ -16,6 +16,7 @@ import type { Titular } from '@/lib/alertas/rss'
 import type { ProbabilidadTasas } from '@/lib/alertas/fedwatch'
 import type { MetricaDebasement } from '@/lib/alertas/debasement'
 import { formatearFalta, type EventoCalendario } from '@/lib/alertas/calendario'
+import { lineaEnlace } from '@/lib/alertas/enlace'
 
 export interface NivelConSimbolo {
   simbolo: SimboloAlerta
@@ -62,21 +63,28 @@ export function mensajeGuerra(params: {
   niveles: NivelConSimbolo[]
   mercadoAbierto: boolean
   faltantes?: string[]
+  /** Enlace ya acortado. Si no llega, se usa el del titular tal cual. */
+  enlace?: string
 }): string {
-  const { titular, clasificacion, niveles, mercadoAbierto, faltantes = [] } = params
+  const { titular, clasificacion, niveles, mercadoAbierto, faltantes = [], enlace } = params
   const icono = SEMAFORO[clasificacion.severidad] ?? '⚪'
 
   const lineas = [
-    `${icono} ESCALADA RUSIA–OTAN · severidad ${clasificacion.severidad}/5`,
-    titular.titulo,
-    `${titular.fuente} · ${horaEcuador(titular.publicadoAt)}`,
-    titular.url,
+    `${icono} *ESCALADA RUSIA–OTAN* · severidad ${clasificacion.severidad}/5`,
     '',
-    ...(clasificacion.resumen ? [clasificacion.resumen, ''] : []),
-    ...niveles.map(lineaNivel),
+    `*${titular.titulo}*`,
+    `${titular.fuente} · ${horaEcuador(titular.publicadoAt)}`,
+    lineaEnlace(enlace ?? titular.url),
   ]
 
-  if (!niveles.length) lineas.push('Sin niveles: no se pudo cotizar ningún activo.')
+  if (clasificacion.resumen) lineas.push('', clasificacion.resumen)
+
+  lineas.push('', '*Niveles*')
+  if (niveles.length) {
+    lineas.push(...niveles.map(lineaNivel))
+  } else {
+    lineas.push('Sin niveles: no se pudo cotizar ningún activo.')
+  }
   if (faltantes.length) lineas.push(`Sin nivel: ${faltantes.join(', ')}`)
 
   lineas.push('', mercadoAbierto ? 'Mercado: sesión regular abierta.' : 'Mercado: fuera de sesión regular, precios de futuros.')
@@ -89,15 +97,18 @@ export function mensajeMacro(params: {
   titular: Titular
   clasificacion: Clasificacion
   probabilidad?: ProbabilidadTasas | null
+  /** Enlace ya acortado. Si no llega, se usa el del titular tal cual. */
+  enlace?: string
 }): string {
-  const { titular, clasificacion, probabilidad } = params
+  const { titular, clasificacion, probabilidad, enlace } = params
   const icono = SEMAFORO[clasificacion.severidad] ?? '⚪'
 
   const lineas = [
-    `${icono} FED vs TESORO · severidad ${clasificacion.severidad}/5`,
-    titular.titulo,
+    `${icono} *FED vs TESORO* · severidad ${clasificacion.severidad}/5`,
+    '',
+    `*${titular.titulo}*`,
     `${titular.fuente} · ${horaEcuador(titular.publicadoAt)}`,
-    titular.url,
+    lineaEnlace(enlace ?? titular.url),
   ]
 
   if (clasificacion.resumen) lineas.push('', clasificacion.resumen)
@@ -183,15 +194,18 @@ export function mensajeDecision(params: {
   nivelesCompra: NivelConSimbolo[]
   probabilidad?: ProbabilidadTasas | null
   titularComunicado?: Titular | null
+  /** Enlace del comunicado ya acortado. */
+  enlace?: string
 }): string {
-  const { evento, nivelesVenta, nivelesCompra, probabilidad, titularComunicado } = params
+  const { evento, nivelesVenta, nivelesCompra, probabilidad, titularComunicado, enlace } = params
 
   const lineas = [
-    `🚨 ${evento.tipo === 'fomc' ? 'PUBLICACIÓN DE TASAS' : 'PUBLICACIÓN DEL IPC'} · ${evento.etiqueta}`,
+    `🚨 *${evento.tipo === 'fomc' ? 'PUBLICACIÓN DE TASAS' : 'PUBLICACIÓN DEL IPC'}* · ${evento.etiqueta}`,
+    '',
   ]
 
   if (titularComunicado) {
-    lineas.push(titularComunicado.titulo, titularComunicado.url)
+    lineas.push(`*${titularComunicado.titulo}*`, lineaEnlace(enlace ?? titularComunicado.url))
   } else {
     lineas.push('Comunicado aún no localizado; niveles preparados para ambos escenarios.')
   }
@@ -199,10 +213,10 @@ export function mensajeDecision(params: {
   if (probabilidad) lineas.push('', lineaProbabilidad(probabilidad))
 
   if (nivelesVenta.length) {
-    lineas.push('', 'SI SUBEN TASAS (riesgo a la baja):', ...nivelesVenta.map(lineaNivel))
+    lineas.push('', '*SI SUBEN TASAS* (riesgo a la baja):', ...nivelesVenta.map(lineaNivel))
   }
   if (nivelesCompra.length) {
-    lineas.push('', 'SI MANTIENEN O BAJAN (riesgo al alza):', ...nivelesCompra.map(lineaNivel))
+    lineas.push('', '*SI MANTIENEN O BAJAN* (riesgo al alza):', ...nivelesCompra.map(lineaNivel))
   }
 
   return lineas.join('\n')

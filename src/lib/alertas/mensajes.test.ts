@@ -113,6 +113,21 @@ describe('mensajeGuerra', () => {
     const m = mensajeGuerra({ titular, clasificacion, niveles: [nivelOro], mercadoAbierto: true, faltantes: ['SI=F'] })
     expect(m).toContain('Sin nivel: SI=F')
   })
+
+  it('usa el enlace acortado en lugar del original cuando llega', () => {
+    const m = mensajeGuerra({
+      titular, clasificacion, niveles: [nivelOro], mercadoAbierto: true,
+      enlace: 'https://is.gd/aB3xY9',
+    })
+    expect(m).toContain('🔗 is.gd · https://is.gd/aB3xY9')
+    expect(m).not.toContain('https://ejemplo.com/n1')
+  })
+
+  it('el titular va en negrita y los niveles bajo su propio encabezado', () => {
+    const m = mensajeGuerra({ titular, clasificacion, niveles: [nivelOro], mercadoAbierto: true })
+    expect(m).toContain('*Polonia derriba un dron ruso*')
+    expect(m).toContain('*Niveles*')
+  })
 })
 
 describe('mensajes macro', () => {
