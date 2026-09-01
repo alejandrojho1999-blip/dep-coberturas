@@ -30,5 +30,12 @@
 # Ecuador, o cuando la probabilidad de subida salta 10 puntos o más.
 0 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh snapshot >> /var/log/dep-alertas.log 2>&1
 
+# Pulso público: cada 30 minutos. Búsquedas en tendencia, visitas de Wikipedia,
+# foros, redes y volumen de noticias. No envía nada ni llama al modelo de
+# lenguaje: solo mide y guarda. Media hora es el paso más fino que tiene sentido
+# —las tendencias de Google no se refrescan más rápido— y deja 48 lecturas al
+# día, suficientes para ver un pico dentro de la jornada.
+*/30 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh pulso >> /var/log/dep-alertas.log 2>&1
+
 # Rotación del log, para que no crezca sin fin.
 0 3 * * 0 [ -f /var/log/dep-alertas.log ] && tail -n 5000 /var/log/dep-alertas.log > /var/log/dep-alertas.log.tmp && mv /var/log/dep-alertas.log.tmp /var/log/dep-alertas.log
