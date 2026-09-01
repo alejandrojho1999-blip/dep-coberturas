@@ -7,7 +7,7 @@
 
 ## Estado actual
 
-**Último commit:** `b8f5b57` (el test de los libros de Excel fallaba por un plazo mal puesto), rama `feat/pulso-ingesta`
+**Último commit:** `17c8c5d` (merge del PR #13 — alerta temprana viva), rama `main`
 
 | Check | Resultado |
 |---|---|
@@ -34,13 +34,14 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 
 ## Pendiente
 
-### Alerta temprana viva (Fases 1–4) — esperando el merge del PR #13
-> Todo el código está escrito, probado y subido a `feat/pulso-ingesta`. El
-> PR #13 «Alerta temprana viva: pulso público, palabras clave y curvas de
-> probabilidad» está **MERGEABLE / CLEAN**, sin revisión bloqueante y con los
-> dos checks de Vercel en verde. Lo único que falta es apretar el botón.
+### Alerta temprana viva (Fases 1–4) — en producción desde el 2026-09-01
+> El PR #13 «Alerta temprana viva: pulso público, palabras clave y curvas de
+> probabilidad» quedó mergeado en `main` (`17c8c5d`, merge commit, los seis
+> commits conservados). Tests en `main` tras el merge: **798/798**. El deploy
+> de producción de Vercel salió en verde. La migración `024_pulso_publico.sql`
+> ya estaba aplicada: el pipeline llevaba días escribiendo en esas tablas.
 
-Lo que entra con el PR:
+Lo que entró con el PR:
 - **Fase 1** — ingesta del pulso público desde seis fuentes (trends, hn,
   youtube, news, wikipedia, mastodon).
 - **Fase 2** — de ese ruido diario salen los doce términos que importan.
