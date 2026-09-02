@@ -43,6 +43,21 @@ export interface StockPosition extends BasePosition {
   precioActual: number | null
 }
 
+/**
+ * Comprobación de que una call cubierta lo está de verdad.
+ *
+ * «Cubierta» no es una etiqueta: exige tener las acciones. Sin ellas la
+ * posición es una call desnuda, con pérdida ilimitada, y el colateral que
+ * muestra el portafolio no existe en ninguna parte.
+ */
+export interface CoberturaAcciones {
+  /** Acciones que exige el contrato: 100 por cada uno. */
+  necesarias: number
+  /** Acciones del mismo ticker abiertas en el portafolio de acciones. */
+  enCartera: number
+  cubierta: boolean
+}
+
 export interface OptionPosition extends BasePosition {
   posicion: SettlementPosition
   strike: number
@@ -56,6 +71,11 @@ export interface OptionPosition extends BasePosition {
   esCorta: boolean
   /** Explicación del capital comprometido, para el tooltip del pastel. */
   detalleCapital: string
+  /**
+   * Solo en las calls cubiertas abiertas. `null` en el resto de posiciones,
+   * donde la pregunta no aplica.
+   */
+  cobertura: CoberturaAcciones | null
 }
 
 export type PortfolioPosition = StockPosition | OptionPosition

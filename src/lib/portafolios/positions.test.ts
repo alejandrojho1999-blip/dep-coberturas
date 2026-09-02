@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { AgentRec } from '@/lib/agentes/types'
 import { contractKey } from '@/lib/options/occ-symbol'
 import { OPTION_LONG_CATEGORIES, OPTION_SHORT_CATEGORIES, TICKET_ACCIONES } from './config'
-import { buildOptionPositions, buildStockPositions, capitalComprometidoOpcion } from './positions'
+import { accionesPorTicker, buildOptionPositions, buildStockPositions, capitalComprometidoOpcion } from './positions'
 
 function rec(over: Partial<AgentRec>): AgentRec {
   return {
@@ -228,5 +228,65 @@ describe('buildOptionPositions', () => {
     const gammaSinContrato = rec({ id: 'g2', ticker: 'NVDA', category: 'OPTIONS_GAMMA', ai_report: {} })
     const { excluidas } = buildOptionPositions([gammaSinContrato, theta], {}, OPTION_SHORT_CATEGORIES)
     expect(excluidas).toHaveLength(0)
+  })
+})
+
+describe('cobertura de las calls vendidas', () => {
+  const cubierta = rec({
+    id: 'cc-cov',
+    ticker: 'AAPL',
+    category: 'OPTIONS_THETA',
+    precio_entrada: 3,
+    ai_report: {
+      strike: 250, expiration: '2026-07-17', strategy: 'COVERED_CALL', underlying: 231.4,
+    },
+  })
+
+  it('marca la call como descubierta cuando el portafolio no tiene las acciones', () => {
+    const { positions } = buildOptionPositions([cubierta], {}, OPTION_SHORT_CATEGORIES, { AAPL: 40 })
+    expect(positions[0].cobertura).toEqual({ necesarias: 100, enCartera: 40, cubierta: false })
+  })
+
+  it('la da por cubierta cuando hay al menos 100 acciones por contrato', () => {
+    const { positions } = buildOptionPositions([cubierta], {}, OPTION_SHORT_CATEGORIES, { AAPL: 120 })
+    expect(positions[0].cobertura?.cubierta).toBe(true)
+  })
+
+  it('sin mapa de acciones asume lo prudente: descubierta', () => {
+    const { positions } = buildOptionPositions([cubierta], {})
+    expect(positions[0].cobertura).toEqual({ necesarias: 100, enCartera: 0, cubierta: false })
+  })
+
+  it('no pregunta por la cobertura de un put asegurado', () => {
+    const put = rec({
+      id: 'sp1',
+      ticker: 'MSFT',
+      category: 'OPTIONS_THETA',
+      precio_entrada: 4,
+      ai_report: { strike: 400, expiration: '2026-07-17', strategy: 'SELL_PUT' },
+    })
+    const { positions } = buildOptionPositions([put], {})
+    expect(positions[0].cobertura).toBeNull()
+  })
+
+  it('tampoco en una call cubierta ya cerrada: las acciones de hoy no dicen nada de entonces', () => {
+    const cerrada = { ...cubierta, estado: 'Vender', precio_venta: 1 }
+    const { positions } = buildOptionPositions([cerrada], {}, OPTION_SHORT_CATEGORIES, {})
+    expect(positions[0].abierta).toBe(false)
+    expect(positions[0].cobertura).toBeNull()
+  })
+
+  it('accionesPorTicker suma solo las posiciones abiertas', () => {
+    const { positions } = buildStockPositions(
+      [
+        rec({ id: 'a1', ticker: 'AAPL', precio_entrada: 100 }),
+        rec({ id: 'a2', ticker: 'AAPL', precio_entrada: 200 }),
+        rec({ id: 'a3', ticker: 'AAPL', precio_entrada: 100, estado: 'Vender', precio_venta: 120 }),
+      ],
+      { AAPL: 100 }
+    )
+    const titulos = accionesPorTicker(positions)
+    // Dos abiertas con ticket fijo: TICKET/100 + TICKET/200. La cerrada no cuenta.
+    expect(titulos.AAPL).toBeCloseTo(TICKET_ACCIONES / 100 + TICKET_ACCIONES / 200, 6)
   })
 })

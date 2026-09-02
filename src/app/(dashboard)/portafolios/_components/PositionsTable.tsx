@@ -1,7 +1,7 @@
 'use client'
 
 import { AGENT_COLORS, fmtPct, fmtUsd } from '@/components/charts/chart-theme'
-import type { OptionPosition, PortfolioPosition, StockPosition } from '@/lib/portafolios/types'
+import type { CoberturaAcciones, OptionPosition, PortfolioPosition, StockPosition } from '@/lib/portafolios/types'
 import { diasEntre } from '@/lib/portafolios/metrics'
 
 function esOpcion(p: PortfolioPosition): p is OptionPosition {
@@ -25,6 +25,24 @@ function AgentBadge({ agente }: { agente: string }) {
       style={{ color, background: `${color}1a`, border: `1px solid ${color}33` }}
     >
       {agente}
+    </span>
+  )
+}
+
+/**
+ * Marca una call vendida sin las acciones que la respalden.
+ *
+ * Se avisa en vez de ocultar la posición: la call existe y su riesgo —ilimitado
+ * mientras no haya títulos detrás— es justo lo que hay que ver en la tabla.
+ */
+function AvisoDescubierta({ cobertura }: { cobertura: CoberturaAcciones | null }) {
+  if (!cobertura || cobertura.cubierta) return null
+  return (
+    <span
+      className="ml-1.5 font-mono text-[10px] text-negative"
+      title={`Sin cobertura: exige ${cobertura.necesarias} acciones y el portafolio tiene ${cobertura.enCartera.toFixed(2)}. La call está al descubierto.`}
+    >
+      ⚠ descubierta
     </span>
   )
 }
@@ -77,7 +95,12 @@ export function PositionsTable({ positions, total }: Props) {
                 <td className="px-3 py-2"><AgentBadge agente={p.agente} /></td>
                 <td className="px-3 py-2 text-text-secondary">
                   {opcion
-                    ? <span title={p.detalleCapital}>{p.posicion.replace('_', ' ')} ${p.strike} · {p.expiration}</span>
+                    ? (
+                      <span title={p.detalleCapital}>
+                        {p.posicion.replace('_', ' ')} ${p.strike} · {p.expiration}
+                        <AvisoDescubierta cobertura={p.cobertura} />
+                      </span>
+                    )
                     : <span className="text-text-secondary">{(p as StockPosition).cantidad.toFixed(2)} acc.</span>}
                 </td>
                 <td className="px-3 py-2 font-mono tabular-nums text-text-secondary">${entrada.toFixed(2)}</td>

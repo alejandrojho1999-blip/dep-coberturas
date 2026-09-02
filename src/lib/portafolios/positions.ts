@@ -6,7 +6,7 @@ import { optionOutcome, optionRefFromRec, sideForCategory } from '@/lib/options/
 import { CONTRACT_MULTIPLIER, positionFromReport } from '@/lib/options/settlement'
 import { CONTRATOS_POR_SENAL, OPTION_CATEGORIES, STOCK_CATEGORIES, TICKET_ACCIONES } from './config'
 import { isoDay, resolveClosedDate } from './closed-date'
-import type { ClosesByTicker, OptionPosition, StockPosition } from './types'
+import type { ClosesByTicker, CoberturaAcciones, OptionPosition, StockPosition } from './types'
 
 /**
  * Traducción de recomendaciones a posiciones de cartera.
@@ -122,10 +122,51 @@ export function capitalComprometidoOpcion(
 }
 
 /**
+ * Acciones abiertas por ticker, sumando las posiciones del portafolio de
+ * acciones. Es la única fuente que tiene la aplicación para saber qué se posee:
+ * el portafolio es derivado, así que las acciones de un ticker son las que
+ * mantienen abiertas Peter y Small sobre ese mismo símbolo.
+ */
+export function accionesPorTicker(stocks: StockPosition[]): Record<string, number> {
+  const porTicker: Record<string, number> = {}
+  for (const p of stocks) {
+    if (!p.abierta) continue
+    porTicker[p.ticker] = (porTicker[p.ticker] ?? 0) + p.cantidad
+  }
+  return porTicker
+}
+
+/**
+ * Comprueba si una call cubierta tiene detrás las acciones que dice tener.
+ *
+ * Devuelve `null` cuando la pregunta no aplica: solo una call corta y abierta
+ * necesita respaldo. El portafolio de acciones es fraccional —un ticket fijo
+ * dividido por el precio de entrada—, así que lo normal es que no llegue a los
+ * 100 títulos por contrato y la call quede al descubierto. Se informa, no se
+ * excluye: la posición existe y su riesgo hay que verlo.
+ */
+export function coberturaDeCall(
+  posicion: string,
+  abierta: boolean,
+  ticker: string,
+  contratos: number,
+  accionesEnCartera: Record<string, number>
+): CoberturaAcciones | null {
+  if (posicion !== 'COVERED_CALL' || !abierta) return null
+  const necesarias = CONTRACT_MULTIPLIER * contratos
+  const enCartera = accionesEnCartera[ticker] ?? 0
+  return { necesarias, enCartera, cubierta: enCartera >= necesarias }
+}
+
+/**
  * Construye las posiciones del portafolio de opciones.
  *
  * `primas` viene indexado por `contractKey`, igual que lo devuelve
  * `/api/informes/option-prices`.
+ *
+ * `accionesEnCartera` viene de `accionesPorTicker`. Sin él las calls cubiertas
+ * salen marcadas como descubiertas, que es la lectura prudente cuando no se
+ * sabe qué se posee.
  *
  * `categorias` acota qué agentes entran. Las compras de Gamma y las ventas de
  * Theta son carteras distintas —una arriesga la prima, la otra inmoviliza el
@@ -135,7 +176,8 @@ export function capitalComprometidoOpcion(
 export function buildOptionPositions(
   recs: AgentRec[],
   primas: Record<string, number>,
-  categorias: readonly string[] = OPTION_CATEGORIES
+  categorias: readonly string[] = OPTION_CATEGORIES,
+  accionesEnCartera: Record<string, number> = {}
 ): BuildResult<OptionPosition> {
   const positions: OptionPosition[] = []
   const excluidas: BuildResult<OptionPosition>['excluidas'] = []
@@ -194,6 +236,9 @@ export function buildOptionPositions(
       contratos: CONTRATOS_POR_SENAL,
       esCorta: side === 'short',
       detalleCapital: detalle,
+      cobertura: coberturaDeCall(
+        posicion, abierta, rec.ticker, CONTRATOS_POR_SENAL, accionesEnCartera
+      ),
       valorActual: outcome ? capital + outcome.usd * CONTRATOS_POR_SENAL : null,
       pnl,
       pnlPct: pnl != null && capital > 0 ? (pnl / capital) * 100 : null,

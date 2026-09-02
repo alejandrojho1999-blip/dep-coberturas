@@ -14,7 +14,7 @@ import {
   OPTION_SHORT_CATEGORIES,
   TICKET_ACCIONES,
 } from '@/lib/portafolios/config'
-import { buildOptionPositions, buildStockPositions } from '@/lib/portafolios/positions'
+import { accionesPorTicker, buildOptionPositions, buildStockPositions } from '@/lib/portafolios/positions'
 import {
   alignSeries, buildBenchmarkCurve, buildOptionEquityCurve, buildStockEquityCurve, ejeTemporal, primeraEntrada,
 } from '@/lib/portafolios/equity'
@@ -122,15 +122,20 @@ export default function PortafoliosClient({ cartera }: { cartera: BacktestCarter
     () => buildStockPositions(recs, livePrices, closes),
     [recs, livePrices, closes]
   )
+  // Lo que se posee de verdad de cada ticker, para poder decir si una call
+  // cubierta lo está. Sale del portafolio de acciones, que es la única cartera
+  // de títulos que conoce la aplicación.
+  const titulos = useMemo(() => accionesPorTicker(acciones.positions), [acciones.positions])
+
   // Gamma y Theta van por separado: una compra arriesga la prima y una venta
   // inmoviliza el colateral, así que comparten pantalla pero no cartera.
   const largas = useMemo(
-    () => buildOptionPositions(recs, primas, OPTION_LONG_CATEGORIES),
-    [recs, primas]
+    () => buildOptionPositions(recs, primas, OPTION_LONG_CATEGORIES, titulos),
+    [recs, primas, titulos]
   )
   const cortas = useMemo(
-    () => buildOptionPositions(recs, primas, OPTION_SHORT_CATEGORIES),
-    [recs, primas]
+    () => buildOptionPositions(recs, primas, OPTION_SHORT_CATEGORIES, titulos),
+    [recs, primas, titulos]
   )
 
   const metricsAcciones = useMemo(

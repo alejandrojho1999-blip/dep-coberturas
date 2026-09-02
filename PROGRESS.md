@@ -7,14 +7,14 @@
 
 ## Estado actual
 
-**Último commit:** deuda de los agentes de opciones (colateral de las calls
-cubiertas y rangos de delta), rama `main`
+**Último commit:** la cobertura de una call vendida se comprueba contra las
+acciones del portafolio, rama `main`
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **819/819** (60 ficheros) |
+| `npm run test:run` | **825/825** (60 ficheros) |
 | `npm run build` | exit 0 |
 | `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
@@ -257,9 +257,17 @@ cerradas el 2026-09-02; la que sigue abierta es la última.
   suelo sube 15 puntos de delta. Conviene mirar en la próxima ejecución cuántos
   tickers sobreviven al paso 4; si se queda seco, la alternativa es la
   contraria (ampliar el score a los rangos anchos).
-- **Nadie comprueba que se posean las acciones de un covered-call.** La
-  estrategia solo está «cubierta» por convención; el sistema no lo verifica.
-  **Sigue abierta.**
+- ~~**Nadie comprueba que se posean las acciones de un covered-call.**~~ —
+  cerrado el 2026-09-02. `positions.ts` expone `accionesPorTicker` y
+  `coberturaDeCall`: cada call cubierta abierta lleva ahora un campo
+  `cobertura` con las acciones que exige (100 por contrato), las que el
+  portafolio de acciones tiene abiertas de ese ticker y el veredicto. La tabla
+  de posiciones marca «⚠ descubierta» cuando no llegan.
+  ⚠️ **Con el sizing actual saldrán casi todas descubiertas**: el portafolio de
+  acciones invierte un ticket fijo y fraccional, así que rara vez acumula 100
+  títulos de un mismo símbolo. El aviso es correcto —la call está al
+  descubierto de verdad— pero conviene decidir si Theta debería exigir la
+  posición en acciones antes de proponer la call, en vez de solo señalarlo.
 
 ### Funcionalidad por definir
 - *(nada pendiente: `/estrategias` ya está implementada)*
@@ -306,6 +314,37 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 (cierre) — la cobertura de las calls deja de ser una convención
+
+Última deuda abierta de los agentes de opciones. El sistema llamaba «cubierta»
+a toda call vendida sin mirar nunca si había acciones detrás, y una call
+descubierta tiene pérdida ilimitada: no es un matiz contable.
+
+- **`accionesPorTicker(stocks)`** en `positions.ts` suma las acciones abiertas
+  por símbolo del portafolio de acciones. Es la única cartera de títulos que
+  conoce la aplicación, así que es la única fuente posible de la respuesta.
+- **`coberturaDeCall(...)`** devuelve `{ necesarias, enCartera, cubierta }` solo
+  para las calls cubiertas **abiertas**. En una cerrada devuelve `null` a
+  propósito: las acciones de hoy no dicen nada de las de entonces.
+- **`buildOptionPositions`** acepta un cuarto argumento opcional con ese mapa.
+  Sin él, la lectura por defecto es la prudente: descubierta.
+- **`PortafoliosClient`** deriva el mapa del portafolio de acciones y lo pasa a
+  las dos carteras de opciones; **`PositionsTable`** pinta «⚠ descubierta» con
+  el detalle en el `title`.
+- **6 tests nuevos** en `positions.test.ts` (descubierta, cubierta, sin mapa,
+  put asegurado, call cerrada, suma de `accionesPorTicker`).
+
+| Check | Resultado |
+|---|---|
+| `npm run lint` | 0 problemas |
+| `npx tsc --noEmit` | exit 0 |
+| `npm run test:run` | **825/825** (60 ficheros) |
+| `npm run build` | exit 0 |
+
+Se avisa en vez de excluir la posición: la call existe y su riesgo es justo lo
+que hay que ver en la tabla. Queda por decidir si Theta debe además exigir las
+acciones antes de proponer la call.
 
 ### Sesión del 2026-09-02 — borrado de Ergo Quant y su backend FastAPI
 

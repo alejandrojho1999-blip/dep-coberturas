@@ -29,6 +29,7 @@ function option(over: Partial<OptionPosition>): OptionPosition {
     fechaEntrada: '2026-01-05', fechaCierre: null, fechaCierreEstimada: false, abierta: true,
     capitalComprometido: 1575, posicion: 'LONG_CALL', strike: 230, expiration: '2026-06-18',
     primaEntrada: 15.75, primaActual: 15.75, contratos: 1, esCorta: false, detalleCapital: '',
+    cobertura: null,
     valorActual: 1575, pnl: 0, pnlPct: 0, ...over,
   }
 }
