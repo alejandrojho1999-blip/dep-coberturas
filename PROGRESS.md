@@ -81,11 +81,22 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   cualquier atentado entre en un canal pensado para Rusia-OTAN. Si aparecen
   falsos positivos de ese tipo, la corrección es añadir «por un Estado o con
   respaldo estatal» al criterio, no quitarlo entero.
-- **Contradicción entre el corpus y el prompt sobre la Fed de junio de 2022.**
-  El corpus le da severidad 5 («sorpresa respecto a lo guiado»); el prompt la usa
-  como ejemplo de movimiento descontado, y la medición le da la razón al prompt:
-  S&P +0,7% y VIX -11,4% a cinco sesiones. El modelo la puntúa 3. Hay que decidir
-  cuál de los dos se corrige, y el dato apunta a que es el corpus.
+- ~~**Contradicción sobre la Fed de junio de 2022**~~ — **corregida el
+  2026-09-02**: la decisión del 15 de junio baja de severidad 5 a 2. Ver la
+  entrada de la sesión en «Completado».
+- **Quedan tres contradicciones del mismo tipo, ya medidas.** Todas son
+  severidad puesta por importancia institucional en vez de por efecto de precio,
+  el mismo defecto que la de junio. No las he tocado porque cada una es un
+  juicio de analista, pero el dato ya está:
+
+  | evento | corpus | lo que dice el prompt | medición a 5 sesiones |
+  |---|---|---|---|
+  | IPC de mayo 2022 (10-06) | 4 | lo lista como **5** | S&P −8,7%, VIX +34,3% |
+  | Primera subida desde 2018 (16-03-2022) | 4 | lo lista como **2** | S&P +5,7%, VIX −23,9% |
+  | Última subida del ciclo (26-07-2023) | 3 | lo lista como **2** | ningún activo movió |
+
+  El IPC es el más claro: es el evento que de verdad desplomó el mercado esa
+  semana y está por debajo de la decisión que no movió nada.
 - **Medir el efecto:** volver a pasar `npm run calibracion:auditar` tras una
   semana con el prompt nuevo y comprobar si el 60,9% de peldaños 4-5 baja.
 
@@ -357,6 +368,39 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — la Fed de junio de 2022 deja de valer un 5
+
+El corpus le daba **severidad 5** a la subida de 75 pb del 15 de junio de 2022 y
+solo un **4** al IPC del 8,6% del 10 de junio. La medición dice lo contrario, y
+sin ambigüedad:
+
+| evento | S&P a 5 sesiones | VIX (extremo) | corpus |
+|---|---|---|---|
+| IPC del 8,6% (10-06) | **−8,7%** | **+34,3%** | 4 |
+| Decisión de 75 pb (15-06) | +0,7% | **−15,1%** | 5 → **2** |
+
+El día que el mercado se desplomó fue el del IPC. Cuando llegó la decisión, la
+repreciación ya había ocurrido: el S&P apenas se movió y el VIX **bajó** un 15%.
+El 5 estaba puesto por lo que el hecho significaba —la mayor subida desde 1994—
+y no por lo que hizo el precio, que es justo el error que todo este trabajo
+existe para corregir. Ahora vale 2, «movimiento completamente descontado», con
+la nota explicando la corrección y su fecha para que nadie la revierta por
+intuición.
+
+Efecto medido: el error medio del clasificador sobre el corpus baja de 0,50 a
+**0,46**. El modelo puntuaba ese evento con un 3, más cerca del 2 real que del 5
+que decía el corpus.
+
+**Una trampa del pipeline que costó un rato y ya está documentada.** Editar
+`eventos.ts` no basta: `cargar.mts` sube la severidad que hay en
+`movimientos.json`, donde `medir.mts` deja una copia del corpus. Sin volver a
+pasar `calibracion:medir` se recarga la severidad vieja y **nada falla** —el
+upsert responde bien y el script dice «Cargados 27 eventos»—. Avisado en la
+cabecera de `cargar.mts`. La segunda pasada es rápida: los precios quedan
+cacheados en disco.
+
+Suite completa en verde: 919/919, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — el clasificador deja de descartar lo que sí importa
 

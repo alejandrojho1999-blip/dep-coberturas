@@ -131,8 +131,12 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2022-06-15', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
     titulo: 'La Fed sube 75 pb, la mayor subida desde 1994',
-    severidad: 5, verificado: true,
-    nota: 'Sorpresa respecto a lo guiado días antes: el propio comité cambió de plan tras el IPC.',
+    severidad: 2, verificado: true,
+    nota: 'Llevaba un 5 por ser la mayor subida desde 1994, que es importancia institucional y '
+      + 'no efecto de precio: corregido el 2026-09-02 con la medición delante. El S&P quedó en '
+      + '+0,7% a cinco sesiones y el VIX BAJÓ un 15,1%. La repreciación ya había ocurrido cinco '
+      + 'días antes con el IPC del 8,6%, que es el evento que merece el 5 de esa semana. El '
+      + 'contraejemplo que enseña que lo descontado no mueve por grande que sea.',
   },
   {
     fecha: '2022-06-10', tramo: 'principal', tema: 'fed_tesoro', clase: 'dato-macro',

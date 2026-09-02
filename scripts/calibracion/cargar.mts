@@ -9,6 +9,12 @@
  * Es idempotente: reejecutarlo con datos nuevos actualiza las filas existentes
  * en vez de duplicarlas.
  *
+ * ⚠️ La severidad que sube es la del JSON, no la de `eventos.ts`. `medir.mts`
+ * deja dentro una copia del corpus, así que **editar `eventos.ts` no basta**:
+ * hay que volver a pasar `calibracion:medir` antes de cargar o se sube la
+ * severidad vieja sin que nada falle. La segunda pasada es rápida porque los
+ * precios quedan cacheados en disco.
+ *
  * Requiere la migración 025 aplicada.
  *
  * Uso:
