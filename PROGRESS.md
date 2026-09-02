@@ -105,6 +105,14 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   sobre el gas europeo y el trigo, que no se miden. Se quedan en severidad 4 a
   propósito: el efecto existió, lo que falla es el instrumento. Si alguna vez se
   amplía la cesta, estos dos son la prueba.
+- **La cesta de activos necesita revisión, y ahora hay con qué.**
+  `npm run calibracion:normalidad` mide cuánto separa cada activo una noticia de
+  un martes cualquiera. El resultado incomoda: **el oro y el VIX son los que
+  peor distinguen** (+9 pts cada uno) y son justo los dos que el prompt cita en
+  todos sus precedentes. El VIX llega a subir un 50,8% en una fecha sin nada
+  detrás, por encima de su umbral del 40%. El que mejor separa es el **S&P 500**
+  (+22 pts), que no aparece en ningún ancla del prompt. Y ningún activo tiene el
+  umbral a más de ×4 de su mediana normal: la cesta entera está apretada.
 - **`BTC-USD` mete ruido en el criterio de movimiento.** Es el único activo que
   cruza el umbral en dos de los tres casos raros: Skripal (-18,7%, en pleno
   invierno cripto de 2018) y Kursk (+16,1%, con el VIX cayendo un 51%). Ninguno
@@ -417,6 +425,52 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — el backtesting describe el día normal, y la cesta sale señalada
+
+La línea base decía que el 25% de las fechas al azar mueven el precio, pero no
+**cuánto** ni **cuál**. Faltaba la distribución de la que sale ese 25%, que es
+lo que permite ver cuándo una sesión corriente se está acercando al umbral de un
+evento en vez de solo saber si lo cruzó.
+
+`perfilNormalidad()` lo mide activo por activo: mediana, p90 y máximo del día
+normal, cruces sin noticia detrás, y a cuántas medianas de distancia queda el
+umbral. Se extrajo `magnitudComparable()` a `calibracion.ts` para que la regla
+del VIX —donde solo cuenta la subida— viva en un sitio y no diverja entre el
+veredicto y el perfil.
+
+**La columna que decide es «separación»**: cuánto más cruza el umbral con
+noticia que sin ella. Se compara en tasa y no en cuenta, porque los grupos no
+tienen el mismo tamaño —60 fechas de control frente a 32 hechos— y restar cruces
+a secas haría parecer ruidoso al que más fechas tiene. El primer borrador tenía
+ese error y el aviso salía mal.
+
+**Lo que enseña la tabla es incómodo y va contra el propio prompt:**
+
+| Activo | Umbral | Mediana normal | Máx normal | Separación |
+| ------ | -----: | -------------: | ---------: | ---------: |
+| S&P 500 |  5% | 2,1% | 11,6% | **+22 pts** |
+| WTI     | 12% | 4,7% | 31,4% | **+20 pts** |
+| Oro     |  6% | 2,1% |  6,8% | +9 pts |
+| VIX     | 40% | 9,9% | 50,8% | +9 pts |
+
+El oro y el VIX, que son los dos activos que el prompt cita en **todos** sus
+precedentes, son los que peor distinguen. El VIX sube un 50,8% en una fecha sin
+nada detrás, por encima de su propio umbral. El mejor separador es el S&P 500,
+que no aparece en ningún ancla. Y ningún activo tiene el umbral a más de ×4 de
+su mediana: la cesta está calibrada apretada, lo que explica que un puñado de
+fechas al azar crucen igual.
+
+También se reescribió `INFORME-CALIBRACION-SEVERIDAD.md`, que seguía describiendo
+la migración 025 como pendiente y la curva como vacía —es decir, mentía sobre el
+estado del sistema—. La sección nueva «Cómo funciona el sistema hoy» documenta el
+pipeline de cinco pasos, el criterio de movimiento material, la curva vigente,
+lo que la cesta no ve y los dos gotchas que cuestan tiempo (la caché de precios
+y que editar `eventos.ts` no basta sin volver a medir).
+
+Nuevo comando `npm run calibracion:normalidad` y panel nuevo en
+`/alertas/backtesting`. Verde: 973/973 tests (12 nuevos), `tsc`, `eslint` y
+`build` limpios.
 
 ### Sesión del 2026-09-02 — el corpus se re-etiqueta y el criterio de medición enseña dos grietas
 
