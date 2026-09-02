@@ -10,37 +10,48 @@ import {
   type PuntoCurva,
 } from '@/lib/alertas/calibracion'
 
+/**
+ * Un movimiento expresado en múltiplos del umbral del activo.
+ *
+ * Los tests van así y no con cifras absolutas para que sobrevivan a una
+ * recalibración: los umbrales se duplicaron el 2026-09-02 y volverán a moverse
+ * cuando el corpus crezca. Lo que se prueba es la regla, no el número.
+ */
+function veces(ticker: string, factor: number) {
+  return { ticker, extremo: UMBRAL_MATERIAL[ticker] * factor }
+}
+
 describe('huboMovimiento', () => {
   it('basta con que un solo activo pase su umbral', () => {
     // El VIX se dispara y el oro ni se entera: sigue siendo un evento que movió.
     expect(huboMovimiento([
-      { ticker: 'GC=F', extremo: 0.004 },
-      { ticker: '^VIX', extremo: 0.35 },
+      veces('GC=F', 0.1),
+      veces('^VIX', 1.5),
     ])).toBe(true)
   })
 
   it('es falso cuando ninguno llega a su umbral', () => {
     expect(huboMovimiento([
-      { ticker: 'GC=F', extremo: 0.01 },
-      { ticker: 'ES=F', extremo: -0.02 },
+      veces('GC=F', 0.5),
+      veces('ES=F', -0.8),
     ])).toBe(false)
   })
 
   it('cuenta el movimiento a la baja igual que el alza', () => {
-    expect(huboMovimiento([{ ticker: 'ES=F', extremo: -0.04 }])).toBe(true)
+    expect(huboMovimiento([veces('ES=F', -1.5)])).toBe(true)
   })
 
   it('en el VIX solo cuenta la subida: es un índice de miedo', () => {
     // El caso real: en la incursión de Kursk el VIX cayó un 51%, que es el
     // mercado calmándose, y en valor absoluto se contaba como un susto.
-    expect(huboMovimiento([{ ticker: '^VIX', extremo: -0.51 }])).toBe(false)
-    expect(huboMovimiento([{ ticker: '^VIX', extremo: 0.35 }])).toBe(true)
+    expect(huboMovimiento([veces('^VIX', -2)])).toBe(false)
+    expect(huboMovimiento([veces('^VIX', 2)])).toBe(true)
   })
 
   it('un VIX que se desploma no tapa el movimiento real de otro activo', () => {
     expect(huboMovimiento([
-      { ticker: '^VIX', extremo: -0.51 },
-      { ticker: 'GC=F', extremo: 0.05 },
+      veces('^VIX', -2),
+      veces('GC=F', 1.2),
     ])).toBe(true)
   })
 

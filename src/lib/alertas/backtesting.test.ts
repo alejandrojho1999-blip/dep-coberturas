@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { UMBRAL_MATERIAL } from '@/lib/alertas/calibracion'
 import {
   eventoMovioElPrecio,
   lineaBase,
@@ -10,6 +11,15 @@ import {
   resumirPorClase,
   type EventoMedido,
 } from '@/lib/alertas/backtesting'
+
+/**
+ * Un movimiento en múltiplos del umbral del activo, para que los tests
+ * sobrevivan a una recalibración. Los umbrales se duplicaron el 2026-09-02.
+ */
+function mov(ticker: string, factor: number, ventana = 5) {
+  const extremo = UMBRAL_MATERIAL[ticker] * factor
+  return { ticker, ventana, retorno: extremo, extremo }
+}
 
 function evento(parcial: Partial<EventoMedido> = {}): EventoMedido {
   return {
@@ -64,14 +74,14 @@ describe('movimientosDeJuicio', () => {
 describe('eventoMovioElPrecio', () => {
   it('es cierto cuando un activo pasa su umbral en la ventana de juicio', () => {
     expect(eventoMovioElPrecio(evento({
-      movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0.04, extremo: 0.05 }],
+      movimientos: [mov('GC=F', 1.4)],
     }))).toBe(true)
   })
 
   it('ignora lo que pasó en ventanas más cortas', () => {
     // Un susto de un día que se deshizo no cuenta: el veredicto es a cinco sesiones.
     expect(eventoMovioElPrecio(evento({
-      movimientos: [{ ticker: 'GC=F', ventana: 1, retorno: 0.09, extremo: 0.09 }],
+      movimientos: [mov('GC=F', 3, 1)],
     }))).toBe(false)
   })
 
@@ -151,16 +161,16 @@ describe('resumirGlobal', () => {
 
   it('señala los graves que no movieron nada', () => {
     const r = resumirGlobal([
-      evento({ severidad: 5, movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0, extremo: 0.001 }] }),
-      evento({ severidad: 4, movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0.05, extremo: 0.05 }] }),
+      evento({ severidad: 5, movimientos: [mov('GC=F', 0.02)] }),
+      evento({ severidad: 4, movimientos: [mov('GC=F', 1.5)] }),
     ])
     expect(r.gravesSinEfecto).toBe(1)
   })
 
   it('señala los leves que sí movieron', () => {
     const r = resumirGlobal([
-      evento({ severidad: 2, movimientos: [{ ticker: '^VIX', ventana: 5, retorno: 0.3, extremo: 0.3 }] }),
-      evento({ severidad: 1, movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0, extremo: 0.001 }] }),
+      evento({ severidad: 2, movimientos: [mov('^VIX', 1.2)] }),
+      evento({ severidad: 1, movimientos: [mov('GC=F', 0.02)] }),
     ])
     expect(r.levesConEfecto).toBe(1)
   })
@@ -193,7 +203,7 @@ describe('el grupo de control', () => {
     evento({
       fecha: '2023-04-11', tramo: 'placebo', clase: 'dia-corriente', severidad: 1,
       titulo: 'Sesión de control 2023-04-11',
-      movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0.05, extremo: 0.05 }],
+      movimientos: [mov('GC=F', 1.5)],
     }),
     evento({
       fecha: '2023-05-02', tramo: 'placebo', clase: 'dia-corriente', severidad: 1,

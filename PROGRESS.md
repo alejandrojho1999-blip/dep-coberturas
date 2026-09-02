@@ -65,40 +65,22 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 
 - ~~**Aplicar la migración 027**~~ — hecha por el usuario el 2026-09-02, y el
   grupo de control ya está cargado: 60 fechas y 1344 mediciones.
-- **DECISIÓN PENDIENTE: el criterio de «movimiento material» está roto y hay que
-  elegir el nuevo.** La línea base salió del **85%**: en un día cualquiera, algún
-  activo supera su umbral el 85% de las veces. Con el criterio actual los
-  eventos importantes del corpus mueven el mercado **menos** que una fecha al
-  azar (82% contra 85%, −3 puntos). No distingue nada.
-
-  No es culpa de ningún activo —el que más se dispara es el Nasdaq, con un 50%—
-  sino de la regla «basta que **uno** de los ocho supere su umbral». Con ocho
-  activos y cinco sesiones, casi cualquier semana cuenta.
-
-  Los candidatos, medidos sobre el corpus y el control:
-
-  | criterio | placebo | principal | separación |
-  |---|---|---|---|
-  | ≥1 activo, umbral actual **(el de hoy)** | 85% | 82% | **−3 pts** |
-  | ≥3 activos, umbral actual | 48% | 76% | +28 pts |
-  | **≥1 activo, umbral ×2** | 30% | 59% | **+29 pts** |
-  | ≥2 activos, umbral ×2 | 13% | 41% | +28 pts |
-
-  **Recomendación: umbral ×2 manteniendo «basta uno».** Máxima separación, es el
-  cambio conceptualmente más simple —los umbrales estaban a la mitad de lo que
-  debían— y conserva la regla de que un evento que solo dispara el VIX sigue
-  siendo un evento del que avisar.
-
-  **Aviso honesto sobre esa recomendación:** se eligió tras probar siete
-  criterios sobre los mismos datos, así que parte de esos 29 puntos es
-  sobreajuste. Los tres mejores están empatados dentro del ruido (28-29 pts) y
-  la elección entre ellos debería hacerse por argumento económico, no por la
-  cifra. Con 60 fechas de control y 27 eventos, la diferencia entre 28 y 29
-  puntos no significa nada.
-- **La curva sigue sin poder aplicarse, ahora por dos razones distintas.**
-  `ajustar.mts` avisa de las dos: el criterio saturado, y que 6 de los 8
-  peldaños tienen menos de 5 casos —con esa muestra la proporción solo puede
-  valer 0, 50 o 100 y la curva describe el sorteo, no el fenómeno.
+- ~~**El criterio de «movimiento material» estaba roto**~~ — **corregido el
+  2026-09-02**: umbrales duplicados por decisión del usuario. La línea base baja
+  del 85% al 30% y los tres tramos de hechos curados se separan del control
+  (principal 59%, control_2014 40%, control_shocks 60%). Ver la entrada de la
+  sesión.
+- **La curva sigue sin poder aplicarse, pero ya solo por una razón: el tamaño de
+  la muestra.** 6 de los 8 peldaños tienen menos de 5 casos, y con eso la
+  proporción solo puede valer unos pocos valores: la curva describe el sorteo
+  más que el fenómeno. `ajustar.mts` lo avisa. El aviso de saturación ya no
+  salta.
+  **Lo que hace falta ahora es corpus**: más eventos curados, sobre todo en los
+  peldaños 2, 3 y 4 de ambos temas. Con 27 hechos no se puede cerrar.
+- **Revisar los umbrales cuando el corpus crezca.** Se eligieron comparando
+  siete criterios sobre los mismos 60 días de control y 27 eventos, así que
+  parte de su ventaja es sobreajuste; tres de los siete quedaron empatados
+  dentro del ruido. Está avisado en el comentario de `UMBRAL_MATERIAL`.
 - ~~**Los cinco agujeros del prompt**~~ — **cerrados el 2026-09-02**, con la
   medición delante: descartados **10 → 1**, y los cinco casos recuperados con el
   peldaño correcto o cerca. Ver la entrada de la sesión en «Completado».
@@ -396,6 +378,42 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — los umbrales se duplican y la curva por fin baja
+
+Aplicada la decisión: los ocho umbrales de `UMBRAL_MATERIAL` pasan al doble. El
+efecto es exactamente el que se buscaba.
+
+| | antes | después |
+|---|---|---|
+| línea base (fechas al azar) | 85% | **30%** |
+| tramo principal | 82% | 59% |
+| separación | **−3 pts** | **+29 pts** |
+
+Los tres tramos de hechos curados quedan por encima del control: principal 59%,
+control_2014 40%, control_shocks 60%, frente al 30% de las fechas al azar. El
+aviso de saturación de `ajustar.mts` ya no salta.
+
+**Y por primera vez la curva baja la severidad en vez de subirla**, que era el
+objetivo desde el principio —el clasificador repartía 4 y 5 al 60,9% de las
+señales—:
+
+```
+  guerra      2/5 → 1/5      fed_tesoro  2/5 → 2/5
+              3/5 → 1/5                  3/5 → 2/5
+              4/5 → 3/5                  4/5 → 2/5
+              5/5 → 5/5                  5/5 → 5/5
+```
+
+**Los tests dejan de llevar umbrales literales.** Ocho fallaron al duplicar los
+valores, y con razón: comprobaban la cifra en vez de la regla. Ahora se
+expresan en múltiplos del umbral (`veces('GC=F', 1.4)`), así que sobreviven a la
+próxima recalibración, que la habrá.
+
+**Sigue sin poder aplicarse, pero ya solo por una razón:** 6 de los 8 peldaños
+tienen menos de cinco casos. Lo que falta ahora es corpus, no método.
+
+Suite completa en verde: 961/961, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — la línea base sale del 85% y tumba el criterio
 

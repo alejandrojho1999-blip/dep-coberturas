@@ -15,19 +15,37 @@
  * Cuánto tiene que moverse cada activo para que la cobertura lo note.
  *
  * No son iguales porque los activos no lo son: un 3% en el oro es un día
- * histórico y en Bitcoin es un martes cualquiera. Los valores salen de la
- * desviación diaria típica de cada uno, redondeada a algo que se pueda defender
- * en voz alta.
+ * histórico y en Bitcoin es un martes cualquiera. Las proporciones entre ellos
+ * salen de la desviación diaria típica de cada uno.
+ *
+ * **Duplicados el 2026-09-02, con el grupo de control delante.** Los valores
+ * viejos eran la mitad de estos y estaban saturados: en una fecha elegida al
+ * azar, alguno de los ocho activos superaba su umbral el 85% de las veces, y
+ * los eventos del corpus lo hacían el 82%. Es decir, una invasión movía el
+ * mercado *menos* que un martes cualquiera. Con estos valores la separación
+ * pasa a ser de 30% contra 59%.
+ *
+ * El fallo no estaba en ningún activo suelto —el más ruidoso, el Nasdaq, se
+ * disparaba el 50% de los días al azar— sino en combinar ocho activos con la
+ * regla «basta que uno», que es una prueba múltiple sin corregir: con ocho
+ * intentos, que ninguno acierte es improbable. Duplicar el listón lo compensa
+ * sin renunciar a la regla, que sigue teniendo sentido: un evento que solo
+ * dispara el VIX es un evento del que hay que avisar.
+ *
+ * Aviso para quien los vuelva a tocar: la cifra se eligió comparando siete
+ * criterios sobre los mismos 60 días de control y 27 eventos, así que parte de
+ * su ventaja es sobreajuste. Tres de los siete quedaron empatados dentro del
+ * ruido. Con más corpus, esto se revisa.
  */
 export const UMBRAL_MATERIAL: Record<string, number> = {
-  'GC=F': 0.03,
-  'SI=F': 0.05,
-  'BTC-USD': 0.08,
-  'CL=F': 0.06,
-  'NQ=F': 0.03,
-  'ES=F': 0.025,
-  '^VIX': 0.20,
-  'DX-Y.NYB': 0.015,
+  'GC=F': 0.06,
+  'SI=F': 0.10,
+  'BTC-USD': 0.16,
+  'CL=F': 0.12,
+  'NQ=F': 0.06,
+  'ES=F': 0.05,
+  '^VIX': 0.40,
+  'DX-Y.NYB': 0.03,
 }
 
 /** La ventana sobre la que se juzga si un evento movió el mercado. */

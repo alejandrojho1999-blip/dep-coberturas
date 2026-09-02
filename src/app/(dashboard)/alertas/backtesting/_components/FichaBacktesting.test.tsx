@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
+import { UMBRAL_MATERIAL } from '@/lib/alertas/calibracion'
 import type { EventoMedido } from '@/lib/alertas/backtesting'
 import { FichaBacktesting } from './FichaBacktesting'
 
@@ -20,9 +21,9 @@ const EVENTOS: EventoMedido[] = [
     severidad: 5,
     nota: null,
     movimientos: [
-      { ticker: 'GC=F', ventana: 5, retorno: 0.006, extremo: 0.04 },
-      { ticker: '^VIX', ventana: 5, retorno: 0.20, extremo: 0.218 },
-      { ticker: 'ES=F', ventana: 5, retorno: -0.03, extremo: -0.05 },
+      { ticker: 'GC=F', ventana: 5, retorno: 0.006, extremo: UMBRAL_MATERIAL['GC=F'] * 1.3 },
+      { ticker: '^VIX', ventana: 5, retorno: 0.20, extremo: UMBRAL_MATERIAL['^VIX'] * 1.1 },
+      { ticker: 'ES=F', ventana: 5, retorno: -0.03, extremo: -UMBRAL_MATERIAL['ES=F'] * 1.2 },
     ],
   },
   {
@@ -34,8 +35,8 @@ const EVENTOS: EventoMedido[] = [
     severidad: 2,
     nota: null,
     movimientos: [
-      { ticker: 'GC=F', ventana: 5, retorno: 0.001, extremo: 0.001 },
-      { ticker: '^VIX', ventana: 5, retorno: 0.094, extremo: 0.094 },
+      { ticker: 'GC=F', ventana: 5, retorno: 0.001, extremo: UMBRAL_MATERIAL['GC=F'] * 0.03 },
+      { ticker: '^VIX', ventana: 5, retorno: 0.094, extremo: UMBRAL_MATERIAL['^VIX'] * 0.24 },
       // Sin ES=F: la celda debe salir como raya, no como 0,0%.
     ],
   },
@@ -47,7 +48,7 @@ const EVENTOS: EventoMedido[] = [
     clase: 'invasion',
     severidad: 5,
     nota: null,
-    movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0.064, extremo: 0.08 }],
+    movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0.064, extremo: UMBRAL_MATERIAL['GC=F'] * 1.4 }],
   },
 ]
 
@@ -114,7 +115,9 @@ describe('FichaBacktesting', () => {
   it('publica los umbrales con los que se juzga cada activo', () => {
     render(<FichaBacktesting eventos={EVENTOS} />)
     const fila = screen.getByText('BTC-USD').closest('tr')
-    expect(within(fila!).getByText('8.0%')).toBeInTheDocument()
+    // Contra la constante y no contra una cifra: los umbrales se recalibran.
+    const esperado = `${(UMBRAL_MATERIAL['BTC-USD'] * 100).toFixed(1)}%`
+    expect(within(fila!).getByText(esperado)).toBeInTheDocument()
   })
 
   it('vuelve al registro', () => {
