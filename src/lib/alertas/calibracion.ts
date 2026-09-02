@@ -48,6 +48,39 @@ export const UMBRAL_MATERIAL: Record<string, number> = {
   'DX-Y.NYB': 0.03,
 }
 
+/**
+ * Los activos que se miden pero **no votan** en el veredicto.
+ *
+ * Se siguen descargando y enseñando —el dato es útil para leer un evento— pero
+ * no cuentan para decidir si el precio se movió. Como la regla es «basta que
+ * uno cruce», cada activo añadido es un intento más de acertar por azar: uno
+ * que cruce a menudo sin noticia detrás sube la línea base y estropea el
+ * veredicto de todo el corpus.
+ *
+ * **Nasdaq, excluido el 2026-09-03.** Correlaciona 0,82 con el S&P en el grupo
+ * de control: no es un activo distinto, es el mismo índice de renta variable
+ * estadounidense contado dos veces, y con más volatilidad —su mediana en un día
+ * normal es 2,7% contra 2,1% del S&P— pero un umbral casi igual (6% contra 5%).
+ * El resultado es que cruza solo cuando nadie más lo hace, y las tres fechas en
+ * las que pasa son de 2002 y 2003: la resaca de las puntocom, con el Nasdaq
+ * oscilando entre el 6,5% y el 8,1% mientras el S&P no pasaba del 3,7%.
+ * Quitarlo sube la separación del criterio de 22 a 27 puntos, y la mejora
+ * aguanta el remuestreo: sale positiva en el 96% de los bootstraps, con un
+ * intervalo del 90% de [2, 10] puntos que no toca el cero.
+ *
+ * Lo que **no** se ha quitado, y por qué:
+ *  - **El oro y el dólar** casi no separan por su cuenta (+9 y +5 puntos), pero
+ *    su aportación marginal es exactamente cero: nunca cruzan solos, así que
+ *    retirarlos no cambia ni una fila. Salen gratis y son el activo que la mesa
+ *    cubre, de modo que quitarlos solo perdería información.
+ *  - **El VIX** sí mejoraría el criterio al retirarlo (+4 puntos), pero la
+ *    mejora no aguanta: solo aparece en el 80% de los remuestreos y su intervalo
+ *    del 90% es [-4, 10], que incluye el cero. Con 60 fechas de control no hay
+ *    muestra para justificarlo, y es el índice de miedo que da sentido al resto.
+ *    Se revisa cuando el corpus crezca.
+ */
+export const ACTIVOS_SIN_VOTO = new Set(['NQ=F'])
+
 /** La ventana sobre la que se juzga si un evento movió el mercado. */
 export const VENTANA_JUICIO = 5
 
@@ -96,6 +129,7 @@ export function huboMovimiento(movimientos: readonly MovimientoMedido[]): boolea
   return movimientos.some((m) => {
     const umbral = UMBRAL_MATERIAL[m.ticker]
     if (umbral == null || m.extremo == null) return false
+    if (ACTIVOS_SIN_VOTO.has(m.ticker)) return false
     return magnitudComparable(m.ticker, m.extremo) >= umbral
   })
 }

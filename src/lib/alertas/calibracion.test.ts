@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ACTIVOS_SIN_VOTO,
   aplicarCurva,
   liftSobreBase,
   resumirReplay,
@@ -39,6 +40,26 @@ describe('huboMovimiento', () => {
 
   it('cuenta el movimiento a la baja igual que el alza', () => {
     expect(huboMovimiento([veces('ES=F', -1.5)])).toBe(true)
+  })
+
+  it('un activo sin voto no da por movido el precio aunque se dispare', () => {
+    // El Nasdaq salió del veredicto el 2026-09-03: correlaciona 0,82 con el
+    // S&P y sus únicos cruces sin noticia son de la resaca de las puntocom.
+    expect(ACTIVOS_SIN_VOTO.has('NQ=F')).toBe(true)
+    expect(huboMovimiento([veces('NQ=F', 3)])).toBe(false)
+  })
+
+  it('el activo sin voto tampoco tapa el movimiento de los que sí votan', () => {
+    // Excluirlo no puede volverse en contra: si otro cruza, sigue contando.
+    expect(huboMovimiento([
+      veces('NQ=F', 3),
+      veces('ES=F', 1.2),
+    ])).toBe(true)
+  })
+
+  it('el activo sin voto conserva su umbral, que se sigue enseñando', () => {
+    // Se mide y se publica; lo que pierde es el voto, no la ficha.
+    expect(UMBRAL_MATERIAL['NQ=F']).toBeGreaterThan(0)
   })
 
   it('en el VIX solo cuenta la subida: es un índice de miedo', () => {

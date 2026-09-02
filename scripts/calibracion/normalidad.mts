@@ -1,20 +1,30 @@
 /**
  * Cómo es un día normal, y a qué distancia queda del umbral de un evento.
  *
- * La línea base dice que el 25% de las fechas al azar «mueven el precio». Es la
- * cifra que da sentido a la curva, pero por sí sola no explica nada: no dice
- * cuánto se mueve un activo cuando no pasa nada, ni cuál de los ocho es el que
- * produce ese 25%. Sin eso no se puede saber si un umbral está bien puesto o si
- * hay un activo saltando por su cuenta.
+ * La línea base dice qué proporción de las fechas al azar «mueven el precio». Es
+ * la cifra que da sentido a la curva, pero por sí sola no explica nada: no dice
+ * cuánto se mueve un activo cuando no pasa nada, ni cuál de ellos la produce.
+ * Sin eso no se puede saber si un umbral está bien puesto o si hay un activo
+ * saltando por su cuenta.
  *
- * Este script enseña la distribución de la que sale ese 25%, activo por activo,
- * y la pone al lado de la de los hechos curados. Las dos columnas que importan:
+ * Este script enseña la distribución de la que sale esa cifra, activo por
+ * activo, y la pone al lado de la de los hechos curados. Las columnas que
+ * importan:
  *
  *  - **umbral / mediana**: cuántas veces el día corriente hay que multiplicar
  *    para llegar al umbral. Cuanto más alto, más raro es que salte por azar.
- *  - **cruces**: veces que el activo superó su umbral SIN que hubiera hecho
- *    detrás. Un activo con muchos cruces aquí está metiendo ruido en el
- *    veredicto, porque `huboMovimiento` basta con que uno cruce.
+ *  - **cruza**: veces que el activo superó su umbral sin hecho detrás, frente a
+ *    veces que lo superó con uno.
+ *  - **separación**: la diferencia entre esas dos tasas.
+ *
+ * ⚠️ **La separación no basta para decidir quitar un activo.** Como la regla es
+ * «basta que uno cruce», lo que decide es la aportación marginal: cuánto cambia
+ * el criterio COMPLETO al retirarlo. El oro separa poco por su cuenta (+9
+ * puntos) y aun así quitarlo no cambia ni una fila, porque nunca cruza solo;
+ * el Nasdaq separaba más (+15) y sí estropeaba el veredicto, porque sus cruces
+ * eran los únicos de esas fechas. Para medirlo hay que comparar la separación
+ * de la cesta con y sin el activo, y remuestrear para ver si la diferencia
+ * aguanta. Así se excluyó el Nasdaq el 2026-09-03.
  *
  * Solo lee. No escribe en la base: el perfil es derivado de
  * `severity_event_moves`, que ya está cargado, y recalcularlo es instantáneo.
@@ -83,10 +93,10 @@ async function main(): Promise<void> {
   console.log(`\nEL DÍA NORMAL, ACTIVO POR ACTIVO  ·  ventana de ${VENTANA_JUICIO} sesiones`)
   console.log('Desplazamiento máximo dentro de la ventana. En el VIX solo cuenta la subida.\n')
 
-  console.log('                    ─────── fechas al azar ───────   ─── hechos curados ───')
+  console.log('                       ─────── fechas al azar ───────   ── hechos curados ──')
   console.log('  activo      umbral  mediana    p90     max    cruza   mediana    cruza   separación')
   for (const p of perfil) {
-    const etiqueta = (ETIQUETA_TICKER[p.ticker] ?? p.ticker).padEnd(9)
+    const etiqueta = ((ETIQUETA_TICKER[p.ticker] ?? p.ticker) + (p.vota ? '' : ' *')).padEnd(9)
     const tasa = (cruces: number, n: number) => (n ? `${cruces}/${n}` : '—').padStart(7)
     console.log(
       `  ${etiqueta} ${pct(p.umbral, 0).padStart(6)}`
@@ -99,9 +109,18 @@ async function main(): Promise<void> {
       + `   ${p.separacion == null ? '—' : `${p.separacion >= 0 ? '+' : ''}${(p.separacion * 100).toFixed(0)} pts`}`,
     )
   }
+  const sinVoto = perfil.filter((p) => !p.vota)
   console.log('')
-  console.log('«separación» = cuánto más cruza el umbral con noticia que sin ella. Es la')
-  console.log('columna que dice si el activo sirve: cerca de cero, solo añade ruido.')
+  if (sinVoto.length) {
+    console.log(`(*) ${sinVoto.map((p) => ETIQUETA_TICKER[p.ticker] ?? p.ticker).join(', ')}`
+      + ' se mide y se enseña pero NO cuenta para el veredicto.')
+    console.log('    Ver ACTIVOS_SIN_VOTO en calibracion.ts para el porqué de cada uno.')
+    console.log('')
+  }
+  console.log('«separación» = cuánto más cruza el umbral con noticia que sin ella. Dice si el')
+  console.log('activo distingue, pero NO basta para decidir quitarlo: bajo la regla «basta que')
+  console.log('uno cruce» lo que decide es la aportación marginal. El oro separa poco (+9 pts)')
+  console.log('y aun así quitarlo no cambia ni una fila, porque nunca cruza solo.')
   console.log('«umbral/mediana»:')
   console.log('  ' + perfil
     .map((p) => `${ETIQUETA_TICKER[p.ticker] ?? p.ticker} ${p.vecesLaMediana == null ? '—' : `×${p.vecesLaMediana.toFixed(1)}`}`)
@@ -109,11 +128,12 @@ async function main(): Promise<void> {
 
   // Lo que de verdad se busca aquí: quién produce la línea base. Si un solo
   // activo aporta la mayoría de los cruces, el veredicto depende de él.
-  const totalCruces = perfil.reduce((a, p) => a + p.cruces, 0)
+  const votantes = perfil.filter((p) => p.vota)
+  const totalCruces = votantes.reduce((a, p) => a + p.cruces, 0)
   console.log('')
   if (totalCruces) {
     console.log('QUIÉN PRODUCE LA LÍNEA BASE')
-    for (const p of perfil.filter((x) => x.cruces)) {
+    for (const p of votantes.filter((x) => x.cruces)) {
       const cuota = p.cruces / totalCruces
       console.log(
         `  ${(ETIQUETA_TICKER[p.ticker] ?? p.ticker).padEnd(9)}`
@@ -127,7 +147,7 @@ async function main(): Promise<void> {
 
   // Se compara en tasa, no en cuenta: los dos grupos tienen tamaños distintos y
   // contar cruces a secas haría parecer ruidoso al que más fechas tiene.
-  const flojos = perfil.filter((p) => p.separacion != null && p.separacion < 0.10 && p.n >= 20)
+  const flojos = votantes.filter((p) => p.separacion != null && p.separacion < 0.10 && p.n >= 20)
   if (flojos.length) {
     console.log('')
     console.log('⚠️  ACTIVOS QUE APENAS DISTINGUEN UNA NOTICIA DE UN MARTES CUALQUIERA:')
@@ -139,8 +159,8 @@ async function main(): Promise<void> {
         + `  (separación ${((p.separacion as number) * 100).toFixed(0)} pts).`,
       )
     }
-    console.log('   Como `huboMovimiento` basta con que UNO cruce, un activo así arrastra')
-    console.log('   el veredicto de todo el corpus sin aportar información.')
+    console.log('   Antes de quitar ninguno hay que medir su aportación marginal: un activo')
+    console.log('   que nunca cruza solo no estropea nada aunque separe poco.')
   }
 
   console.log('')

@@ -173,6 +173,7 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
             <thead>
               <tr className="border-b border-border-subtle">
                 <Th>Activo</Th>
+                <Th>Vota</Th>
                 <Th alinear="right">Umbral</Th>
                 <Th alinear="right">Mediana</Th>
                 <Th alinear="right">p90</Th>
@@ -185,8 +186,13 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
             </thead>
             <tbody>
               {perfil.map((p) => (
-                <tr key={p.ticker} className="border-b border-border-subtle/60">
+                <tr key={p.ticker} className={`border-b border-border-subtle/60 ${p.vota ? '' : 'opacity-55'}`}>
                   <Td mono>{ETIQUETA_TICKER[p.ticker] ?? p.ticker}</Td>
+                  <Td mono>
+                    {p.vota
+                      ? <span className="text-text-secondary">sí</span>
+                      : <span className="text-text-muted">no cuenta</span>}
+                  </Td>
                   <Td alinear="right" mono>{pctPlano(p.umbral, 0)}</Td>
                   <Td alinear="right" mono>{pctPlano(p.p50)}</Td>
                   <Td alinear="right" mono>{pctPlano(p.p90)}</Td>
@@ -219,7 +225,13 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
           umbral con noticia que sin ella, y es la única columna que dice si el activo sirve: se
           compara en tasa y no en cuenta porque los dos grupos no tienen el mismo tamaño. Un activo
           cerca de cero cruza igual pase o no pase algo y, como basta con que <strong>uno</strong>{' '}
-          cruce para dar por movido el precio, arrastra el veredicto sin aportar información.
+          cruce para dar por movido el precio, arrastra el veredicto sin aportar información. Los
+          activos marcados «no cuenta» se siguen midiendo y enseñando, pero no deciden: el Nasdaq
+          salió del veredicto el 2026-09-03 porque correlaciona 0,82 con el S&amp;P —es el mismo
+          índice contado dos veces— y sus únicos cruces sin noticia son de 2002 y 2003, la resaca
+          de las puntocom. La decisión de quitar un activo no se toma con esta columna sino con su
+          aportación al criterio completo: el oro y el dólar separan poco por su cuenta y aun así
+          se quedan, porque nunca cruzan solos y retirarlos no cambiaría ni una fila.
         </NotaPie>
       </Panel>
 

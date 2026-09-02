@@ -125,7 +125,10 @@ corriente del umbral de un evento. Sobre 60 fechas de control y 32 hechos:
 | S&P 500 |  5% | 2,1% |  4,1% | 11,6% | 2/60 | 8/32 | **+22 pts** |
 | WTI     | 12% | 4,7% |  9,8% | 31,4% | 3/60 | 8/32 | **+20 pts** |
 | Bitcoin | 16% | 7,0% | 16,1% | 20,9% | 3/24 | 7/25 | +16 pts |
-| Nasdaq  |  6% | 2,7% |  5,9% |  9,3% | 6/60 | 8/32 | +15 pts |
+| Nasdaq *|  6% | 2,7% |  5,9% |  9,3% | 6/60 | 8/32 | +15 pts |
+
+`*` El Nasdaq se mide y se enseña, pero **no vota** en el veredicto desde el
+2026-09-03. Ver «La revisión de la cesta».
 | Plata   | 10% | 3,2% |  6,8% |  9,6% | 0/60 | 4/32 | +13 pts |
 | Oro     |  6% | 2,1% |  4,0% |  6,8% | 2/60 | 4/32 | +9 pts |
 | VIX     | 40% | 9,9% | 26,0% | 50,8% | 4/60 | 5/32 | +9 pts |
@@ -134,16 +137,68 @@ corriente del umbral de un evento. Sobre 60 fechas de control y 32 hechos:
 «Separación» es cuánto más cruza el umbral con noticia que sin ella. Se compara
 en tasa y no en cuenta porque los grupos no tienen el mismo tamaño.
 
-**Lo que enseña esta tabla es incómodo: el oro y el VIX son los que peor
-distinguen** (+9 pts cada uno), y son justo los dos que el prompt cita en todos
-sus precedentes. El VIX llega a subir un 50,8% en una fecha sin nada detrás,
-por encima de su propio umbral del 40%. El que mejor separa es el S&P 500, que
-no aparece en ningún ancla del prompt.
+El oro y el VIX son los que peor distinguen (+9 pts cada uno), y son justo los
+dos que el prompt cita en todos sus precedentes. El VIX llega a subir un 50,8%
+en una fecha sin nada detrás, por encima de su propio umbral del 40%. El que
+mejor separa es el S&P 500, que no aparece en ningún ancla del prompt.
 
 La columna «umbral/mediana» dice lo raro que es que un activo salte por
 casualidad: entre ×2,2 (Nasdaq) y ×4,0 (VIX). Ninguno llega a ×5, lo que
 significa que **la cesta entera está calibrada apretada** y que un puñado de
 fechas al azar cruzan igual.
+
+**Aviso de lectura: esta columna no basta para decidir quitar un activo.** Ver
+la sección siguiente, que es donde está el criterio correcto.
+
+### La revisión de la cesta
+
+Como la regla es «basta que uno cruce», la separación individual **no** es el
+criterio para retirar un activo: lo que decide es la **aportación marginal**,
+es decir cuánto cambia el criterio completo al quitarlo. Los dos números no
+coinciden, y confundirlos lleva a quitar justo lo que no molesta.
+
+| Quitar | Δ separación de la cesta | Sale positivo en… | IC 90% |
+| ------ | -----------------------: | ----------------: | ------ |
+| **Nasdaq**  | **+5 pts** | **96%** de los remuestreos | [2, 10] |
+| VIX         | +4 pts | 80% | [−4, 10] |
+| Nasdaq+VIX  | +9 pts | 96% | [0, 17] |
+| Oro         |  0 pts | 0% | [0, 0] |
+
+**Se retiró el Nasdaq** (2026-09-03). Tiene respaldo estadístico —la mejora
+excluye el cero— y una razón estructural que pesa más: correlaciona **0,82** con
+el S&P en el grupo de control, o sea que no es un activo distinto sino el mismo
+índice de renta variable contado dos veces. Y es el más volátil de los dos
+(mediana 2,7% contra 2,1%) con un umbral casi igual (6% contra 5%), así que
+cruza cuando el S&P no llega. Sus tres cruces en solitario del control son de
+**2002 y 2003**: la resaca de las puntocom, con el Nasdaq entre el 6,5% y el
+8,1% mientras el S&P no pasaba del 3,7%. Nada que ver con un evento.
+
+**No se retiraron**, pese a separar poco:
+
+- **El oro y el dólar.** Su aportación marginal es exactamente cero: nunca
+  cruzan solos, así que retirarlos no cambiaría ni una fila. Salen gratis, y el
+  oro es además el activo que la mesa cubre.
+- **El VIX.** Retirarlo mejoraría el criterio en 4 puntos, pero la mejora no
+  aguanta el remuestreo: aparece en el 80% de los bootstraps y su intervalo
+  incluye el cero. Con 60 fechas de control no hay muestra para justificarlo.
+
+**No se persiguió el óptimo.** Una búsqueda exhaustiva sobre las 255 cestas
+posibles da un máximo de 34 puntos con `{plata, bitcoin, WTI, dólar}`, pero
+elegir el argmax de 255 opciones sobre 60+32 observaciones es sobreajuste de
+manual: las diez mejores están dentro del ruido unas de otras, y esa cesta
+excluiría el oro, el VIX y el S&P, que es absurdo para una mesa de coberturas.
+
+Efecto de la retirada: la línea base baja del **25% al 20%** y la curva no se
+mueve —`guerra` 2/5 sigue traduciéndose a 1/5—, que es justo lo que se quiere:
+un denominador más limpio sin tocar el veredicto de los peldaños.
+
+**Problema abierto: la cobertura de Bitcoin es asimétrica.** Existe en el 78%
+de los hechos curados pero solo en el 40% de las fechas de control, porque no
+cotiza antes de 2014. Como solo puede sumar cruces donde existe, y existe más
+en el grupo de los hechos, **infla la separación medida por pura
+disponibilidad**. Su aportación marginal sale positiva, pero parte de eso es
+artefacto. No se ha tocado porque corregirlo bien pide restringir la comparación
+a fechas donde todos los activos existen, y eso deja el control en 24.
 
 ### Lo que la cesta no ve
 
@@ -158,16 +213,16 @@ nada que ver con el hecho: Skripal (−18,7%, invierno cripto de 2018) y Kursk
 
 ### La curva vigente
 
-Con `v6-corpus-reetiquetado`, línea base del 25%:
+Con `v6-corpus-reetiquetado` y la cesta de siete activos, línea base del **20%**:
 
 | Tema | Peldaño LLM | n | P(mov) | Lift | → Final |
 | ---- | ----------- | -: | -----: | ---: | ------: |
 | guerra | 2/5 | 11 |  18% |   0% | **1/5** |
-| guerra | 4/5 |  3 |  67% |  56% | 3/5 |
+| guerra | 4/5 |  3 |  67% |  58% | 3/5 |
 | guerra | 5/5 |  1 | 100% | 100% | 5/5 |
-| fed_tesoro | 2/5 | 3 |  67% |  56% | 3/5 |
+| fed_tesoro | 2/5 | 3 |  67% |  58% | 3/5 |
 | fed_tesoro | 3/5 | 1 |   0% |   0% | 3/5 |
-| fed_tesoro | 4/5 | 4 |  25% |   0% | 3/5 |
+| fed_tesoro | 4/5 | 4 |  25% |   6% | 3/5 |
 | fed_tesoro | 5/5 | 5 | 100% | 100% | 5/5 |
 
 La curva se fuerza monótona: un peldaño más alto del LLM nunca puede acabar
@@ -259,10 +314,14 @@ Dos gotchas que cuestan tiempo si no se saben:
   solo. Ampliar da menos de lo que parece: el clasificador concentra sus
   respuestas en el 2 y el 5, así que para llenar los huecos hacen falta hechos
   que **el modelo** puntúe ahí, no que lo merezcan.
-- **Revisar la cesta de activos.** El oro y el VIX apenas separan (+9 pts), y
-  son los que el prompt usa como ancla en todos sus precedentes. Bitcoin cruza
-  su umbral por motivos suyos. Y ni el gas europeo ni el trigo están, que es por
-  lo que Nord Stream y Crimea salen como «no movió».
+- ~~**Revisar la cesta de activos**~~ — **hecho el 2026-09-03**: fuera el
+  Nasdaq. Queda abierto lo que no se pudo cerrar con esta muestra:
+  - **El VIX.** Retirarlo mejoraría el criterio en 4 puntos, pero el intervalo
+    incluye el cero. Se decide cuando el control pase de 60 fechas.
+  - **La cobertura asimétrica de Bitcoin** (78% de los hechos contra 40% del
+    control): infla la separación por disponibilidad, no por señal.
+  - **Faltan el gas europeo y el trigo**, que es por lo que Nord Stream y Crimea
+    salen como «no movió» pese a haber movido su mercado.
 - **Revisar los umbrales.** Se eligieron comparando siete criterios sobre los
   mismos 60 días de control y 27 eventos, así que parte de su ventaja es
   sobreajuste; tres de los siete quedaron empatados dentro del ruido. El caso a

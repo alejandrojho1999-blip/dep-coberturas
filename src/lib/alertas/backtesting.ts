@@ -13,6 +13,7 @@
  */
 
 import {
+  ACTIVOS_SIN_VOTO,
   huboMovimiento,
   magnitudComparable,
   UMBRAL_MATERIAL,
@@ -219,6 +220,13 @@ export interface PerfilActivo {
   ticker: string
   /** El umbral a partir del cual el movimiento se considera material. */
   umbral: number
+  /**
+   * Si el activo cuenta para decidir que el precio se movió.
+   *
+   * Los que no votan se siguen midiendo y enseñando: el dato ayuda a leer un
+   * evento aunque no participe en el veredicto.
+   */
+  vota: boolean
   /** Mediciones válidas del activo en el grupo de control. */
   n: number
   /** Mediana del desplazamiento en una fecha sin hecho detrás. */
@@ -284,6 +292,7 @@ export function perfilNormalidad(eventos: readonly EventoMedido[]): PerfilActivo
       return {
         ticker,
         umbral,
+        vota: !ACTIVOS_SIN_VOTO.has(ticker),
         n: normales.length,
         p50,
         p90: percentil(normales, 0.9),
@@ -300,9 +309,10 @@ export function perfilNormalidad(eventos: readonly EventoMedido[]): PerfilActivo
           : null,
       }
     })
-    // Por poder discriminante: arriba el activo que más distingue una noticia de
-    // un martes cualquiera, que es el orden en el que interesa leerlos.
-    .sort((a, b) => (b.separacion ?? -Infinity) - (a.separacion ?? -Infinity)
+    // Los que votan primero y, dentro de cada grupo, por poder discriminante:
+    // arriba el activo que más distingue una noticia de un martes cualquiera.
+    .sort((a, b) => Number(b.vota) - Number(a.vota)
+      || (b.separacion ?? -Infinity) - (a.separacion ?? -Infinity)
       || a.ticker.localeCompare(b.ticker))
 }
 

@@ -105,14 +105,26 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   sobre el gas europeo y el trigo, que no se miden. Se quedan en severidad 4 a
   propósito: el efecto existió, lo que falla es el instrumento. Si alguna vez se
   amplía la cesta, estos dos son la prueba.
-- **La cesta de activos necesita revisión, y ahora hay con qué.**
-  `npm run calibracion:normalidad` mide cuánto separa cada activo una noticia de
-  un martes cualquiera. El resultado incomoda: **el oro y el VIX son los que
-  peor distinguen** (+9 pts cada uno) y son justo los dos que el prompt cita en
-  todos sus precedentes. El VIX llega a subir un 50,8% en una fecha sin nada
-  detrás, por encima de su umbral del 40%. El que mejor separa es el **S&P 500**
-  (+22 pts), que no aparece en ningún ancla del prompt. Y ningún activo tiene el
-  umbral a más de ×4 de su mediana normal: la cesta entera está apretada.
+- ~~**La cesta de activos necesita revisión**~~ — **revisada el 2026-09-03**:
+  fuera el Nasdaq. Ver la entrada de la sesión. Lo que queda abierto:
+  - **El VIX.** Retirarlo mejoraría el criterio en 4 puntos, pero la mejora solo
+    sale en el 80% de los remuestreos y su intervalo del 90% incluye el cero. Se
+    decide cuando el grupo de control pase de 60 fechas.
+  - **La cobertura de Bitcoin es asimétrica**: existe en el 78% de los hechos
+    curados y solo en el 40% del control, porque no cotiza antes de 2014. Como
+    solo puede sumar cruces donde existe, infla la separación por disponibilidad
+    y no por señal. Corregirlo bien pide comparar solo fechas donde todos los
+    activos existen, y eso deja el control en 24.
+  - **Faltan el gas europeo y el trigo.** Es por lo que Nord Stream y Crimea
+    salen como «no movió» pese a haber movido su mercado.
+- **La separación individual no es criterio para quitar un activo, y por poco me
+  lleva a quitar el que no era.**
+  Bajo la regla «basta que uno cruce», lo que decide es la **aportación
+  marginal**: cuánto cambia el criterio completo al retirarlo. El oro separa
+  poco (+9 pts) pero **nunca cruza solo**, así que quitarlo no cambia ni una
+  fila. El Nasdaq separaba más (+15) y sí estropeaba el veredicto, porque sus
+  cruces eran los únicos de esas fechas. Está avisado en el docstring de
+  `normalidad.mts` y en la nota al pie de la ficha.
 - **`BTC-USD` mete ruido en el criterio de movimiento.** Es el único activo que
   cruza el umbral en dos de los tres casos raros: Skripal (-18,7%, en pleno
   invierno cripto de 2018) y Kursk (+16,1%, con el VIX cayendo un 51%). Ninguno
@@ -425,6 +437,59 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — la cesta pierde el Nasdaq, y el criterio para quitarlo no era el que parecía
+
+La sesión anterior dejó señalados el oro y el VIX como «los que peor
+distinguen» (+9 puntos cada uno). **Era la métrica equivocada.** Bajo la regla
+«basta que uno cruce», la separación individual no dice si un activo estorba:
+lo que decide es la **aportación marginal**, o sea cuánto cambia el criterio
+completo al retirarlo. Medidas las dos cosas, el cuadro se da la vuelta:
+
+| Quitar | Δ separación | Sale positivo en… | IC 90% |
+| ------ | -----------: | ----------------: | ------ |
+| **Nasdaq** | **+5 pts** | **96%** de remuestreos | [2, 10] |
+| VIX | +4 pts | 80% | [−4, 10] |
+| Oro | 0 pts | 0% | [0, 0] |
+
+**El oro no era el problema: nunca cruza solo.** Quitarlo no cambia ni una fila,
+en el 100% de los remuestreos. El que sí degradaba el veredicto era el Nasdaq.
+
+**Se retiró el Nasdaq**, y la razón estructural pesa más que la estadística:
+correlaciona **0,82** con el S&P en el control, así que no es un activo distinto
+sino el mismo índice de renta variable contado dos veces. Es el más volátil de
+los dos (mediana 2,7% contra 2,1%) con un umbral casi igual (6% contra 5%), de
+modo que cruza cuando el S&P no llega. Sus tres cruces en solitario del control
+son de **2002 y 2003** —la resaca de las puntocom, Nasdaq entre 6,5% y 8,1%
+mientras el S&P no pasaba del 3,7%—: ruido de una época, no reacción a nada.
+
+**Lo que no se hizo, y por qué:**
+
+- **El VIX se queda.** Retirarlo daría +4 puntos, pero solo aparece en el 80% de
+  los remuestreos y su intervalo incluye el cero. Con 60 fechas de control no
+  hay muestra para justificarlo.
+- **No se persiguió el óptimo.** La búsqueda exhaustiva sobre las 255 cestas da
+  un máximo de 34 puntos con `{plata, bitcoin, WTI, dólar}`, pero elegir el
+  argmax de 255 sobre 60+32 observaciones es sobreajuste de manual, y esa cesta
+  excluiría el oro, el VIX y el S&P: absurdo para una mesa de coberturas.
+
+**Cómo quedó implementado.** `ACTIVOS_SIN_VOTO` en `calibracion.ts`, con el
+razonamiento completo en el docstring. El activo **se sigue midiendo y
+enseñando** —el dato ayuda a leer un evento— pero no vota: `UMBRAL_MATERIAL` y
+`TICKERS_MEDIDOS` no se tocan. La ficha lo enseña con una columna «Vota» y la
+fila atenuada, para que la exclusión se vea en vez de quedar escondida.
+
+**Efecto:** la línea base baja del 25% al **20%** y la curva no se mueve
+—`guerra` 2/5 sigue traduciéndose a 1/5—, que es justo lo buscado: denominador
+más limpio sin tocar el veredicto.
+
+**Hallazgo nuevo, anotado y sin resolver:** la cobertura de Bitcoin es
+asimétrica —78% de los hechos curados contra 40% del control, porque no cotiza
+antes de 2014—. Como solo puede sumar cruces donde existe, infla la separación
+por disponibilidad y no por señal.
+
+Verde: 976/976 tests (3 nuevos sobre la exclusión), `tsc`, `eslint` y `build`
+limpios.
 
 ### Sesión del 2026-09-03 — el backtesting describe el día normal, y la cesta sale señalada
 
