@@ -35,14 +35,14 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 
 ## Pendiente
 
-### Tesis de inversión — falta aplicar la migración 026
+### Tesis de inversión
 
-- **Aplicar `supabase/migrations/026_informe_adjuntos.sql` a mano** desde el
-  panel de Supabase. Crea la tabla `informe_adjuntos`, el bucket privado
-  `informe-adjuntos` (10 MB por archivo, seis MIME permitidos) y sus políticas.
-  Hasta entonces el botón «Adjuntar fuentes» falla al subir; el resto de
-  `/recomendaciones` funciona igual que siempre, porque sin lote el generador
-  cae exactamente en el camino de antes.
+> La migración 026 **ya está aplicada**, verificada el 2026-09-02 contra la API
+> real: tabla `informe_adjuntos` con sus 12 columnas, RLS activa con la política
+> `FOR ALL`, y bucket `informe-adjuntos` privado con `file_size_limit`
+> 10485760 y los seis MIME esperados, más sus cuatro políticas de
+> `storage.objects`. «Adjuntar fuentes» ya puede subir.
+
 - **Comprobar `pdf-parse` en producción.** Es la primera vez que se ejecuta de
   verdad: el código heredado llamaba al módulo como si fuera una función, que
   es la API de la versión 1, y la 2 exporta una clase. Está corregido y
@@ -52,11 +52,13 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   con `informe_id NULL`. No molestan; convendría una limpieza de los que pasen
   de una semana.
 
-### Calibración de severidad — falta aplicar la migración 025
+### Calibración de severidad
 
-- **Aplicar `supabase/migrations/025_calibracion_severidad.sql` a mano** desde el
-  panel de Supabase: el MCP conectado no tiene este proyecto. Hasta entonces
-  `npm run calibracion:cargar` falla, y falla diciendo exactamente eso.
+> La migración 025 **ya está aplicada**, verificada el 2026-09-02: las cuatro
+> tablas `severity_*` existen con sus columnas y con RLS activa sin políticas
+> públicas, tal y como se diseñaron. `npm run calibracion:cargar` ya tiene
+> dónde escribir.
+
 - **La curva numérica sigue vacía.** `severity_calibration` necesita antes
   reejecutar el prompt nuevo sobre el corpus y guardarlo en
   `severity_llm_replay`. Con 27 eventos la curva sería ruido.
@@ -389,7 +391,7 @@ no fiarse del modelo:
 | `npm run test:run` | **894/894** (67 ficheros) |
 | `npm run build` | exit 0 |
 
-Queda aplicar la migración 026 a mano; hasta entonces todo lo demás funciona.
+Las migraciones 025 y 026 se aplicaron y verificaron el 2026-09-02.
 
 ### Sesión del 2026-09-02 (cierre) — la cobertura de las calls deja de ser una convención
 
