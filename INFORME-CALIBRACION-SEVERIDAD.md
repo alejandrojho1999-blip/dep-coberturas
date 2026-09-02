@@ -118,112 +118,133 @@ criterio estaba saturado —si casi cualquier semana cuenta como movimiento,
 ### El día normal, activo por activo
 
 `calibracion:normalidad` es lo que permite ver a qué distancia queda una sesión
-corriente del umbral de un evento. Sobre 60 fechas de control y 32 hechos:
+corriente del umbral de un evento. Sobre 60 fechas de control **emparejadas por
+época** y 32 hechos:
 
 | Activo | Umbral | Mediana normal | p90 | Máx | Cruza sin noticia | Cruza con noticia | Separación |
 | ------ | -----: | -------------: | --: | --: | ----------------: | ----------------: | ---------: |
-| S&P 500 |  5% | 2,1% |  4,1% | 11,6% | 2/60 | 8/32 | **+22 pts** |
-| WTI     | 12% | 4,7% |  9,8% | 31,4% | 3/60 | 8/32 | **+20 pts** |
-| Bitcoin | 16% | 7,0% | 16,1% | 20,9% | 3/24 | 7/25 | +16 pts |
-| Nasdaq *|  6% | 2,7% |  5,9% |  9,3% | 6/60 | 8/32 | +15 pts |
-
-`*` El Nasdaq se mide y se enseña, pero **no vota** en el veredicto desde el
-2026-09-03. Ver «La revisión de la cesta».
-| Plata   | 10% | 3,2% |  6,8% |  9,6% | 0/60 | 4/32 | +13 pts |
-| Oro     |  6% | 2,1% |  4,0% |  6,8% | 2/60 | 4/32 | +9 pts |
-| VIX     | 40% | 9,9% | 26,0% | 50,8% | 4/60 | 5/32 | +9 pts |
-| Dólar   |  3% | 1,2% |  1,9% |  3,1% | 1/60 | 2/32 | +5 pts |
+| WTI     | 12% | 4,9% |  9,8% |  22,9% | 4/60 | 8/32 | **+18 pts** |
+| Bitcoin | 16% | 6,2% | 18,2% |  20,8% | 7/47 | 7/25 | +13 pts |
+| S&P 500 |  5% | 2,4% |  5,3% |   9,5% | 8/60 | 8/32 | +12 pts |
+| Nasdaq  |  6% | 2,9% |  7,1% |  12,1% | 8/60 | 8/32 | +12 pts |
+| VIX     | 40% | 8,8% | 31,4% | 102,9% | 4/60 | 5/32 | +9 pts |
+| Dólar   |  3% | 1,0% |  1,7% |   2,5% | 0/60 | 2/32 | +6 pts |
+| Oro     |  6% | 2,0% |  5,6% |  17,9% | 4/60 | 4/32 | +6 pts |
+| Plata   | 10% | 3,1% |  7,8% |  23,9% | 4/60 | 4/32 | +6 pts |
 
 «Separación» es cuánto más cruza el umbral con noticia que sin ella. Se compara
 en tasa y no en cuenta porque los grupos no tienen el mismo tamaño.
 
-El oro y el VIX son los que peor distinguen (+9 pts cada uno), y son justo los
-dos que el prompt cita en todos sus precedentes. El VIX llega a subir un 50,8%
-en una fecha sin nada detrás, por encima de su propio umbral del 40%. El que
-mejor separa es el S&P 500, que no aparece en ningún ancla del prompt.
+Ningún activo separa mucho, y el mejor es el **WTI**, no los dos que el prompt
+usa como ancla en todos sus precedentes: el oro se queda en +6 puntos y el VIX
+en +9. La columna «umbral/mediana» dice lo raro que es que un activo salte por
+casualidad, y ninguno pasa de ×4,5: **la cesta entera está calibrada apretada**,
+que es lo que explica una línea base tan alta.
 
-La columna «umbral/mediana» dice lo raro que es que un activo salte por
-casualidad: entre ×2,2 (Nasdaq) y ×4,0 (VIX). Ninguno llega a ×5, lo que
-significa que **la cesta entera está calibrada apretada** y que un puñado de
-fechas al azar cruzan igual.
+El VIX llega a un máximo del **102,9%** en una fecha de control sin nada detrás,
+más del doble de su umbral. Es la señal más clara de que su umbral del 40% no
+está capturando lo que se pensaba.
 
 **Aviso de lectura: esta columna no basta para decidir quitar un activo.** Ver
 la sección siguiente, que es donde está el criterio correcto.
 
+### El grupo de control tiene que cubrir las mismas épocas que el corpus
+
+Es la corrección más importante de todas y se descubrió tirando del hilo de un
+detalle: **Bitcoin cotizaba en el 78% de los hechos curados y solo en el 40% de
+las fechas de control.** Como la regla es «basta que uno cruce», un activo solo
+puede sumar cruces donde existe, así que el corpus tenía más oportunidades de
+cruzar que su propio denominador y la separación salía inflada por
+disponibilidad, no por señal.
+
+La causa no era Bitcoin. El muestreo del control era uniforme desde 2001,
+mientras que el corpus se concentra en los 2020:
+
+| Década | Control (antes) | Corpus |
+| ------ | --------------: | -----: |
+| 2000s  | 42% |  9% |
+| 2010s  | 38% | 19% |
+| 2020s  | 20% | **72%** |
+
+La mediana del control caía en **2010** y la del corpus en **2022**: se estaba
+comparando un evento reciente contra un día normal de otra década, con otro
+régimen de volatilidad y con activos que ni existían.
+
+**El arreglo** (`placebo.mts`): cada evento aporta sus propias fechas de
+control, tomadas de su mismo periodo —el mismo año, ensanchando la ventana solo
+si el veto por cercanía ha dejado ese año sin candidatas—. Después:
+
+| | Control | Corpus |
+| --- | ---: | ---: |
+| 2020s | 68% | 72% |
+| Cobertura de Bitcoin | **78%** | **78%** |
+| Mediana | 2022-07-12 | 2022-09-26 |
+
+El script imprime las dos medianas al terminar, para que el emparejamiento se
+compruebe y no se suponga.
+
+**Consecuencia incómoda: la línea base sube del 20% al 36,7%.** Un día normal de
+los 2020 mueve el precio mucho más a menudo que uno de los 2000, y la cifra
+anterior estaba midiendo la década equivocada. Con el denominador correcto, la
+separación agregada del corpus cae de 22 a **10 puntos**, con un intervalo del
+90% de [−8, 28] que incluye el cero: **el corpus entero, tomado en bloque,
+apenas se distingue de un día cualquiera.** Lo que sí sobrevive es el patrón por
+peldaño, que es lo que la curva usa —el 2/5 se queda por debajo de la base y el
+4/5 y el 5/5 muy por encima—.
+
 ### La revisión de la cesta
 
 Como la regla es «basta que uno cruce», la separación individual **no** es el
-criterio para retirar un activo: lo que decide es la **aportación marginal**,
-es decir cuánto cambia el criterio completo al quitarlo. Los dos números no
-coinciden, y confundirlos lleva a quitar justo lo que no molesta.
+criterio para retirar un activo: lo que decide es la **aportación marginal**, es
+decir cuánto cambia el criterio completo al quitarlo.
 
-| Quitar | Δ separación de la cesta | Sale positivo en… | IC 90% |
-| ------ | -----------------------: | ----------------: | ------ |
-| **Nasdaq**  | **+5 pts** | **96%** de los remuestreos | [2, 10] |
-| VIX         | +4 pts | 80% | [−4, 10] |
-| Nasdaq+VIX  | +9 pts | 96% | [0, 17] |
-| Oro         |  0 pts | 0% | [0, 0] |
+**Ahora mismo no hay ningún activo excluido**, y merece contarse por qué, porque
+el camino equivocado parecía muy convincente. El 2026-09-03 se excluyó el Nasdaq
+con esta prueba: quitarlo subía la separación de 22 a 27 puntos, la mejora salía
+en el 96% de los remuestreos con un intervalo que no tocaba el cero, y encima
+había un motivo estructural —correlaciona 0,82 con el S&P, o sea que es el mismo
+índice de renta variable contado dos veces—. Sus únicos cruces en solitario del
+control eran tres, y los tres de 2002 y 2003.
 
-**Se retiró el Nasdaq** (2026-09-03). Tiene respaldo estadístico —la mejora
-excluye el cero— y una razón estructural que pesa más: correlaciona **0,82** con
-el S&P en el grupo de control, o sea que no es un activo distinto sino el mismo
-índice de renta variable contado dos veces. Y es el más volátil de los dos
-(mediana 2,7% contra 2,1%) con un umbral casi igual (6% contra 5%), así que
-cruza cuando el S&P no llega. Sus tres cruces en solitario del control son de
-**2002 y 2003**: la resaca de las puntocom, con el Nasdaq entre el 6,5% y el
-8,1% mientras el S&P no pasaba del 3,7%. Nada que ver con un evento.
+Esas tres fechas eran el problema, y no por el Nasdaq: estaban en el control
+porque el muestreo no estaba emparejado por época. Al arreglarlo desaparecieron,
+y con ellas toda la ventaja de quitarlo: **de +5 puntos a +0, en el 0% de los
+remuestreos.** El Nasdaq volvió al veredicto el mismo día.
 
-**No se retiraron**, pese a separar poco:
+La lección queda escrita en el docstring de `ACTIVOS_SIN_VOTO`, que es donde la
+buscará quien vuelva a plantearlo: **antes de culpar a un activo, comprobar que
+el denominador es comparable.** Un control que no cubre las mismas épocas que el
+corpus fabrica culpables.
 
-- **El oro y el dólar.** Su aportación marginal es exactamente cero: nunca
-  cruzan solos, así que retirarlos no cambiaría ni una fila. Salen gratis, y el
-  oro es además el activo que la mesa cubre.
-- **El VIX.** Retirarlo mejoraría el criterio en 4 puntos, pero la mejora no
-  aguanta el remuestreo: aparece en el 80% de los bootstraps y su intervalo
-  incluye el cero. Con 60 fechas de control no hay muestra para justificarlo.
+El mecanismo para excluir un activo sigue implementado y probado, con la lista
+vacía: se sigue midiendo y enseñando todo, y la ficha tiene una columna «Vota»
+para que cualquier exclusión futura se vea en vez de quedar escondida.
 
-**No se persiguió el óptimo.** Una búsqueda exhaustiva sobre las 255 cestas
-posibles da un máximo de 34 puntos con `{plata, bitcoin, WTI, dólar}`, pero
-elegir el argmax de 255 opciones sobre 60+32 observaciones es sobreajuste de
-manual: las diez mejores están dentro del ruido unas de otras, y esa cesta
-excluiría el oro, el VIX y el S&P, que es absurdo para una mesa de coberturas.
-
-Efecto de la retirada: la línea base baja del **25% al 20%** y la curva no se
-mueve —`guerra` 2/5 sigue traduciéndose a 1/5—, que es justo lo que se quiere:
-un denominador más limpio sin tocar el veredicto de los peldaños.
-
-**Problema abierto: la cobertura de Bitcoin es asimétrica.** Existe en el 78%
-de los hechos curados pero solo en el 40% de las fechas de control, porque no
-cotiza antes de 2014. Como solo puede sumar cruces donde existe, y existe más
-en el grupo de los hechos, **infla la separación medida por pura
-disponibilidad**. Su aportación marginal sale positiva, pero parte de eso es
-artefacto. No se ha tocado porque corregirlo bien pide restringir la comparación
-a fechas donde todos los activos existen, y eso deja el control en 24.
-
-### Lo que la cesta no ve
-
-Dos de los eventos más grandes del corpus salen como «no movió»: el sabotaje
-del Nord Stream y la anexión de Crimea. Su efecto fue sobre el gas europeo y el
-trigo, que no están entre los ocho activos medidos. Se quedan en severidad 4 a
-propósito: el efecto existió y lo que falla es el instrumento.
-
-En sentido contrario, `BTC-USD` cruza su umbral en dos casos donde no tiene
-nada que ver con el hecho: Skripal (−18,7%, invierno cripto de 2018) y Kursk
-(+16,1%, con el VIX cayendo un 51%).
+**Lo que se sabe hoy de cada activo** (con el control ya emparejado): ninguna
+retirada mejora el criterio de forma que aguante el remuestreo. Quitar el VIX lo
+empeora, quitar el Nasdaq, el S&P o el dólar no cambia nada, y las mejoras
+aparentes de quitar la plata, el oro, el WTI o Bitcoin (+2 y +3 puntos) tienen
+intervalos que incluyen el cero. Con 60 fechas y 32 hechos no hay muestra para
+retirar nada.
 
 ### La curva vigente
 
-Con `v6-corpus-reetiquetado` y la cesta de siete activos, línea base del **20%**:
+Con `v6-corpus-reetiquetado`, los ocho activos y el control emparejado por
+época, línea base del **36,7%**:
 
 | Tema | Peldaño LLM | n | P(mov) | Lift | → Final |
 | ---- | ----------- | -: | -----: | ---: | ------: |
 | guerra | 2/5 | 11 |  18% |   0% | **1/5** |
-| guerra | 4/5 |  3 |  67% |  58% | 3/5 |
+| guerra | 4/5 |  3 |  67% |  47% | 3/5 |
 | guerra | 5/5 |  1 | 100% | 100% | 5/5 |
-| fed_tesoro | 2/5 | 3 |  67% |  58% | 3/5 |
+| fed_tesoro | 2/5 | 3 |  67% |  47% | 3/5 |
 | fed_tesoro | 3/5 | 1 |   0% |   0% | 3/5 |
-| fed_tesoro | 4/5 | 4 |  25% |   6% | 3/5 |
+| fed_tesoro | 4/5 | 4 |  25% |   0% | 3/5 |
 | fed_tesoro | 5/5 | 5 | 100% | 100% | 5/5 |
+
+Los peldaños finales son **los mismos** que con el control mal emparejado, que
+es la comprobación que importa: la corrección del denominador cambia los lifts
+pero no las conclusiones de la curva.
 
 La curva se fuerza monótona: un peldaño más alto del LLM nunca puede acabar
 dando uno final más bajo. Los peldaños que no aparecen se publican sin corregir,
@@ -314,12 +335,14 @@ Dos gotchas que cuestan tiempo si no se saben:
   solo. Ampliar da menos de lo que parece: el clasificador concentra sus
   respuestas en el 2 y el 5, así que para llenar los huecos hacen falta hechos
   que **el modelo** puntúe ahí, no que lo merezcan.
-- ~~**Revisar la cesta de activos**~~ — **hecho el 2026-09-03**: fuera el
-  Nasdaq. Queda abierto lo que no se pudo cerrar con esta muestra:
-  - **El VIX.** Retirarlo mejoraría el criterio en 4 puntos, pero el intervalo
-    incluye el cero. Se decide cuando el control pase de 60 fechas.
-  - **La cobertura asimétrica de Bitcoin** (78% de los hechos contra 40% del
-    control): infla la separación por disponibilidad, no por señal.
+- ~~**La cobertura asimétrica de Bitcoin**~~ — **corregida el 2026-09-03**
+  emparejando el control por época: pasa de 40%/78% a 78%/78%.
+- ~~**Revisar la cesta de activos**~~ — **revisada el 2026-09-03**: con el
+  control ya emparejado, **ninguna retirada aguanta el remuestreo** y la cesta
+  se queda con los ocho. Queda abierto:
+  - **El umbral del VIX.** Su máximo en una fecha de control es del 102,9%,
+    más del doble del umbral del 40%. O el umbral está mal puesto o el extremo a
+    cinco sesiones no es la forma de medirlo.
   - **Faltan el gas europeo y el trigo**, que es por lo que Nord Stream y Crimea
     salen como «no movió» pese a haber movido su mercado.
 - **Revisar los umbrales.** Se eligieron comparando siete criterios sobre los

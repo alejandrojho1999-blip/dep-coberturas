@@ -225,13 +225,13 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
           umbral con noticia que sin ella, y es la única columna que dice si el activo sirve: se
           compara en tasa y no en cuenta porque los dos grupos no tienen el mismo tamaño. Un activo
           cerca de cero cruza igual pase o no pase algo y, como basta con que <strong>uno</strong>{' '}
-          cruce para dar por movido el precio, arrastra el veredicto sin aportar información. Los
-          activos marcados «no cuenta» se siguen midiendo y enseñando, pero no deciden: el Nasdaq
-          salió del veredicto el 2026-09-03 porque correlaciona 0,82 con el S&amp;P —es el mismo
-          índice contado dos veces— y sus únicos cruces sin noticia son de 2002 y 2003, la resaca
-          de las puntocom. La decisión de quitar un activo no se toma con esta columna sino con su
-          aportación al criterio completo: el oro y el dólar separan poco por su cuenta y aun así
-          se quedan, porque nunca cruzan solos y retirarlos no cambiaría ni una fila.
+          cruce para dar por movido el precio, arrastra el veredicto sin aportar información. Aun
+          así, <strong>esta columna no basta para retirar un activo</strong>: lo que decide es su
+          aportación al criterio completo. El oro separa poco por su cuenta y retirarlo no cambia
+          ni una fila, porque nunca cruza solo. El Nasdaq llegó a excluirse el 2026-09-03 por esta
+          vía y se readmitió el mismo día: su desventaja venía de un grupo de control mal
+          emparejado en el tiempo, no del activo. Los marcados «no cuenta» —ahora ninguno— se
+          siguen midiendo y enseñando, pero no deciden.
         </NotaPie>
       </Panel>
 

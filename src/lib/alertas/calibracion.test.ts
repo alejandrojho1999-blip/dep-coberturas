@@ -42,24 +42,25 @@ describe('huboMovimiento', () => {
     expect(huboMovimiento([veces('ES=F', -1.5)])).toBe(true)
   })
 
-  it('un activo sin voto no da por movido el precio aunque se dispare', () => {
-    // El Nasdaq salió del veredicto el 2026-09-03: correlaciona 0,82 con el
-    // S&P y sus únicos cruces sin noticia son de la resaca de las puntocom.
-    expect(ACTIVOS_SIN_VOTO.has('NQ=F')).toBe(true)
-    expect(huboMovimiento([veces('NQ=F', 3)])).toBe(false)
+  it('ahora mismo no hay ningún activo sin voto, y es el estado correcto', () => {
+    // El Nasdaq se excluyó y se readmitió el 2026-09-03: su desventaja venía de
+    // un grupo de control mal emparejado, no del activo. Ver ACTIVOS_SIN_VOTO.
+    expect(ACTIVOS_SIN_VOTO.size).toBe(0)
+    expect(huboMovimiento([veces('NQ=F', 3)])).toBe(true)
   })
 
-  it('el activo sin voto tampoco tapa el movimiento de los que sí votan', () => {
-    // Excluirlo no puede volverse en contra: si otro cruza, sigue contando.
-    expect(huboMovimiento([
-      veces('NQ=F', 3),
-      veces('ES=F', 1.2),
-    ])).toBe(true)
-  })
+  it('un activo sin voto no daría por movido el precio', () => {
+    // El mecanismo sigue vivo aunque la lista esté vacía: se prueba con una
+    // lista propia para no atar el test a una decisión que ya se revirtió una
+    // vez y puede volver a cambiar.
+    const sinVoto = new Set(['NQ=F'])
+    const movio = (ms: Array<{ ticker: string; extremo: number }>) =>
+      ms.some((m) => !sinVoto.has(m.ticker)
+        && Math.abs(m.extremo) >= UMBRAL_MATERIAL[m.ticker])
 
-  it('el activo sin voto conserva su umbral, que se sigue enseñando', () => {
-    // Se mide y se publica; lo que pierde es el voto, no la ficha.
-    expect(UMBRAL_MATERIAL['NQ=F']).toBeGreaterThan(0)
+    expect(movio([veces('NQ=F', 3)])).toBe(false)
+    // Y excluirlo no puede tapar a los que sí votan.
+    expect(movio([veces('NQ=F', 3), veces('ES=F', 1.2)])).toBe(true)
   })
 
   it('en el VIX solo cuenta la subida: es un índice de miedo', () => {

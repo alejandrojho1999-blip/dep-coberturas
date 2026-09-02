@@ -156,17 +156,94 @@ async function main(): Promise<void> {
     throw new Error(`solo hay ${candidatas.length} sesiones candidatas para ${cuantas} fechas`)
   }
 
-  // Barajado de Fisher-Yates con la semilla, y se cogen las primeras.
   const rnd = aleatorioCon(semilla)
-  const barajadas = [...candidatas]
-  for (let i = barajadas.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1))
-    ;[barajadas[i], barajadas[j]] = [barajadas[j], barajadas[i]]
-  }
-  const elegidas = barajadas.slice(0, cuantas).sort()
 
-  console.log(`\nGRUPO DE CONTROL · ${cuantas} fechas al azar (semilla ${semilla})`)
-  console.log(`Candidatas: ${candidatas.length} sesiones desde ${desde}, excluidas ${vetadas.size} por cercanía a un evento.\n`)
+  /** Baraja una copia con la semilla compartida. Fisher-Yates. */
+  function barajar<T>(xs: readonly T[]): T[] {
+    const out = [...xs]
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1))
+      ;[out[i], out[j]] = [out[j], out[i]]
+    }
+    return out
+  }
+
+  // ── Muestreo emparejado por época ──────────────────────────────────────
+  //
+  // El muestreo uniforme sobre todo el periodo estaba comparando cosas de
+  // décadas distintas: el corpus se concentra en los 2020 (72% de los hechos)
+  // y las candidatas están repartidas por igual desde 2001, así que el control
+  // caía sobre todo en los 2000 y 2010. La mediana del control quedaba en 2010
+  // y la del corpus en 2022, doce años de diferencia.
+  //
+  // Eso no es un detalle: cada década tiene su régimen de volatilidad, y hay
+  // activos que ni existían. Bitcoin cotizaba en el 78% de los hechos y solo en
+  // el 40% de las fechas de control, y como la regla es «basta que uno cruce»,
+  // un activo solo puede sumar cruces donde existe: el corpus tenía más
+  // oportunidades de cruzar que su propio denominador, y la separación salía
+  // inflada por disponibilidad y no por señal.
+  //
+  // Ahora cada evento aporta sus propias fechas de control, tomadas de su mismo
+  // periodo. El control pasa a ser «qué hacía el precio en un día cualquiera de
+  // aquella época», que es la comparación que la curva necesita.
+  const porEvento = Math.max(1, Math.round(cuantas / EVENTOS.length))
+  const usadas = new Set<string>()
+  const elegidas: string[] = []
+
+  // De más estrecha a más ancha: se prefiere el mismo año y solo se abre la
+  // ventana cuando el veto ha dejado sin candidatas ese periodo.
+  const VENTANAS_ANIOS = [1, 2, 4, 8] as const
+  const aniosDe = (fecha: string, anios: number) => {
+    const d = new Date(`${fecha}T00:00:00Z`)
+    const desdeF = new Date(d); desdeF.setUTCFullYear(d.getUTCFullYear() - anios)
+    const hastaF = new Date(d); hastaF.setUTCFullYear(d.getUTCFullYear() + anios)
+    return [desdeF.toISOString().slice(0, 10), hastaF.toISOString().slice(0, 10)] as const
+  }
+
+  let ensanchados = 0
+  for (const evento of barajar(EVENTOS.map((e) => e.fecha)).sort()) {
+    let tomadas = 0
+    for (const anios of VENTANAS_ANIOS) {
+      if (tomadas >= porEvento) break
+      if (anios > VENTANAS_ANIOS[0] && tomadas === 0) ensanchados++
+      const [ini, fin] = aniosDe(evento, anios)
+      const cerca = barajar(candidatas.filter((f) => f >= ini && f <= fin && !usadas.has(f)))
+      for (const f of cerca) {
+        if (tomadas >= porEvento) break
+        usadas.add(f)
+        elegidas.push(f)
+        tomadas++
+      }
+    }
+  }
+
+  // El reparto por evento rara vez suma justo lo pedido. Se completa o se
+  // recorta al azar sobre lo ya elegido, sin romper el emparejamiento.
+  if (elegidas.length > cuantas) {
+    const sobran = barajar(elegidas).slice(0, cuantas)
+    elegidas.length = 0
+    elegidas.push(...sobran)
+  } else if (elegidas.length < cuantas) {
+    for (const f of barajar(candidatas.filter((x) => !usadas.has(x)))) {
+      if (elegidas.length >= cuantas) break
+      usadas.add(f)
+      elegidas.push(f)
+    }
+  }
+  elegidas.sort()
+
+  console.log(`\nGRUPO DE CONTROL · ${elegidas.length} fechas al azar (semilla ${semilla})`)
+  console.log(`Candidatas: ${candidatas.length} sesiones desde ${desde}, excluidas ${vetadas.size} por cercanía a un evento.`)
+  console.log(`Emparejado por época: ${porEvento} fecha(s) por cada uno de los ${EVENTOS.length} eventos, del mismo periodo.`)
+  if (ensanchados) {
+    console.log(`${ensanchados} evento(s) necesitaron ensanchar la ventana: su año no tenía candidatas libres.`)
+  }
+
+  // El emparejamiento solo sirve si de verdad acerca las dos distribuciones, y
+  // eso se comprueba, no se supone.
+  const mediana = (xs: readonly string[]) => [...xs].sort()[Math.floor(xs.length / 2)]
+  console.log(`Mediana del control: ${mediana(elegidas)}  ·  mediana del corpus: ${mediana(EVENTOS.map((e) => e.fecha))}`)
+  console.log('')
 
   const admin = createAdminClient()
 

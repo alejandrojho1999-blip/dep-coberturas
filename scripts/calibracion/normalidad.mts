@@ -19,12 +19,18 @@
  *
  * ⚠️ **La separación no basta para decidir quitar un activo.** Como la regla es
  * «basta que uno cruce», lo que decide es la aportación marginal: cuánto cambia
- * el criterio COMPLETO al retirarlo. El oro separa poco por su cuenta (+9
- * puntos) y aun así quitarlo no cambia ni una fila, porque nunca cruza solo;
- * el Nasdaq separaba más (+15) y sí estropeaba el veredicto, porque sus cruces
- * eran los únicos de esas fechas. Para medirlo hay que comparar la separación
- * de la cesta con y sin el activo, y remuestrear para ver si la diferencia
- * aguanta. Así se excluyó el Nasdaq el 2026-09-03.
+ * el criterio COMPLETO al retirarlo. El oro separa poco por su cuenta y aun así
+ * quitarlo no cambia ni una fila, porque nunca cruza solo. Para medirlo hay que
+ * comparar la separación de la cesta con y sin el activo, y remuestrear para
+ * ver si la diferencia aguanta.
+ *
+ * ⚠️ **Y antes que nada, comprobar que el denominador es comparable.** El
+ * 2026-09-03 se excluyó el Nasdaq por este camino y hubo que readmitirlo el
+ * mismo día: su desventaja salía de tres fechas de 2002 y 2003 que estaban en
+ * el control porque el muestreo era uniforme desde 2001, mientras el corpus se
+ * concentra en los 2020. Con el control emparejado por época la ventaja de
+ * quitarlo pasó a cero. Un denominador que no cubre las mismas épocas que el
+ * corpus fabrica culpables.
  *
  * Solo lee. No escribe en la base: el perfil es derivado de
  * `severity_event_moves`, que ya está cargado, y recalcularlo es instantáneo.

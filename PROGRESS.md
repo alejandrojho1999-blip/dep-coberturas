@@ -106,17 +106,20 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   propósito: el efecto existió, lo que falla es el instrumento. Si alguna vez se
   amplía la cesta, estos dos son la prueba.
 - ~~**La cesta de activos necesita revisión**~~ — **revisada el 2026-09-03**:
-  fuera el Nasdaq. Ver la entrada de la sesión. Lo que queda abierto:
-  - **El VIX.** Retirarlo mejoraría el criterio en 4 puntos, pero la mejora solo
-    sale en el 80% de los remuestreos y su intervalo del 90% incluye el cero. Se
-    decide cuando el grupo de control pase de 60 fechas.
-  - **La cobertura de Bitcoin es asimétrica**: existe en el 78% de los hechos
-    curados y solo en el 40% del control, porque no cotiza antes de 2014. Como
-    solo puede sumar cruces donde existe, infla la separación por disponibilidad
-    y no por señal. Corregirlo bien pide comparar solo fechas donde todos los
-    activos existen, y eso deja el control en 24.
-  - **Faltan el gas europeo y el trigo.** Es por lo que Nord Stream y Crimea
-    salen como «no movió» pese a haber movido su mercado.
+  con el grupo de control ya emparejado por época, **ninguna retirada aguanta el
+  remuestreo** y la cesta se queda con los ocho activos.
+- ~~**La cobertura asimétrica de Bitcoin**~~ — **corregida el 2026-09-03**: pasa
+  de 40%/78% a 78%/78% emparejando el control por época.
+- **El umbral del VIX está mal puesto, o el extremo no es la forma de medirlo.**
+  Con el control emparejado, el VIX llega a **+102,9%** en una fecha sin nada
+  detrás: más del doble de su umbral del 40%. Es el aviso más claro que ha dado
+  el perfil y no se ha tocado nada por ello.
+- **La línea base es del 36,7%, no del 20%, y eso reabre la pregunta de los
+  umbrales.** El valor anterior estaba medido contra la década equivocada. Con
+  el denominador correcto la separación agregada del corpus cae de 22 a **10
+  puntos**, con intervalo [−8, 28] que incluye el cero: el corpus en bloque
+  apenas se distingue de un día cualquiera. Lo que sí sobrevive es el patrón por
+  peldaño, que es lo que la curva usa.
 - **La separación individual no es criterio para quitar un activo, y por poco me
   lleva a quitar el que no era.**
   Bajo la regla «basta que uno cruce», lo que decide es la **aportación
@@ -437,6 +440,62 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — el grupo de control comparaba con la década equivocada
+
+El encargo era arreglar la asimetría de Bitcoin: cotizaba en el 78% de los
+hechos curados y solo en el 40% de las fechas de control, y como la regla es
+«basta que uno cruce», un activo solo puede sumar cruces donde existe. El corpus
+tenía más oportunidades que su propio denominador.
+
+**Bitcoin era el síntoma.** La causa es que el control se muestreaba
+uniformemente desde 2001 mientras el corpus se concentra en los 2020:
+
+| Década | Control (antes) | Corpus |
+| ------ | --------------: | -----: |
+| 2000s  | 42% |  9% |
+| 2010s  | 38% | 19% |
+| 2020s  | 20% | **72%** |
+
+Mediana del control en **2010**, mediana del corpus en **2022**. Doce años. Se
+estaba comparando un evento reciente contra un día normal de otra década, con
+otro régimen de volatilidad y con activos que ni existían.
+
+**El arreglo** (`placebo.mts`): cada evento aporta sus propias fechas de
+control, del mismo periodo, ensanchando la ventana solo si el veto por cercanía
+dejó ese año sin candidatas. Después: Bitcoin **78% contra 78%**, décadas
+10/22/68 contra 9/19/72, medianas a dos meses una de otra. El script imprime las
+dos medianas al terminar para que el emparejamiento se compruebe.
+
+**Y entonces se cayó la decisión del turno anterior.** La exclusión del Nasdaq
+se apoyaba en que sus únicos cruces en solitario del control eran tres, y los
+tres de 2002 y 2003. Esas fechas estaban ahí por el muestreo mal emparejado. Al
+corregirlo desaparecieron y con ellas toda la ventaja: **de +5 puntos a +0, en
+el 0% de los remuestreos.** El Nasdaq volvió al veredicto el mismo día, y la
+lección quedó escrita en el docstring de `ACTIVOS_SIN_VOTO`, que es donde la
+buscará quien vuelva a plantearlo: antes de culpar a un activo, comprobar que el
+denominador es comparable.
+
+**Lo que esto cuesta, dicho sin adornos.** La línea base sube del 20% al
+**36,7%**: un día normal de los 2020 mueve el precio mucho más a menudo que uno
+de los 2000, y la cifra anterior medía la década equivocada. Con el denominador
+correcto la separación agregada del corpus cae de 22 a **10 puntos**, con un
+intervalo del 90% de [−8, 28] que incluye el cero. El corpus entero, en bloque,
+apenas se distingue de un día cualquiera.
+
+**Lo que sobrevive, que es lo que importa:** el patrón por peldaño, que es lo
+que la curva usa de verdad. Los peldaños finales salen **idénticos** a los de
+antes —`guerra` 2/5 sigue traduciéndose a 1/5, el 4/5 a 3/5 y el 5/5 a 5/5—. La
+corrección del denominador cambia los lifts pero no las conclusiones.
+
+Apareció además un aviso nuevo: con el control emparejado, el **VIX llega a
++102,9%** en una fecha sin nada detrás, más del doble de su umbral del 40%.
+
+El mecanismo de exclusión se conserva implementado y probado con la lista vacía,
+y la ficha mantiene la columna «Vota» para que cualquier exclusión futura se vea
+en vez de quedar escondida.
+
+Verde: 975/975 tests, `tsc`, `eslint` y `build` limpios.
 
 ### Sesión del 2026-09-03 — la cesta pierde el Nasdaq, y el criterio para quitarlo no era el que parecía
 
