@@ -36,7 +36,6 @@ describe('Sidebar', () => {
   it('no muestra los módulos retirados del menú', () => {
     render(<Sidebar mobileOpen={false} onMobileClose={() => {}} />)
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
-    expect(screen.queryByText('ERGOS QUANT')).not.toBeInTheDocument()
   })
 
   it('colapsa y expande al hacer click en el toggle', () => {

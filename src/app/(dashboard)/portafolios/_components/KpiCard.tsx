@@ -16,7 +16,7 @@ interface Props {
 
 /**
  * Tarjeta de métrica. Hasta ahora cada pantalla escribía la suya inline; esta
- * es la versión compartida, con el estilo del optimizador de ERGOS.
+ * es la versión compartida.
  */
 export function KpiCard({ label, value, sub, signo, ayuda, acento }: Props) {
   const color = signo == null || signo === 0

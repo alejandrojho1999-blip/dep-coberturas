@@ -28,8 +28,8 @@ cubiertas y rangos de delta), rama `main`
 | 4 | Recomendaciones | `/recomendaciones` | Panel de Recomendaciones |
 | 5 | Alerta temprana | `/alertas` | Escalada Rusia–OTAN, pulso Fed vs Tesoro y tasas EEUU (solo admin) |
 
-Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
-`/perfil` y `/fincept-terminal` (estas dos bajo Configuración).
+Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
+`/fincept-terminal` (estas dos bajo Configuración).
 
 ---
 
@@ -225,27 +225,13 @@ decidir si migrarlas al admin o dejarlas ocultas.
   (`recomendaciones`, `fincept-terminal`): sin acento cálido, la jerarquía
   depende de peso y relleno y puede necesitar retoques al verla en uso.
 
-### Ergo Quant y su backend FastAPI — congelado, candidato a borrado
-Decisión del usuario (2026-08-23): no interesa. **No se toca ni se mantiene**;
-más adelante se decide si se borra.
+### Ergo Quant y su backend FastAPI — **borrado el 2026-09-02**
+Ver la entrada de la sesión en «Completado». El repositorio ya no tiene
+Python: se puede consolidar el despliegue en Vercel sin la parte difícil.
 
-Estado actual: **ya está fuera de la navegación** — el sidebar no tiene ningún
-enlace a `/ergos-quant` (solo se llega escribiendo la URL, y sigue protegida por
-`proxy.ts:45`). No hace falta ocultar nada más.
-
-Inventario para el día que se borre:
-- `src/app/(dashboard)/ergos-quant/` — 5 archivos, ~464 líneas
-  (`ErgoQuantClient`, `SignalsTable`, `PortfolioOptimizer`, `PpoAgent`, `page`).
-- `src/app/api/ergos-quant/[...path]/route.ts` — el proxy con `X-API-Key`.
-- `ergo-quant-api/` — backend FastAPI en Python, 240 KB.
-- En `render.yaml`: el servicio `pserv` completo y las dos variables
-  `ERGO_QUANT_API_URL` / `ERGO_QUANT_API_KEY` del servicio web.
-- Las rutas en `proxy.ts:45` y las menciones de `DEPLOY_RENDER.md` /
-  `SECURITY_AUDIT_RENDER.md`.
-
-Borrarlo es además el requisito previo para consolidar el despliegue en Vercel:
-ese FastAPI es la única pieza que no es Next, y sin él la migración deja de
-tener parte difícil.
+Lo único que queda por hacer del lado de las cuentas: **dar de baja en Render el
+private service `ergo-quant-api`**, que ya no lo crea ningún Blueprint pero
+puede seguir vivo y facturando si se creó a mano.
 
 ### Deudas conocidas en los agentes de opciones
 Detectadas al escribir las fichas técnicas. Tres de las cuatro quedaron
@@ -310,8 +296,8 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
   sin sesión está comprobado en producción; que el fichero llegue bien a quien sí
   tiene derecho, solo por pruebas unitarias. Se cierra abriendo
   `/agentes/backtest` y pulsando un enlace del panel de descargas.
-- Qué hacer con `/dashboard` y `/ergos-quant`: siguen vivas pero sin entrada de
-  menú.
+- Qué hacer con `/dashboard`: sigue viva pero sin entrada de menú.
+  (`/ergos-quant` ya no aplica: borrada el 2026-09-02.)
 - `OPENROUTER_API_KEY` y `FRED_API_KEY` están vacías en `.env.local`. En Vercel
   sí están cargadas, pero sin ellas no se pueden probar recomendaciones ni
   agentes en local.
@@ -319,6 +305,49 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — borrado de Ergo Quant y su backend FastAPI
+
+Congelado desde el 2026-08-23 y fuera de la navegación desde entonces. Borrado
+por decisión del usuario. Lo que se fue:
+
+- `src/app/(dashboard)/ergos-quant/` — 5 componentes.
+- `src/app/api/ergos-quant/[...path]/route.ts` — el proxy con `X-API-Key`.
+- `ergo-quant-api/` — el backend FastAPI, 23 ficheros Python, 240 KB.
+- En `render.yaml`, el servicio `pserv` entero y las dos variables
+  `ERGO_QUANT_API_URL` / `ERGO_QUANT_API_KEY` que colgaban de él.
+- La rama `/ergos-quant` de `isProtectedRoute` en `proxy.ts`.
+- `scripts/render-start-single.sh`, que existía solo para arrancar Next y
+  FastAPI dentro de un mismo servicio de Render.
+- `.python-version` y `runtime.txt` de la raíz: **no queda un solo `.py` en el
+  repositorio** fuera del backend borrado, así que declaraban una versión de
+  Python que ya nadie usa.
+- `.vercelignore`, cuyas dos únicas líneas eran `ergo-quant-api/` y
+  `ergo-quant-temp/` (esta última ni siquiera existía).
+
+`DEPLOY_RENDER.md` estaba estructurado entero alrededor de los dos servicios
+—modo Blueprint, modo manual, `CORS_ORIGINS`, el pin de Python 3.11 por
+`dowhy`/`econml`— y se reescribió: el despliegue es ahora una sola aplicación
+Node. La versión anterior queda en el historial de git.
+
+Un detalle de la verificación: tras borrar las carpetas, `tsc` fallaba con dos
+`TS2307` que **no venían del código** sino de `.next/types/validator.ts`, que
+seguía validando las rutas viejas. Se arregla con `npx next typegen`.
+
+| Check | Resultado |
+|---|---|
+| `npx tsc --noEmit` | exit 0 (tras `next typegen`) |
+| `npm run lint` | 0 problemas |
+| `npm run test:run` | **819/819** (60 ficheros) |
+| `npm run build` | exit 0, sin rutas `ergos-quant` |
+
+**No se tocaron** tres documentos que mencionan Ergo Quant a propósito:
+`SECURITY_AUDIT_RENDER.md` y `SECURITY_REVIEW_PROGRESS.md` son registros
+históricos —y el segundo está marcado como congelado—, así que reescribirlos
+falsearía lo que se auditó aquel día. `presentacion/build.js` y los dos
+`GUION_LOCUCION.md` contienen la narración de una presentación ya grabada que
+cita el gateway `/api/ergos-quant/[...path]` como ejemplo de arquitectura;
+cambiarla obliga a reconstruir la presentación y a rehacer la locución.
 
 ### Sesión del 2026-09-02 (tarde) — deuda de los agentes de opciones
 

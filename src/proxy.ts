@@ -43,7 +43,6 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/estrategias') ||
     pathname.startsWith('/recomendaciones') ||
     pathname.startsWith('/alertas') ||
-    pathname.startsWith('/ergos-quant') ||
     pathname.startsWith('/fincept-terminal') ||
     pathname.startsWith('/perfil')
 
