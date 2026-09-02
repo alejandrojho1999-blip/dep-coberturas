@@ -84,19 +84,24 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 - ~~**Contradicción sobre la Fed de junio de 2022**~~ — **corregida el
   2026-09-02**: la decisión del 15 de junio baja de severidad 5 a 2. Ver la
   entrada de la sesión en «Completado».
-- **Quedan tres contradicciones del mismo tipo, ya medidas.** Todas son
-  severidad puesta por importancia institucional en vez de por efecto de precio,
-  el mismo defecto que la de junio. No las he tocado porque cada una es un
-  juicio de analista, pero el dato ya está:
+- ~~**Las tres contradicciones restantes de `fed_tesoro`**~~ — **corregidas el
+  2026-09-02**. El tema entero quedó coherente; ver la entrada de la sesión.
+- **En `guerra` quedan dos discrepancias con el prompt, y una es de las gordas.**
+  No las he tocado porque cada una es un juicio de analista y porque el tramo de
+  guerra es el que alimenta las anclas del prompt:
 
   | evento | corpus | lo que dice el prompt | medición a 5 sesiones |
   |---|---|---|---|
-  | IPC de mayo 2022 (10-06) | 4 | lo lista como **5** | S&P −8,7%, VIX +34,3% |
-  | Primera subida desde 2018 (16-03-2022) | 4 | lo lista como **2** | S&P +5,7%, VIX −23,9% |
-  | Última subida del ciclo (26-07-2023) | 3 | lo lista como **2** | ningún activo movió |
+  | Drones sobre Polonia (10-09-2025) | **4** | lo lista como **3** | VIX +8,9%, **ningún activo movió** |
+  | Motín de Wagner (24-06-2023) | **3** | lo lista como **2** | VIX +9,4%, **ningún activo movió** |
 
-  El IPC es el más claro: es el evento que de verdad desplomó el mercado esa
-  semana y está por debajo de la decisión que no movió nada.
+  Los dos llevan una severidad por encima de lo que el propio prompt les asigna
+  y ninguno movió un solo activo por encima de su umbral. La de Polonia es la
+  más llamativa: un 4 con efecto de precio nulo, en el tramo que sirve de ancla.
+  El argumento a favor de mantenerlo es que fue la primera vez que la OTAN
+  disparó contra material ruso sobre su territorio, pero ese es exactamente el
+  razonamiento por importancia que se acaba de corregir cuatro veces en
+  `fed_tesoro`.
 - **Medir el efecto:** volver a pasar `npm run calibracion:auditar` tras una
   semana con el prompt nuevo y comprobar si el 60,9% de peldaños 4-5 baja.
 
@@ -368,6 +373,46 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — el tramo de la Fed queda coherente de arriba abajo
+
+Las tres contradicciones que quedaban en `fed_tesoro`, corregidas con la
+medición delante. Las tres eran el mismo defecto: severidad puesta por lo que el
+hecho significaba y no por lo que hizo el precio.
+
+| evento | antes | ahora | medición a 5 sesiones |
+|---|---|---|---|
+| IPC de mayo 2022 (10-06) | 4 | **5** | S&P −8,7%, VIX +34,3% |
+| Primera subida desde 2018 (16-03-2022) | 4 | **2** | S&P +5,7%, VIX −23,9% |
+| Última subida del ciclo (26-07-2023) | 3 | **2** | ningún activo movió |
+
+Dos de las notas viejas ya se contradecían solas: la de 2023 decía
+«completamente descontada» —que es la definición literal del peldaño 2— y
+llevaba un 3; la del IPC decía «mueve más que la reunión» y le daba la misma
+severidad que a la reunión.
+
+**El resultado se puede leer en una columna.** La severidad media que merece
+cada peldaño del clasificador, en `fed_tesoro`, es ahora:
+
+```
+  llm 2/5  →  merece 2.0
+  llm 3/5  →  merece 3.0
+  llm 4/5  →  merece 4.0
+  llm 5/5  →  merece 4.8
+```
+
+El modelo y el corpus corregido dicen casi lo mismo, y los dos coinciden con lo
+que hizo el precio. Eso es la señal de que las correcciones iban en la dirección
+buena y no de que se hayan movido las etiquetas hasta que cuadrasen.
+
+**Error medio del clasificador sobre el corpus: 0,46 → 0,31.** El de la versión
+vieja del prompt baja también, de 0,41 a 0,18, porque los eventos que sí juzgaba
+son justo los que ahora están mejor etiquetados.
+
+La curva sigue subiendo la severidad y sigue sin poder aplicarse: eso lo arregla
+el corpus con eventos anodinos, no las etiquetas de los que ya están.
+
+Suite completa en verde: 919/919, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — la Fed de junio de 2022 deja de valer un 5
 

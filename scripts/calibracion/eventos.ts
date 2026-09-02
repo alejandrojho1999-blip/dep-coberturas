@@ -125,8 +125,11 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2022-03-16', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
     titulo: 'La Fed sube tasas por primera vez desde 2018 (+25 pb)',
-    severidad: 4, verificado: true,
-    nota: 'Giro de ciclo. Esperado, pero marca el inicio del régimen que aún dura.',
+    severidad: 2, verificado: true,
+    nota: 'Llevaba un 4 por marcar el inicio del régimen de tasas altas, que es importancia '
+      + 'institucional y no efecto de precio: corregido el 2026-09-02. El mercado la esperaba '
+      + 'y la celebró, con el S&P en +5,7% y el VIX cayendo un 23,9% a cinco sesiones. Un giro '
+      + 'de ciclo anunciado con meses de antelación ya está en el precio cuando llega.',
   },
   {
     fecha: '2022-06-15', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
@@ -141,8 +144,12 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2022-06-10', tramo: 'principal', tema: 'fed_tesoro', clase: 'dato-macro',
     titulo: 'IPC de EEUU de mayo sorprende al alza (8,6% interanual)',
-    severidad: 4, verificado: true,
-    nota: 'El dato que forzó los 75 pb. Un IPC que rompe expectativas mueve más que la reunión.',
+    severidad: 5, verificado: true,
+    nota: 'Sube de 4 a 5 el 2026-09-02: la nota vieja ya decía que mueve más que la reunión, '
+      + 'pero le daba la misma severidad. Es el movimiento más fuerte del tramo principal '
+      + '—S&P -8,7% y VIX +34,3% a cinco sesiones— y el que forzó los 75 pb de cinco días '
+      + 'después. Un dato que rompe la expectativa reescribe la trayectoria; la decisión que '
+      + 'lo confirma solo la ejecuta.',
   },
   {
     fecha: '2023-03-10', tramo: 'principal', tema: 'fed_tesoro', clase: 'crisis-institucional',
@@ -153,8 +160,10 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2023-07-26', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
     titulo: 'Última subida del ciclo: la Fed lleva la tasa al 5,25-5,50%',
-    severidad: 3, verificado: true,
-    nota: 'Completamente descontada. El techo del ciclo no sorprendió a nadie.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02 para que la severidad diga lo que ya decía la nota: '
+      + '«completamente descontada» es la definición del peldaño 2, no del 3. Ningún activo '
+      + 'vigilado superó su umbral en las cinco sesiones siguientes.',
   },
   {
     fecha: '2024-09-18', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
