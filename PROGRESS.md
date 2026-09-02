@@ -71,19 +71,21 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   señales reales. `ajustar.mts` detecta el caso y lo avisa en pantalla.
   **Lo que hace falta**: ampliar `eventos.ts` con 30-50 titulares corrientes de
   severidad 1-2 que no movieron nada. Es trabajo de curación, no de código.
-- **El replay descubrió fallos reales del prompt.** 10 de 27 eventos salieron
-  `no relevante`. Algunos con razón —el 11-S y la invasión de Irak no son
-  sucesos Rusia-OTAN, y el prompt de guerra solo cubre eso—, pero otros son
-  agujeros de verdad:
-  - **La Fed sube 75 pb (2022-06-15), severidad 5** — descartada por el prompt
-    macro. Es el mayor movimiento de tasas desde 1994.
-  - **S&P rebaja el AAA de EEUU (2011-08-05), severidad 4** — descartada.
-  - **MH17 (2014-07-17)** y **Skripal (2018-03-04)**: daño a ciudadanos y suelo
-    OTAN, que el prompt dice cubrir explícitamente.
-  - **Zaporiyia (2022-03-04)**: incendio en central nuclear durante combate.
-
-  Estos cinco valen más que la curva: son casos concretos con los que reescribir
-  los criterios de `relevante` y comprobar el arreglo sin adivinar.
+- ~~**Los cinco agujeros del prompt**~~ — **cerrados el 2026-09-02**, con la
+  medición delante: descartados **10 → 1**, y los cinco casos recuperados con el
+  peldaño correcto o cerca. Ver la entrada de la sesión en «Completado».
+- **Vigilar el 11-S en producción.** El criterio nuevo dice «ataque atribuido a
+  un Estado contra ciudadanos o territorio de la OTAN, ocurra donde ocurra», y el
+  modelo lo estiró para dejar pasar un atentado de un actor **no** estatal. Para
+  el corpus está bien —merece 5 y da 5— pero en producción abre la puerta a que
+  cualquier atentado entre en un canal pensado para Rusia-OTAN. Si aparecen
+  falsos positivos de ese tipo, la corrección es añadir «por un Estado o con
+  respaldo estatal» al criterio, no quitarlo entero.
+- **Contradicción entre el corpus y el prompt sobre la Fed de junio de 2022.**
+  El corpus le da severidad 5 («sorpresa respecto a lo guiado»); el prompt la usa
+  como ejemplo de movimiento descontado, y la medición le da la razón al prompt:
+  S&P +0,7% y VIX -11,4% a cinco sesiones. El modelo la puntúa 3. Hay que decidir
+  cuál de los dos se corrige, y el dato apunta a que es el corpus.
 - **Medir el efecto:** volver a pasar `npm run calibracion:auditar` tras una
   semana con el prompt nuevo y comprobar si el 60,9% de peldaños 4-5 baja.
 
@@ -355,6 +357,53 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — el clasificador deja de descartar lo que sí importa
+
+El replay dejó a la vista que el prompt tiraba a la basura 10 de 27 eventos del
+corpus. Cinco eran agujeros de verdad. Arreglados y medidos:
+
+| | antes | después |
+|---|---|---|
+| descartados | 10 | **1** |
+| juzgados | 17 | 26 |
+| con severidad ≥ 4 | 10 de 17 (59%) | 12 de 26 (**46%**) |
+
+Los cinco casos, recuperados: Zaporiyia (da 4, merece 4), MH17 (3 y 3), Skripal
+(2 y 2), la rebaja del AAA de 2011 (da 5, merece 4) y la subida de 75 pb de la
+Fed (da 3, merece 5). De propina volvieron Wagner, Kursk, Crimea y el 11-S.
+
+**Las dos causas eran distintas y solo una era obvia:**
+
+1. **El modelo usaba las reglas de severidad para decidir la relevancia.** La
+   regla dura macro dice que la subida de 75 pb «estaba descontada», y el modelo
+   lo leyó como permiso para descartarla. Igual con MH17 y Skripal, que el propio
+   prompt cita como precedentes medidos y aun así el filtro rechazaba. Los dos
+   prompts llevan ahora un párrafo que separa las dos decisiones: un hecho del
+   dominio que no vaya a mover el precio es `relevante: true` con severidad 1 o 2,
+   nunca `relevante: false`.
+2. **Criterios que no cubrían el hecho.** Skripal era un ataque químico y el
+   criterio hablaba de espacio aéreo y marítimo; Zaporiyia era riesgo nuclear
+   civil y el criterio solo contemplaba armas nucleares; y el tema se llama
+   `fed_tesoro` pero no tenía ni un criterio sobre la deuda del Tesoro, que es la
+   mitad del nombre. Los tres cubiertos.
+
+De paso se corrigió una incoherencia: el prompt listaba el MH17 como severidad 2
+«sin transmisión al precio» cuando la medición da un VIX +39,8% en el pico de la
+ventana, y el corpus le pone 3.
+
+**Herramientas nuevas**, porque «se ve mejor» no es una medición:
+- `scripts/calibracion/comparar.mts` enfrenta dos versiones del replay y saca
+  descartados, juzgados, peldaños altos y error medio, con la lista de eventos
+  recuperados y perdidos.
+- `resumirReplay` en `src/lib/alertas/calibracion.ts`, con 6 tests.
+
+**Una cifra que conviene leer bien:** el error medio sube de 0,41 a 0,50. No es
+un empeoramiento, es que el conjunto cambió: antes se medía sobre 17 eventos
+fáciles y ahora sobre 26, incluidos los nueve que el prompt evitaba juzgar. Un
+error medio calculado sobre lo que no se descarta premia al que descarta más.
+
+Suite completa en verde: 919/919, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — la calibración de severidad deja de ser una tabla vacía
 

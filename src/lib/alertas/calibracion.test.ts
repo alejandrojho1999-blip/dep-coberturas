@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   aplicarCurva,
+  resumirReplay,
   forzarMonotonia,
   huboMovimiento,
   peldanoDesdeProbabilidad,
@@ -131,5 +132,62 @@ describe('aplicarCurva', () => {
 
   it('con la curva vacía no corrige nada', () => {
     expect(aplicarCurva(5, 'guerra', [])).toBe(5)
+  })
+})
+
+describe('resumirReplay', () => {
+  const merecida = new Map([[1, 5], [2, 3], [3, 2]])
+
+  it('separa lo descartado de lo juzgado', () => {
+    const r = resumirReplay([
+      { eventoId: 1, titular: 'Invasión', severidadLlm: 5 },
+      { eventoId: 2, titular: 'Derribo', severidadLlm: null },
+    ], merecida)
+
+    expect(r.juzgados).toBe(1)
+    expect(r.descartados).toEqual(['Derribo'])
+  })
+
+  it('el error medio es la distancia al peldaño del analista', () => {
+    // |5-5| = 0 y |1-3| = 2  →  media 1.
+    const r = resumirReplay([
+      { eventoId: 1, titular: 'a', severidadLlm: 5 },
+      { eventoId: 2, titular: 'b', severidadLlm: 1 },
+    ], merecida)
+
+    expect(r.errorMedio).toBe(1)
+  })
+
+  it('un descartado no cuenta en el error medio: no dio ningún peldaño', () => {
+    const r = resumirReplay([
+      { eventoId: 1, titular: 'a', severidadLlm: 5 },
+      { eventoId: 2, titular: 'b', severidadLlm: null },
+    ], merecida)
+
+    expect(r.errorMedio).toBe(0)
+  })
+
+  it('cuenta los peldaños altos, que son el vicio a corregir', () => {
+    const r = resumirReplay([
+      { eventoId: 1, titular: 'a', severidadLlm: 5 },
+      { eventoId: 2, titular: 'b', severidadLlm: 4 },
+      { eventoId: 3, titular: 'c', severidadLlm: 3 },
+    ], merecida)
+
+    expect(r.altos).toBe(2)
+  })
+
+  it('ignora en el error los eventos que no están en el corpus', () => {
+    const r = resumirReplay([
+      { eventoId: null, titular: 'suelto', severidadLlm: 5 },
+    ], merecida)
+
+    expect(r.juzgados).toBe(1)
+    expect(r.errorMedio).toBeNull()
+  })
+
+  it('sin respuestas devuelve un resumen vacío, no NaN', () => {
+    const r = resumirReplay([], merecida)
+    expect(r).toEqual({ descartados: [], juzgados: 0, altos: 0, errorMedio: null })
   })
 })

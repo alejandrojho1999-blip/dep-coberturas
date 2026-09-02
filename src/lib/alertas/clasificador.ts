@@ -38,13 +38,26 @@ Devuelves SOLO un JSON con esta forma exacta:
 
 Criterios de "relevante" (true solo si se cumple alguno):
 - Ataque, incursión, derribo o violación del espacio aéreo o marítimo de un país de la OTAN.
+- Ataque atribuido a un Estado contra ciudadanos, territorio o aeronaves de un país de la
+  OTAN, POR CUALQUIER MEDIO y OCURRA DONDE OCURRA: militar, químico, radiológico o
+  ciberataque. Un agente nervioso en una ciudad europea y un avión de línea derribado sobre
+  un tercer país cuentan igual que un misil.
 - Invocación del artículo 4 o del artículo 5, o movilización/despliegue militar de la Alianza.
 - Amenaza o ejercicio nuclear ruso, o cambio de nivel de alerta.
+- Riesgo nuclear civil: combate, ataque, incendio o pérdida de control en una central o
+  instalación nuclear dentro de la zona de guerra.
 - Sabotaje de infraestructura crítica atribuido a un Estado (cables, gasoductos, red eléctrica).
 - Ruptura o firma de un alto el fuego, o ultimátum formal entre las partes.
 
 Es FALSE: análisis, opinión, encuestas, declaraciones rutinarias, recapitulaciones,
 aniversarios, deportes, cultura, y cualquier suceso anterior a las últimas 48 horas.
+
+"relevante" Y "severidad" SON DOS DECISIONES SEPARADAS, Y CONFUNDIRLAS ES EL ERROR MÁS
+FRECUENTE. "relevante" dice solo si el hecho pertenece a este dominio. "severidad" dice
+cuánto se espera que mueva el precio. Un hecho del dominio que no vaya a mover nada es
+"relevante": true con severidad 1 o 2 — NUNCA "relevante": false. Que un suceso sea viejo
+conocido, esté descontado o no vaya a mover el mercado no lo saca del dominio: lo baja de
+peldaño. Solo se descarta lo que no es un hecho de este dominio.
 
 SEVERIDAD = EFECTO ESPERADO EN EL PRECIO, NO GRAVEDAD HUMANA.
 No puntúas cuánto duele el hecho: puntúas cuánto se espera que mueva el oro y el VIX en
@@ -59,9 +72,13 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   oro +1,3%, VIX +8,9%. MiG-31 sobre Estonia (19-09-2025): oro +2,6%, VIX +13,0%.
   Misil con dos muertos en Przewodów, Polonia (15-11-2022): oro -2,0%, VIX +10,5%, S&P -0,2%.
   Este último es la referencia que importa: hubo muertos en suelo OTAN y el mercado no se movió.
+  Derribo del MH17 con 298 muertos, la mayoría de países OTAN (17-07-2014): oro +0,4%,
+  S&P +0,3% al quinto día, pero VIX +39,8% en el pico de la ventana.
 - 2 · Suceso grave sin transmisión al precio. Motín de Wagner y marcha sobre Moscú
-  (24-06-2023): oro +0,1%, VIX +9,4%, S&P +2,3%. Derribo del MH17 con 298 muertos
-  (17-07-2014): oro +0,4%, S&P +0,3%.
+  (24-06-2023): oro +0,1%, VIX +9,4%, S&P +2,3%. Envenenamiento de Skripal con Novichok en
+  suelo británico (04-03-2018): agente químico de un Estado y expulsión masiva de
+  diplomáticos, y aun así oro +0,1%, S&P +3,5%, VIX -32,1%. Los dos son "relevante": true
+  con severidad baja: es exactamente la combinación que hay que saber emitir.
 - 1 · Declaración, amenaza retórica o movimiento ya descontado.
 
 Reglas duras:
@@ -94,13 +111,22 @@ subir tasas para llevar la inflación al objetivo del 2% manteniendo el pleno em
 Devuelves SOLO un JSON con esta forma exacta:
 {"relevante": boolean, "severidad": 1-5, "evento_key": "string", "resumen": "string", "motivo": "string"}
 
-Es "relevante" solo si el titular aporta información NUEVA sobre la trayectoria de las tasas:
+Es "relevante" si el titular trae un hecho de este dominio:
 declaración de Warsh, Bessent, un gobernador de la Fed o del Tesoro; comunicado del FOMC;
 dato de inflación o empleo; presión política sobre la independencia del banco central;
-cambio en la composición del comité.
+cambio en la composición del comité; y también el lado del Tesoro, que es media ecuación:
+cambio en la calificación crediticia soberana de Estados Unidos, subasta de deuda desierta
+o con demanda anómala, y movimiento brusco del rendimiento del bono a 10 años.
 
 Es FALSE: análisis de terceros, opinión de bancos privados, resúmenes de mercado,
 repeticiones de declaraciones ya conocidas.
+
+"relevante" Y "severidad" SON DOS DECISIONES SEPARADAS, Y CONFUNDIRLAS ES EL ERROR MÁS
+FRECUENTE. "relevante" dice solo si el hecho pertenece a este dominio. "severidad" dice
+cuánta sorpresa hay. UNA DECISIÓN DEL FOMC O UN DATO DE IPC SON SIEMPRE "relevante": true,
+por descontados que estén; si el mercado ya los tenía en precio, eso los deja en severidad
+1 o 2, no fuera. Descartar un hecho del dominio por estar descontado es el fallo que hay
+que evitar.
 
 SEVERIDAD = SORPRESA RESPECTO A LO YA DESCONTADO.
 Lo esperado no mueve nada por grande que sea; lo pequeño e inesperado mueve mucho. Puntúas
@@ -121,8 +147,10 @@ Precedentes medidos (retorno del S&P y máximo del VIX a 5 sesiones desde el cie
 - 1 · Comentario, reiteración o declaración sin contenido nuevo.
 
 Reglas duras:
-- Que un hecho sea histórico no lo hace un 5. La subida de 75 pb de junio de 2022, la mayor
-  desde 1994, dejó el S&P en +0,7%: estaba descontada desde el IPC de dos días antes.
+- Que un hecho sea histórico no lo hace un 5, pero tampoco lo hace irrelevante. La subida de
+  75 pb de junio de 2022, la mayor desde 1994, dejó el S&P en +0,7% a cinco sesiones: estaba
+  descontada desde el IPC de dos días antes. Eso la baja de peldaño; sigue siendo
+  "relevante": true, porque es una decisión del FOMC.
 - Una reforma institucional o un cambio de personal en la Fed no pasa de 3 salvo que altere
   la votación de la próxima reunión.
 - Un análisis o una opinión sobre lo que la Fed "podría" hacer nunca pasa de 2.

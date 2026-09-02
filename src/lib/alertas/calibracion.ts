@@ -115,3 +115,56 @@ export function aplicarCurva(
   const punto = curva.find((p) => p.tema === tema && p.severidadLlm === severidadLlm)
   return punto?.severidadFinal ?? severidadLlm
 }
+
+export interface RespuestaReplay {
+  eventoId: number | null
+  titular: string
+  /** Nulo cuando el modelo dijo que el titular no era de su dominio. */
+  severidadLlm: number | null
+}
+
+export interface ResumenReplay {
+  /** Titulares que el prompt sacó de su dominio: avisos que nunca se enviarían. */
+  descartados: string[]
+  juzgados: number
+  /** Cuántos de los juzgados salieron en 4 o 5, que es el vicio a corregir. */
+  altos: number
+  /**
+   * Distancia media entre el peldaño del modelo y el que puso el analista.
+   * Nula si no hay ni un evento que ambos hayan juzgado.
+   */
+  errorMedio: number | null
+}
+
+/**
+ * Las cifras con las que se juzga una tanda del replay.
+ *
+ * Existe para que comparar dos versiones del prompt sea una resta y no una
+ * lectura por encima de veintisiete líneas: así se llegó a repartir 4 y 5 al
+ * 60,9% de las señales.
+ */
+export function resumirReplay(
+  respuestas: readonly RespuestaReplay[],
+  merecidaPorEvento: ReadonlyMap<number, number>,
+): ResumenReplay {
+  const descartados: string[] = []
+  const errores: number[] = []
+  let altos = 0
+
+  for (const r of respuestas) {
+    if (r.severidadLlm == null) {
+      descartados.push(r.titular)
+      continue
+    }
+    if (r.severidadLlm >= 4) altos++
+    const merecida = r.eventoId == null ? undefined : merecidaPorEvento.get(r.eventoId)
+    if (merecida != null) errores.push(Math.abs(r.severidadLlm - merecida))
+  }
+
+  return {
+    descartados,
+    juzgados: respuestas.length - descartados.length,
+    altos,
+    errorMedio: errores.length ? errores.reduce((a, b) => a + b, 0) / errores.length : null,
+  }
+}
