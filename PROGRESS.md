@@ -369,6 +369,49 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Sesión del 2026-09-02 — el backtesting de eventos deja de vivir solo en la base
+
+Los datos existían desde esta misma sesión —27 eventos y 627 mediciones en
+`severity_events` y `severity_event_moves`— pero solo se podían mirar con una
+consulta SQL. Ahora hay pantalla: **`/alertas/backtesting`**, con su botón junto
+a «Ficha técnica» y «Actualizar».
+
+Qué enseña:
+- **Cifras de cabecera**, y las dos que valen van en ámbar: «graves sin efecto»
+  y «leves con efecto». Cada una es un caso donde la etiqueta del analista y el
+  mercado no coinciden, que es justo lo que el corpus existe para encontrar.
+- **Qué mueve cada familia de suceso**, ordenada por número de casos. La
+  pregunta útil no es cuánto movió este dron sino cuánto mueve un dron en
+  general; con el orden por casos se ve de un vistazo qué familias tienen
+  respaldo y cuáles son una anécdota.
+- **Los eventos, separados por tramo.** No van mezclados por fecha a propósito:
+  el mercado de tasas cero reaccionaba a la geopolítica de otra manera y los
+  tramos no son comparables entre sí.
+- **Los umbrales** con los que se juzga cada activo, incluida la asimetría del
+  VIX.
+- **«Qué NO se puede concluir de esta tabla»**, que es la sección que impide que
+  la pantalla mienta: el sesgo de selección del corpus, que correlación no es
+  causa, y que los tramos no se comparan.
+
+**Decisiones que conviene recordar:**
+- La página lee con `createAdminClient`. Las tablas `severity_*` llevan RLS
+  activada **sin ninguna política**, porque son tablas de trabajo interno que no
+  pertenecen a ningún usuario: sin service key no devuelven ni una fila. El
+  guard de admin de la página es lo que sostiene esa decisión.
+- `force-dynamic`: el corpus solo cambia cuando alguien ejecuta los scripts a
+  mano, pero cuando cambia hay que verlo. Sin esto, corregir una severidad y
+  recargar seguiría enseñando la vieja.
+- Un fallo de lectura se distingue de «no hay eventos». Son estados distintos y
+  el segundo se arregla cargando el corpus, no mirando el log.
+- Del VIX se enseña el extremo y no el retorno: es un índice de miedo y lo que
+  dice algo es el pico de la ventana, no dónde acabó la semana.
+
+`src/lib/alertas/backtesting.ts` con la agregación (19 tests) y
+`FichaBacktesting.tsx` con la pantalla (10 tests). Uno de ellos comprueba que
+una medición ausente salga como raya y nunca como 0,0%.
+
+Suite completa en verde: 950/950, `tsc`, `eslint` y `build` limpios.
+
 ### Sesión del 2026-09-02 — el VIX deja de contar sus caídas como sustos
 
 `huboMovimiento` medía el extremo en valor absoluto para todos los activos. Para

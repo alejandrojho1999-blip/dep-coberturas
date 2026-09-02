@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, FileText, RefreshCw } from 'lucide-react'
+import { AlertTriangle, FileText, History, RefreshCw } from 'lucide-react'
 import { Panel, Chip } from '@/app/(dashboard)/estrategias/_components/ui'
 import { KpiCard, KpiRow } from '@/app/(dashboard)/portafolios/_components/KpiCard'
 import { PulsoPublico } from '@/app/(dashboard)/alertas/_components/PulsoPublico'
@@ -113,6 +113,13 @@ export function AlertasClient({ proximoEventoIso, proximoEventoEtiqueta }: {
           >
             <FileText className="h-3 w-3" />
             Ficha técnica
+          </Link>
+          <Link
+            href="/alertas/backtesting"
+            className="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide text-text-secondary hover:text-text-primary"
+          >
+            <History className="h-3 w-3" />
+            Backtesting
           </Link>
           <button
             type="button"
