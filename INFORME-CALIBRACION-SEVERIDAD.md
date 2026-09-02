@@ -123,27 +123,66 @@ corriente del umbral de un evento. Sobre 60 fechas de control **emparejadas por
 
 | Activo | Umbral | Mediana normal | p90 | Máx | Cruza sin noticia | Cruza con noticia | Separación |
 | ------ | -----: | -------------: | --: | --: | ----------------: | ----------------: | ---------: |
-| WTI     | 12% | 4,9% |  9,8% |  22,9% | 4/60 | 8/32 | **+18 pts** |
-| Bitcoin | 16% | 6,2% | 18,2% |  20,8% | 7/47 | 7/25 | +13 pts |
-| S&P 500 |  5% | 2,4% |  5,3% |   9,5% | 8/60 | 8/32 | +12 pts |
-| Nasdaq  |  6% | 2,9% |  7,1% |  12,1% | 8/60 | 8/32 | +12 pts |
-| VIX     | 40% | 8,8% | 31,4% | 102,9% | 4/60 | 5/32 | +9 pts |
-| Dólar   |  3% | 1,0% |  1,7% |   2,5% | 0/60 | 2/32 | +6 pts |
-| Oro     |  6% | 2,0% |  5,6% |  17,9% | 4/60 | 4/32 | +6 pts |
-| Plata   | 10% | 3,1% |  7,8% |  23,9% | 4/60 | 4/32 | +6 pts |
+| WTI     | 12% | 4,9% |  9,8% |  22,9% |  4/60 |  8/32 | **+18 pts** |
+| VIX     | 25% | 8,8% | 31,4% | 102,9% | 10/60 | 11/32 | **+18 pts** |
+| Bitcoin | 16% | 6,2% | 18,2% |  20,8% |  7/47 |  7/25 | +13 pts |
+| S&P 500 |  5% | 2,4% |  5,3% |   9,5% |  8/60 |  8/32 | +12 pts |
+| Nasdaq  |  6% | 2,9% |  7,1% |  12,1% |  8/60 |  8/32 | +12 pts |
+| Dólar   |  3% | 1,0% |  1,7% |   2,5% |  0/60 |  2/32 | +6 pts |
+| Oro     |  6% | 2,0% |  5,6% |  17,9% |  4/60 |  4/32 | +6 pts |
+| Plata   | 10% | 3,1% |  7,8% |  23,9% |  4/60 |  4/32 | +6 pts |
 
 «Separación» es cuánto más cruza el umbral con noticia que sin ella. Se compara
 en tasa y no en cuenta porque los grupos no tienen el mismo tamaño.
 
-Ningún activo separa mucho, y el mejor es el **WTI**, no los dos que el prompt
-usa como ancla en todos sus precedentes: el oro se queda en +6 puntos y el VIX
-en +9. La columna «umbral/mediana» dice lo raro que es que un activo salte por
-casualidad, y ninguno pasa de ×4,5: **la cesta entera está calibrada apretada**,
-que es lo que explica una línea base tan alta.
+Los que mejor separan son el **WTI** y el **VIX**, este último desde que su
+umbral bajó al 25% (ver abajo). El oro, que es el ancla de casi todos los
+precedentes del prompt, se queda en +6 puntos.
 
-El VIX llega a un máximo del **102,9%** en una fecha de control sin nada detrás,
-más del doble de su umbral. Es la señal más clara de que su umbral del 40% no
-está capturando lo que se pensaba.
+El VIX llega a un máximo del **102,9%** en una fecha de control sin nada detrás
+—el 18 de enero de 2022, con el desplome que abrió aquel año—. No es un error de
+medición: es que la cola del VIX es larguísima, y por eso su umbral no se puede
+elegir mirando el máximo.
+
+### El umbral del VIX: puesto para que cruzar fuera raro, no para captar eventos
+
+Al 40%, el VIX era **peso muerto**: la separación del criterio completo era la
+misma con él que sin él, +1 punto. Solo 5 de los 32 hechos del corpus llegaban a
+moverlo tanto. El umbral se había elegido para que cruzar fuera improbable —cae
+en el percentil 93 del día normal, en línea con el oro y el WTI— pero sin
+comprobar lo contrario: que los eventos de verdad lo cruzaran. La mediana del
+VIX en un hecho curado es del **17%** y su p75 del **34%**, así que tres cuartas
+partes de los eventos se quedaban cortos.
+
+**Baja al 25% el 2026-09-03.** Captura 11 de 32 hechos en vez de 5, y su
+aportación al criterio pasa de +1 a +7 puntos.
+
+No es el valor que más separa. El barrido fino da esto:
+
+| Umbral del VIX | Línea base | Separación |
+| -------------: | ---------: | ---------: |
+| 12,5% | 53% | 25 pts |
+| 15%   | 52% | 23 pts |
+| **17,5% – 27,5%** | **40-50%** | **16 pts, constante** |
+| 30-37,5% | 37-40% | 13-16 pts |
+| 40% (antes) | 37% | 10 pts |
+
+El máximo está en el 12,5%, y se descartó por dos razones. La primera es que
+sube la línea base al 53%, que es volver a la saturación que estos umbrales
+corrigieron: con un día cualquiera moviéndose la mitad de las veces, «pasó algo»
+deja de distinguir nada. La segunda es la forma de la curva: entre el 17,5% y el
+27,5% la separación se queda clavada en 16 puntos durante **cinco pasos
+seguidos**, y esa meseta es la señal de que el valor no está ajustado al ruido de
+la muestra. El pico del 12,5% dura dos pasos y tiene toda la pinta de estarlo.
+Se coge el centro de la meseta.
+
+Con el 25%, el VIX cae en el percentil 83 del día normal, en línea con Bitcoin
+(p85) y los índices (p87).
+
+**Qué prueba esto y qué no.** La mejora frente al 40% sale en el 83% de los
+remuestreos, pero su intervalo del 90% es [−3, 16] y toca el cero: no es prueba
+estadística. Lo que sí está fuera de duda es que el 40% era peso muerto, y que
+la meseta no depende del valor exacto.
 
 **Aviso de lectura: esta columna no basta para decidir quitar un activo.** Ver
 la sección siguiente, que es donde está el criterio correcto.
@@ -220,31 +259,31 @@ El mecanismo para excluir un activo sigue implementado y probado, con la lista
 vacía: se sigue midiendo y enseñando todo, y la ficha tiene una columna «Vota»
 para que cualquier exclusión futura se vea en vez de quedar escondida.
 
-**Lo que se sabe hoy de cada activo** (con el control ya emparejado): ninguna
+**Lo que se sabe hoy de cada activo** (control emparejado y VIX al 25%): ninguna
 retirada mejora el criterio de forma que aguante el remuestreo. Quitar el VIX lo
-empeora, quitar el Nasdaq, el S&P o el dólar no cambia nada, y las mejoras
-aparentes de quitar la plata, el oro, el WTI o Bitcoin (+2 y +3 puntos) tienen
-intervalos que incluyen el cero. Con 60 fechas y 32 hechos no hay muestra para
-retirar nada.
+empeora en **7 puntos** —es el que más aporta desde que se le arregló el umbral—;
+quitar el Nasdaq, el S&P o el dólar no cambia nada; y las mejoras aparentes de
+quitar el oro, la plata, el WTI o Bitcoin (+2 puntos) tienen intervalos que
+incluyen el cero. Con 60 fechas y 32 hechos no hay muestra para retirar nada.
 
 ### La curva vigente
 
 Con `v6-corpus-reetiquetado`, los ocho activos y el control emparejado por
-época, línea base del **36,7%**:
+época y el VIX al 25%, línea base del **40%**:
 
 | Tema | Peldaño LLM | n | P(mov) | Lift | → Final |
 | ---- | ----------- | -: | -----: | ---: | ------: |
-| guerra | 2/5 | 11 |  18% |   0% | **1/5** |
-| guerra | 4/5 |  3 |  67% |  47% | 3/5 |
+| guerra | 2/5 | 11 |  36% |   0% | **1/5** |
+| guerra | 4/5 |  3 |  67% |  44% | 3/5 |
 | guerra | 5/5 |  1 | 100% | 100% | 5/5 |
-| fed_tesoro | 2/5 | 3 |  67% |  47% | 3/5 |
+| fed_tesoro | 2/5 | 3 |  67% |  44% | 3/5 |
 | fed_tesoro | 3/5 | 1 |   0% |   0% | 3/5 |
-| fed_tesoro | 4/5 | 4 |  25% |   0% | 3/5 |
+| fed_tesoro | 4/5 | 4 |  50% |  17% | 3/5 |
 | fed_tesoro | 5/5 | 5 | 100% | 100% | 5/5 |
 
-Los peldaños finales son **los mismos** que con el control mal emparejado, que
-es la comprobación que importa: la corrección del denominador cambia los lifts
-pero no las conclusiones de la curva.
+Los peldaños finales han salido **idénticos** en las tres versiones del criterio
+—control mal emparejado, control emparejado, y VIX al 25%—. Los lifts cambian y
+las conclusiones no, que es la comprobación que importa.
 
 La curva se fuerza monótona: un peldaño más alto del LLM nunca puede acabar
 dando uno final más bajo. Los peldaños que no aparecen se publican sin corregir,
@@ -340,15 +379,18 @@ Dos gotchas que cuestan tiempo si no se saben:
 - ~~**Revisar la cesta de activos**~~ — **revisada el 2026-09-03**: con el
   control ya emparejado, **ninguna retirada aguanta el remuestreo** y la cesta
   se queda con los ocho. Queda abierto:
-  - **El umbral del VIX.** Su máximo en una fecha de control es del 102,9%,
-    más del doble del umbral del 40%. O el umbral está mal puesto o el extremo a
-    cinco sesiones no es la forma de medirlo.
+  - ~~**El umbral del VIX**~~ — **corregido el 2026-09-03**: del 40% al 25%. Se
+    comprobó de paso que `extremo` mide mejor que `retorno` en todo el barrido,
+    así que la forma de medir no era el problema.
+  - **El umbral del dólar.** Está en el percentil 100: no cruza ni una de las 60
+    fechas de control, y solo 2 de los 32 hechos. Es inerte más que ruidoso
+    —quitarlo no cambia nada— pero pide la misma revisión que tuvo el VIX.
   - **Faltan el gas europeo y el trigo**, que es por lo que Nord Stream y Crimea
     salen como «no movió» pese a haber movido su mercado.
-- **Revisar los umbrales.** Se eligieron comparando siete criterios sobre los
-  mismos 60 días de control y 27 eventos, así que parte de su ventaja es
-  sobreajuste; tres de los siete quedaron empatados dentro del ruido. El caso a
-  mirar es el MH17: su VIX llegó al +39,8% contra un umbral del 40%.
+- **Revisar los umbrales que quedan.** Se eligieron comparando siete criterios
+  sobre los mismos 60 días de control y 27 eventos, así que parte de su ventaja
+  es sobreajuste; tres de los siete quedaron empatados dentro del ruido. El del
+  VIX ya se revisó; el del dólar es el siguiente candidato.
 - **El error medio ya no sirve para juzgar un cambio de prompt.** Cayó a 0,14
   con `v6`, pero las etiquetas del corpus se movieron hacia donde apuntaba el
   modelo, así que parte de esa mejora es tautológica. La evidencia independiente

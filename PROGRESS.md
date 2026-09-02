@@ -110,10 +110,15 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   remuestreo** y la cesta se queda con los ocho activos.
 - ~~**La cobertura asimétrica de Bitcoin**~~ — **corregida el 2026-09-03**: pasa
   de 40%/78% a 78%/78% emparejando el control por época.
-- **El umbral del VIX está mal puesto, o el extremo no es la forma de medirlo.**
-  Con el control emparejado, el VIX llega a **+102,9%** en una fecha sin nada
-  detrás: más del doble de su umbral del 40%. Es el aviso más claro que ha dado
-  el perfil y no se ha tocado nada por ello.
+- ~~**El umbral del VIX está mal puesto**~~ — **corregido el 2026-09-03**:
+  baja del 40% al 25% tras barrer los valores del 5% al 60%. Al 40% era peso
+  muerto (aportaba +1 punto de separación); al 25% aporta +7 y pasa a ser el
+  activo más valioso de la cesta. Ver la entrada de la sesión en «Completado».
+- **El umbral del dólar (`DX-Y.NYB`, 3%) pide la misma revisión que el VIX.**
+  Está en el **percentil 100** del día normal: no cruza ni una de las 60 fechas
+  de control y solo 2 de los 32 hechos del corpus. No es ruidoso, es inerte —el
+  leave-one-out confirma que quitarlo no cambia ni una fila—, pero un umbral que
+  no cruza nunca no está midiendo nada.
 - **La línea base es del 36,7%, no del 20%, y eso reabre la pregunta de los
   umbrales.** El valor anterior estaba medido contra la década equivocada. Con
   el denominador correcto la separación agregada del corpus cae de 22 a **10
@@ -132,10 +137,9 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   cruza el umbral en dos de los tres casos raros: Skripal (-18,7%, en pleno
   invierno cripto de 2018) y Kursk (+16,1%, con el VIX cayendo un 51%). Ninguno
   tiene que ver con el hecho geopolítico. Convendría revisar si pertenece a la
-  cesta o si su umbral del 16% se queda corto para lo que se mueve solo.
-- **`guerra` ya no tiene peldaño 3 y `fed_tesoro` casi tampoco** (n=1). El motor
-  publica sin corregir los peldaños que no aparecen en la curva, que es lo
-  correcto, pero conviene saber que ahí no hay red.
+  cesta o si su umbral del 16% se queda corto para lo que se mueve solo. Los dos
+  casos quedan explicados en la nota del corpus (2026-09-03) para que nadie los
+  lea como reacción al hecho.
 - **`guerra` ya no tiene peldaño 3 y `fed_tesoro` casi tampoco** (n=1). El motor
   publica sin corregir los peldaños que no aparecen en la curva, que es lo
   correcto, pero conviene saber que ahí no hay red.
@@ -440,6 +444,62 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — el VIX baja del 40% al 25% y deja de ser peso muerto
+
+El pendiente que abrió la sesión anterior: con el control ya emparejado por
+época, el VIX llegaba a **+102,9%** en una fecha sin nada detrás, más del doble
+de su umbral. La sospecha era que el 40% estuviera mal puesto.
+
+**Lo estaba, y por el lado contrario al que parecía.** El barrido del 5% al 60%
+sobre los 32 hechos y las 60 fechas de control mostró que al 40% solo cruzaban
+**5 de 32** eventos curados: la mediana del VIX en un hecho del corpus es del
+**17%** y su p75 del **34%**, así que tres cuartas partes se quedaban cortas. El
+umbral estaba elegido para que cruzar fuera raro, sin comprobar que los eventos
+de verdad cruzaran. Su aportación marginal al criterio completo era de **+1
+punto**: quitarlo de la cesta no cambiaba nada.
+
+| Umbral VIX | Separación | Línea base | Cruza (curados) |
+|---|---|---|---|
+| 12,5% | 25 pts | 53% | 20/32 |
+| 17,5–27,5% | 16 pts (meseta) | 40% | 11–14/32 |
+| **25%** | **16 pts** | **40%** | **11/32** |
+| 40% | 11 pts | 36,7% | 5/32 |
+
+**Se eligió el 25%, no el pico del 12,5%, y las dos razones importan.** La
+primera es que el 12,5% sube la línea base al **53%**: con un día cualquiera
+moviéndose la mitad de las veces se vuelve a la saturación que estos umbrales
+corrigieron. La segunda es la forma de la curva: entre el 17,5% y el 27,5% la
+separación se queda clavada en 16 puntos durante **cinco pasos seguidos**, y esa
+meseta es señal de que el valor no está pegado al ruido de la muestra; el pico
+del 12,5% dura dos pasos y tiene toda la pinta de estarlo. Se cogió el centro de
+la meseta. Comprobación cruzada: al 25% el VIX cae en el **percentil 83** del día
+normal, en línea con Bitcoin (p85) y los índices (p87), mientras que al 40%
+estaba fuera de escala respecto al resto de la cesta.
+
+**Honestidad sobre lo que esto prueba.** La mejora frente al 40% sale en el 83%
+de los remuestreos, con intervalo del 90% en **[−3, 16]**, que toca el cero. Lo
+que sí está fuera de duda es que el 40% no aportaba nada.
+
+**Efectos aguas abajo, todos verificados:**
+- La línea base sube del 36,7% al **40%** y la curva v6 se recalculó con ella.
+- El leave-one-out cambia de dueño: el VIX pasa a ser **el activo más valioso**
+  de la cesta (+7 pts) y el dólar queda confirmado como inerte (percentil 100,
+  0 cruces en 60 fechas de control).
+- Los eventos curados que activan `huboMovimiento()` pasan de 15 a **18**. El
+  **MH17** entra: su VIX de +39,8% caía dos décimas por debajo del umbral viejo
+  y era el caso señalado en el corpus como «el evento a mirar si se revisan los
+  umbrales». Ya cruza. **Su severidad sigue siendo 2**, porque la fija el
+  criterio del prompt —respuesta material— y aquí no la hubo.
+- **Tres notas del corpus quedaron mintiendo** al cambiar el umbral y se
+  corrigieron en `eventos.ts`: MH17 y **Estlink 2** decían que no cruzaban, y
+  **Kursk** y **Skripal** no explicaban que su único cruce es Bitcoin por su
+  cuenta (+16,1% con el VIX cayendo un 51%; −18,7% en el invierno cripto de
+  2018). El corpus vuelve a ser autoexplicativo.
+
+Verde: **975/975 tests**, `tsc` y ESLint limpios. `UMBRAL_MATERIAL`,
+`INFORME-CALIBRACION-SEVERIDAD.md` y la ficha de backtesting documentan el
+porqué del 25% para quien lo vuelva a tocar.
 
 ### Sesión del 2026-09-03 — el grupo de control comparaba con la década equivocada
 

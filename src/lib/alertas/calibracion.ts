@@ -32,10 +32,39 @@
  * sin renunciar a la regla, que sigue teniendo sentido: un evento que solo
  * dispara el VIX es un evento del que hay que avisar.
  *
+ * **El VIX baja del 40% al 25% el 2026-09-03.** Al 40% no aportaba nada: la
+ * separación del criterio completo era la misma con él que sin él, +1 punto,
+ * porque solo 5 de los 32 hechos del corpus llegaban a mover tanto el VIX. El
+ * umbral estaba puesto para que cruzar fuera raro, sin comprobar que los
+ * eventos de verdad cruzaran: la mediana del VIX en un hecho curado es del 17%
+ * y su p75 del 34%, así que tres cuartas partes de los eventos se quedaban
+ * cortos. Al 25% captura 11 de 32 y su aportación pasa de +1 a +7 puntos.
+ *
+ * El 25% no es el valor que más separa —eso sería el 12,5%, con 25 puntos— y
+ * está elegido a propósito por dos razones. La primera es que el 12,5% sube la
+ * línea base al 53%, que es volver a la saturación que estos umbrales
+ * corrigieron: con un día cualquiera moviéndose la mitad de las veces, «pasó
+ * algo» deja de distinguir. La segunda es que entre el 17,5% y el 27,5% la
+ * separación se queda clavada en 16 puntos durante cinco pasos seguidos, y esa
+ * meseta es la señal de que el valor no está ajustado al ruido de la muestra;
+ * el pico del 12,5% dura dos pasos y tiene toda la pinta de serlo. Se coge el
+ * centro de la meseta.
+ *
+ * Con el 25%, el VIX cae en el percentil 83 del día normal, en línea con
+ * Bitcoin (p85) y los índices (p87). Honestidad sobre lo que esto prueba: la
+ * mejora frente al 40% sale en el 83% de los remuestreos, pero su intervalo del
+ * 90% es [-3, 16] y toca el cero. Lo que sí está fuera de duda es que el 40%
+ * era peso muerto.
+ *
  * Aviso para quien los vuelva a tocar: la cifra se eligió comparando siete
  * criterios sobre los mismos 60 días de control y 27 eventos, así que parte de
  * su ventaja es sobreajuste. Tres de los siete quedaron empatados dentro del
  * ruido. Con más corpus, esto se revisa.
+ *
+ * Queda uno pendiente: **el dólar está en el percentil 100**, o sea que no cruza
+ * ni una de las 60 fechas de control, y solo 2 de los 32 hechos. Es inerte más
+ * que ruidoso —quitarlo no cambia nada— pero su umbral del 3% pide la misma
+ * revisión que acaba de tener el VIX.
  */
 export const UMBRAL_MATERIAL: Record<string, number> = {
   'GC=F': 0.06,
@@ -44,7 +73,8 @@ export const UMBRAL_MATERIAL: Record<string, number> = {
   'CL=F': 0.12,
   'NQ=F': 0.06,
   'ES=F': 0.05,
-  '^VIX': 0.40,
+  // 40% -> 25% el 2026-09-03. Ver la nota de arriba.
+  '^VIX': 0.25,
   'DX-Y.NYB': 0.03,
 }
 

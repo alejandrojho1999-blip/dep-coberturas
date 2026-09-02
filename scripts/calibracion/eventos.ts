@@ -107,7 +107,9 @@ export const EVENTOS: readonly EventoHistorico[] = [
     fecha: '2024-08-06', tramo: 'principal', tema: 'guerra', clase: 'invasion',
     titulo: 'Ucrania lanza la incursión terrestre en Kursk',
     severidad: 2, verificado: true,
-    nota: 'Escalada real, pero dentro del patrón conocido de la guerra. El mercado apenas se enteró.',
+    nota: 'Escalada real, pero dentro del patrón conocido de la guerra. Cuenta como movimiento '
+      + 'por Bitcoin (+16,1%), que ese mismo tramo iba a lo suyo mientras el VIX CAÍA un 51%: es '
+      + 'ruido del activo, no reacción al hecho. El resto de la cesta ni se enteró.',
   },
   {
     fecha: '2024-11-19', tramo: 'principal', tema: 'guerra', clase: 'amenaza-nuclear',
@@ -205,9 +207,11 @@ export const EVENTOS: readonly EventoHistorico[] = [
     titulo: 'Derribo del vuelo MH17 sobre Donbás, 298 muertos',
     severidad: 2, verificado: true,
     nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: gravedad humana máxima y ninguna '
-      + 'respuesta material. Es el caso que mejor enseña que severidad no es gravedad. Ojo con '
-      + 'la medición: el VIX llegó a +39,8% y el umbral está en el 40%, así que cuenta como '
-      + 'no-movimiento por dos décimas. Si se revisan los umbrales, este es el evento a mirar.',
+      + 'respuesta material. Es el caso que mejor enseña que severidad no es gravedad. Se quedó '
+      + 'un día señalado como el evento a mirar si se revisaban los umbrales, porque su VIX de '
+      + '+39,8% caía dos décimas por debajo del umbral del 40% y contaba como no-movimiento. '
+      + 'Con el umbral del VIX en el 25% (2026-09-03) ya registra movimiento. La severidad sigue '
+      + 'siendo 2: la fija el criterio del prompt, que pide respuesta material y aquí no la hubo.',
   },
   {
     fecha: '2015-11-24', tramo: 'control_2014', tema: 'guerra', clase: 'incursion-otan',
@@ -222,7 +226,9 @@ export const EVENTOS: readonly EventoHistorico[] = [
     fecha: '2018-03-04', tramo: 'control_2014', tema: 'guerra', clase: 'sabotaje',
     titulo: 'Envenenamiento de Skripal en Salisbury con Novichok',
     severidad: 2, verificado: true,
-    nota: 'Agente químico ruso en suelo OTAN, expulsiones masivas de diplomáticos, cero efecto de precio.',
+    nota: 'Agente químico ruso en suelo OTAN y expulsiones masivas de diplomáticos, con el oro '
+      + 'en +1,3% y el VIX cayendo un 32,1%. Cuenta como movimiento solo por Bitcoin (-18,7%), '
+      + 'en pleno invierno cripto de 2018 y sin relación con el hecho.',
   },
   {
     fecha: '2020-03-15', tramo: 'control_2014', tema: 'fed_tesoro', clase: 'fomc-decision',
@@ -291,8 +297,9 @@ export const EVENTOS: readonly EventoHistorico[] = [
     severidad: 2, verificado: true,
     nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: el apresamiento del buque es una '
       + 'respuesta material, pero de un solo barco y sin tamaño de mercado, y el cable es un '
-      + 'interconector bilateral. Ocurrió en Navidad, con el mercado medio cerrado. VIX +36,6% '
-      + 'y NQ -4,7%, ninguno por encima de su umbral.',
+      + 'interconector bilateral. Ocurrió en Navidad, con el mercado medio cerrado. Su VIX de '
+      + '+36,6% quedaba por debajo del umbral viejo del 40%; con el del 25% (2026-09-03) sí '
+      + 'cuenta como movimiento. La severidad la fija el criterio del prompt, no el veredicto.',
   },
   {
     fecha: '2023-08-01', tramo: 'principal', tema: 'fed_tesoro', clase: 'crisis-institucional',
