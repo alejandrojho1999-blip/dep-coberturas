@@ -86,15 +86,33 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 - ~~**El peldaño 3 de `guerra` no distingue nada**~~ — **corregido el
   2026-09-02** con `v5-peldano2`: los ocho casos bajan al 2 y el peldaño queda
   vacío. Ver la entrada de la sesión.
-- **Decidir si el corpus se re-etiqueta con el criterio nuevo.** Es la deuda que
-  deja `v5-peldano2` y no se ha tocado por ser un cambio de la vara de medir. El
-  corpus sigue diciendo `merece=3` para los ocho hechos que el prompt ya puntúa
-  2, así que el error medio contra el analista subió de 0,29 a 0,46. **Esa cifra
-  ya no se puede leer como antes**: mide la distancia a unas etiquetas escritas
-  con el criterio viejo. Si se acepta que severidad es efecto de precio —y el
-  precio dice que esos ocho mueven menos que una fecha al azar— las etiquetas
-  del corpus son las que hay que bajar. Hasta que se decida, comparar contra
-  `v4-otan` no dice nada útil.
+- ~~**Decidir si el corpus se re-etiqueta**~~ — **re-etiquetado el 2026-09-02**
+  con `v6-corpus-reetiquetado`. Ver la entrada de la sesión.
+- **El error medio ya no sirve para juzgar este cambio de prompt, y conviene no
+  olvidarlo.** Cayó a 0,14, pero las ocho etiquetas que se bajaron coinciden con
+  lo que el modelo respondía, así que **parte de esa mejora es tautológica**: se
+  movió la vara hacia donde apuntaba el examinando. La justificación fue el
+  criterio y el precio, no la respuesta del modelo, pero el número resultante no
+  es evidencia independiente. **La evidencia independiente es la curva**, que se
+  calcula con el precio y no con la etiqueta: `guerra` 2/5 con n=11 y lift 0%.
+- **El clasificador no es determinista, y eso limita comparar versiones.** Con
+  `temperature: 0.1`, la rebaja de Moody's salió 5/5 en `v5` y 4/5 en `v6` sin
+  que `SISTEMA_MACRO` cambiara ni una coma. Una diferencia de un peldaño entre
+  dos versiones puede ser ruido de muestreo. Para atribuir un cambio al prompt
+  hacen falta o varias pasadas o diferencias grandes, no de un punto.
+- **La cesta de ocho activos no ve dos de los eventos más grandes del corpus.**
+  Nord Stream y la anexión de Crimea salen como «no movió» porque su efecto fue
+  sobre el gas europeo y el trigo, que no se miden. Se quedan en severidad 4 a
+  propósito: el efecto existió, lo que falla es el instrumento. Si alguna vez se
+  amplía la cesta, estos dos son la prueba.
+- **`BTC-USD` mete ruido en el criterio de movimiento.** Es el único activo que
+  cruza el umbral en dos de los tres casos raros: Skripal (-18,7%, en pleno
+  invierno cripto de 2018) y Kursk (+16,1%, con el VIX cayendo un 51%). Ninguno
+  tiene que ver con el hecho geopolítico. Convendría revisar si pertenece a la
+  cesta o si su umbral del 16% se queda corto para lo que se mueve solo.
+- **`guerra` ya no tiene peldaño 3 y `fed_tesoro` casi tampoco** (n=1). El motor
+  publica sin corregir los peldaños que no aparecen en la curva, que es lo
+  correcto, pero conviene saber que ahí no hay red.
 - **`guerra` ya no tiene peldaño 3 y `fed_tesoro` casi tampoco** (n=1). El motor
   publica sin corregir los peldaños que no aparecen en la curva, que es lo
   correcto, pero conviene saber que ahí no hay red.
@@ -399,6 +417,50 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — el corpus se re-etiqueta y el criterio de medición enseña dos grietas
+
+Ocho hechos de `guerra` bajan de 3 a 2 en `eventos.ts`, con la nota de cada uno
+explicando por qué: Przewodów, la doctrina nuclear de 2024, los drones sobre
+Polonia, los MiG-31 sobre Estonia, el MH17, el Su-24 de Turquía, el
+Balticconnector y el Estlink 2.
+
+**Cómo se hizo, que aquí importa más que el resultado.** Re-etiquetar copiando
+las respuestas del modelo habría destruido la única métrica independiente que
+queda: el error medio pasaría a medir el modelo contra sí mismo. Así que se
+aplicó el criterio y el precio evento por evento, y sobre **todo** el tema
+`guerra`, no solo sobre los ocho que el modelo había bajado.
+
+Revisar también los que no cambiaban fue lo que dio valor a la pasada, porque
+aparecieron cinco casos incoherentes y ninguno era del corpus:
+
+- **Tres `sev=2` que sí «movieron», los tres por un solo activo y ninguno
+  atribuible al hecho.** Przewodów cruza por el crudo a -12,6%, que es el signo
+  contrario al que un misil en Polonia predice. Skripal cruza por bitcoin a
+  -18,7% en pleno invierno cripto de 2018. Kursk cruza por bitcoin a +16,1%
+  mientras el VIX **caía** un 51%. `BTC-USD` produce dos de los tres.
+- **Dos `sev=4` que no movieron porque la cesta no puede verlos.** Nord Stream y
+  Crimea tuvieron su efecto en el gas europeo y el trigo, que no están entre los
+  ocho activos medidos. Se quedan en 4 a propósito: el efecto existió y lo que
+  falla es el instrumento.
+
+También se afinó el prompt: el peldaño 3 pedía «corte real de suministro» y el 4
+tenía al Nord Stream, que también lo es, así que el Balticconnector no quedaba
+decidido por el criterio. Ahora el 3 exige que la interrupción tenga **tamaño de
+mercado**, y se dice explícitamente que un enlace bilateral no llega aunque el
+corte sea real y dure meses.
+
+**El resultado.** El error medio cae de 0,57 a 0,14 con `v6-corpus-reetiquetado`,
+pero esa cifra **no es evidencia independiente** y así queda anotado en
+«Pendiente»: las ocho etiquetas se movieron hacia donde el modelo apuntaba. Lo
+que sí es evidencia es la curva, que se calcula con el precio: `guerra` 2/5 con
+n=11, P(mov) 18% contra una línea base del 25%, lift 0% y final **1/5**.
+
+De propina apareció que el clasificador no es determinista: la rebaja de Moody's
+salió 5/5 en `v5` y 4/5 en `v6` sin tocar `SISTEMA_MACRO`. Una diferencia de un
+peldaño entre versiones puede ser ruido.
+
+Suite completa en verde: 961/961, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — el peldaño 3 de `guerra` se vacía y deja de mentir
 

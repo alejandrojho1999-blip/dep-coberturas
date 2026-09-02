@@ -72,10 +72,14 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   cortado. Lo que separa un peldaño de otro en el sabotaje NO es la audacia del acto ni el
   país afectado, sino cuánta energía o cuánto tráfico deja de circular. Un cable de datos o
   un interconector eléctrico entre dos países no mueve el precio de nada.
-- 3 · Incidente con la OTAN al que le sigue una respuesta material: intervención armada de
-  la Alianza, corte real de suministro energético, o cierre de espacio aéreo o de una ruta
-  comercial. Es un peldaño ESTRECHO. No basta con que el incidente sea grave ni con que se
-  invoque el artículo 4: hace falta que algo se interrumpa de verdad.
+- 3 · Incidente con la OTAN al que le sigue una respuesta material CON TAMAÑO DE MERCADO:
+  intervención armada de la Alianza, corte de suministro que un operador note en el precio
+  de la energía, o cierre de un espacio aéreo o de una ruta comercial de uso general. Es un
+  peldaño ESTRECHO y en el histórico casi no se da. No basta con que el incidente sea grave,
+  ni con que se invoque el artículo 4, ni con que algo se interrumpa: la interrupción tiene
+  que ser lo bastante grande como para mover un precio. Un enlace bilateral entre dos países
+  —un gasoducto pequeño, un interconector eléctrico, un cable de datos— NO llega, aunque el
+  corte sea real y dure meses.
 - 2 · Incidente militar directo con la OTAN, aislado y sin respuesta material. ESTE ES EL
   PELDAÑO QUE MÁS SE FALLA, Y EL QUE MÁS CASOS RECIBE. Una violación del espacio aéreo, un
   derribo, un sabotaje de infraestructura o un cambio declarado de doctrina son un 2 cuando

@@ -87,8 +87,12 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2022-11-15', tramo: 'principal', tema: 'guerra', clase: 'victimas-otan',
     titulo: 'Misil cae en Przewodów (Polonia) y mata a dos personas; Polonia invoca el artículo 4',
-    severidad: 3, verificado: true,
-    nota: 'Muertes en suelo OTAN, pero se aclaró en horas que era un S-300 ucraniano. El susto duró una sesión.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: hubo muertos en suelo OTAN y '
+      + 'artículo 4, pero ninguna respuesta material —ni intervención armada ni corte de nada—, '
+      + 'y se aclaró en horas que era un S-300 ucraniano. Es el único de los ocho que cruzó un '
+      + 'umbral, y lo cruzó por el crudo a -12,6%: signo contrario al que un misil en Polonia '
+      + 'predice, así que se lee como ruido del mercado del petróleo y no como reacción.',
   },
   {
     fecha: '2023-06-24', tramo: 'principal', tema: 'guerra', clase: 'inestabilidad-interna',
@@ -108,24 +112,28 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2024-11-19', tramo: 'principal', tema: 'guerra', clase: 'amenaza-nuclear',
     titulo: 'Rusia rebaja el umbral de su doctrina nuclear tras autorizar EEUU los ATACMS de largo alcance',
-    severidad: 3, verificado: true,
-    nota: 'Cambio de doctrina, no de despliegue. Movió, pero se deshizo en dos sesiones.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: es un cambio declarado de '
+      + 'doctrina, no un despliegue. El 4 exige amenaza nuclear CON acto detrás, y aquí no lo '
+      + 'hay. Oro +3,8% y VIX +20,6% a cinco sesiones, sin un solo activo por encima de su umbral.',
   },
   {
     fecha: '2025-09-10', tramo: 'principal', tema: 'guerra', clase: 'incursion-otan',
     titulo: 'Cazas de la OTAN derriban drones rusos sobre Polonia; Polonia invoca el artículo 4',
-    severidad: 3, verificado: true,
+    severidad: 2, verificado: true,
     nota: 'Llevaba un 4 por ser la primera vez que la OTAN dispara contra material ruso sobre '
-      + 'su territorio, que es importancia histórica y no efecto de precio: corregido el '
-      + '2026-09-02. Oro +1,3% y VIX +8,9% a cinco sesiones, sin un solo activo por encima de '
-      + 'su umbral. Queda a la altura de la violación de Estonia de nueve días después, que es '
-      + 'su misma clase y sí movió dos activos.',
+      + 'su territorio, que es importancia histórica y no efecto de precio: bajó a 3 el '
+      + '2026-09-02 y a 2 ese mismo día con el criterio nuevo, que pide respuesta material y '
+      + 'no la hubo. Oro +1,5% y VIX +8,9% a cinco sesiones, sin un solo activo por encima de '
+      + 'su umbral.',
   },
   {
     fecha: '2025-09-19', tramo: 'principal', tema: 'guerra', clase: 'incursion-otan',
     titulo: 'Tres MiG-31 rusos violan el espacio aéreo de Estonia doce minutos; Estonia invoca el artículo 4',
-    severidad: 3, verificado: true,
-    nota: 'Violación deliberada y sin víctimas ni daño. Segunda del mes: el mercado ya la descuenta.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: violación deliberada, sin '
+      + 'víctimas, sin daño y sin respuesta material. Segunda del mes, y el mercado ya la '
+      + 'descuenta: oro +3,9% y VIX +13,0%, ningún activo por encima de su umbral.',
   },
 
   // ── Tramo principal · Fed y Tesoro ────────────────────────────────────────
@@ -195,14 +203,20 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2014-07-17', tramo: 'control_2014', tema: 'guerra', clase: 'victimas-otan',
     titulo: 'Derribo del vuelo MH17 sobre Donbás, 298 muertos',
-    severidad: 3, verificado: true,
-    nota: 'Víctimas civiles de países OTAN. Prueba directa de gravedad humana alta con efecto de precio corto.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: gravedad humana máxima y ninguna '
+      + 'respuesta material. Es el caso que mejor enseña que severidad no es gravedad. Ojo con '
+      + 'la medición: el VIX llegó a +39,8% y el umbral está en el 40%, así que cuenta como '
+      + 'no-movimiento por dos décimas. Si se revisan los umbrales, este es el evento a mirar.',
   },
   {
     fecha: '2015-11-24', tramo: 'control_2014', tema: 'guerra', clase: 'incursion-otan',
     titulo: 'Turquía derriba un Su-24 ruso en su frontera',
-    severidad: 3, verificado: true,
-    nota: 'Un país OTAN derriba un avión ruso: el precedente más cercano a un choque directo.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: un país OTAN derriba un avión '
+      + 'ruso, que es el precedente más cercano a un choque directo, y aun así la respuesta '
+      + 'fueron sanciones económicas rusas a Turquía, no una respuesta material de mercado. '
+      + 'Oro -1,5% y VIX +10,2%, ningún activo por encima de su umbral.',
   },
   {
     fecha: '2018-03-04', tramo: 'control_2014', tema: 'guerra', clase: 'sabotaje',
@@ -258,8 +272,12 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2023-10-08', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
     titulo: 'El gasoducto Balticconnector entre Finlandia y Estonia aparece dañado en el Báltico',
-    severidad: 3, verificado: true,
-    nota: 'Infraestructura energética de dos países OTAN, un año después del Nord Stream. Sirve para ver si la repetición agota el efecto.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo, y es el caso que obligó a '
+      + 'afinarlo: hubo corte real de gas y duró meses, pero un enlace bilateral no tiene '
+      + 'tamaño de mercado. Es lo que lo separa del Nord Stream, que sigue en 4. La respuesta '
+      + 'a la pregunta que motivó incluirlo —si la repetición agota el efecto— es que no hubo '
+      + 'efecto que agotar.',
   },
   {
     fecha: '2024-11-18', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
@@ -270,8 +288,11 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2024-12-25', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
     titulo: 'Dañado el cable eléctrico Estlink 2 entre Finlandia y Estonia; Finlandia apresa un petrolero de la flota en la sombra',
-    severidad: 3, verificado: true,
-    nota: 'Primera vez que un país OTAN aborda y retiene un buque por sabotaje. Ocurrió en Navidad, con el mercado medio cerrado.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: el apresamiento del buque es una '
+      + 'respuesta material, pero de un solo barco y sin tamaño de mercado, y el cable es un '
+      + 'interconector bilateral. Ocurrió en Navidad, con el mercado medio cerrado. VIX +36,6% '
+      + 'y NQ -4,7%, ninguno por encima de su umbral.',
   },
   {
     fecha: '2023-08-01', tramo: 'principal', tema: 'fed_tesoro', clase: 'crisis-institucional',
