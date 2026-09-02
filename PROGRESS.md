@@ -63,15 +63,42 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 > mediciones de precio, 27 respuestas del replay y 7 puntos de curva. El
 > pipeline completo funciona de extremo a extremo.
 
-- **APLICAR LA MIGRACIÓN 027** — es lo único que bloquea el cierre de la
-  calibración, y solo puede hacerlo el dueño del proyecto de Supabase. Enviada
-  por correo el 2026-09-02 («SQL para Supabase — migración 027»). Permite el
-  tramo `placebo` en `severity_events`; comprobado contra la base que la
-  constraint actual lo rechaza. Después, en el servidor:
-  `npm run calibracion:placebo` y `npm run calibracion:ajustar`.
-- **La curva sigue sin aplicarse hasta que exista el grupo de control.** El
-  código ya está listo: `ajustar.mts` usa `liftSobreBase` y avisa en pantalla
-  cuando no hay control. La pantalla de backtesting también avisa en ámbar.
+- ~~**Aplicar la migración 027**~~ — hecha por el usuario el 2026-09-02, y el
+  grupo de control ya está cargado: 60 fechas y 1344 mediciones.
+- **DECISIÓN PENDIENTE: el criterio de «movimiento material» está roto y hay que
+  elegir el nuevo.** La línea base salió del **85%**: en un día cualquiera, algún
+  activo supera su umbral el 85% de las veces. Con el criterio actual los
+  eventos importantes del corpus mueven el mercado **menos** que una fecha al
+  azar (82% contra 85%, −3 puntos). No distingue nada.
+
+  No es culpa de ningún activo —el que más se dispara es el Nasdaq, con un 50%—
+  sino de la regla «basta que **uno** de los ocho supere su umbral». Con ocho
+  activos y cinco sesiones, casi cualquier semana cuenta.
+
+  Los candidatos, medidos sobre el corpus y el control:
+
+  | criterio | placebo | principal | separación |
+  |---|---|---|---|
+  | ≥1 activo, umbral actual **(el de hoy)** | 85% | 82% | **−3 pts** |
+  | ≥3 activos, umbral actual | 48% | 76% | +28 pts |
+  | **≥1 activo, umbral ×2** | 30% | 59% | **+29 pts** |
+  | ≥2 activos, umbral ×2 | 13% | 41% | +28 pts |
+
+  **Recomendación: umbral ×2 manteniendo «basta uno».** Máxima separación, es el
+  cambio conceptualmente más simple —los umbrales estaban a la mitad de lo que
+  debían— y conserva la regla de que un evento que solo dispara el VIX sigue
+  siendo un evento del que avisar.
+
+  **Aviso honesto sobre esa recomendación:** se eligió tras probar siete
+  criterios sobre los mismos datos, así que parte de esos 29 puntos es
+  sobreajuste. Los tres mejores están empatados dentro del ruido (28-29 pts) y
+  la elección entre ellos debería hacerse por argumento económico, no por la
+  cifra. Con 60 fechas de control y 27 eventos, la diferencia entre 28 y 29
+  puntos no significa nada.
+- **La curva sigue sin poder aplicarse, ahora por dos razones distintas.**
+  `ajustar.mts` avisa de las dos: el criterio saturado, y que 6 de los 8
+  peldaños tienen menos de 5 casos —con esa muestra la proporción solo puede
+  valer 0, 50 o 100 y la curva describe el sorteo, no el fenómeno.
 - ~~**Los cinco agujeros del prompt**~~ — **cerrados el 2026-09-02**, con la
   medición delante: descartados **10 → 1**, y los cinco casos recuperados con el
   peldaño correcto o cerca. Ver la entrada de la sesión en «Completado».
@@ -369,6 +396,40 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — la línea base sale del 85% y tumba el criterio
+
+Aplicada la migración 027 por el usuario, el grupo de control se cargó sin
+incidencias: 60 fechas al azar, 1344 mediciones. Y el resultado invalida el
+criterio con el que se venía midiendo todo.
+
+**En un día cualquiera, algún activo supera su umbral el 85% de las veces.** Los
+eventos del tramo principal lo hacen el 82%. Es decir: con el criterio actual,
+las invasiones, los sabotajes y las decisiones de la Fed mueven el mercado
+**menos** que una fecha elegida al azar. La separación es de −3 puntos.
+
+Eso explica hacia atrás por qué la curva salía subiendo la severidad: no era
+solo el sesgo del corpus, era que el criterio estaba saturado desde el principio
+y nadie tenía con qué verlo.
+
+**La causa no es ningún activo suelto.** El que más se dispara en fechas al azar
+es el Nasdaq, con un 50%, y el que menos Bitcoin, con un 12%. El problema es la
+regla «basta que **uno** de los ocho supere su umbral»: con ocho activos y una
+ventana de cinco sesiones, la probabilidad de que ninguno se mueva es pequeña.
+Es una prueba múltiple sin corrección.
+
+Medidos los candidatos sobre el corpus y el control, la tabla está en
+«Pendiente». La recomendación es duplicar los umbrales manteniendo «basta uno»
+(30% contra 59%, +29 puntos), pero **la decisión es del dueño del sistema**: se
+eligió tras probar siete criterios sobre los mismos datos y parte de esa ventaja
+es sobreajuste.
+
+`ajustar.mts` gana dos avisos que saltan solos: uno cuando la línea base pasa
+del 70% —el criterio está saturado— y otro cuando algún peldaño tiene menos de
+cinco casos. Ahora mismo saltan los dos: 6 de 8 peldaños están por debajo de
+cinco, así que la curva describe el sorteo más que el fenómeno.
+
+Suite completa en verde: 961/961, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — la calibración consigue su denominador
 

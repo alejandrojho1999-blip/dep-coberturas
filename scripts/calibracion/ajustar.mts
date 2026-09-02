@@ -181,6 +181,28 @@ async function main(): Promise<void> {
     console.log('   fueron importantes, así que casi todos movieron el precio. Faltan')
     console.log('   los días anodinos. NO apliques esta curva en producción todavía.')
   }
+
+  // Una línea base tan alta significa que el criterio de movimiento está
+  // saturado: si en un día cualquiera casi siempre pasa algo, «pasó algo» no
+  // distingue eventos. No es un problema del corpus sino del umbral.
+  if (base != null && base >= 0.70) {
+    console.log('')
+    console.log(`⚠️  LÍNEA BASE DEL ${(base * 100).toFixed(0)}%: el criterio de movimiento está saturado.`)
+    console.log('   Con ocho activos y la regla «basta que uno supere su umbral», casi')
+    console.log('   cualquier semana del mercado cuenta como movimiento. Mientras la base')
+    console.log('   siga así de alta, el lift es casi binario y la curva no es fiable.')
+    console.log('   Se corrige subiendo los umbrales o exigiendo varios activos a la vez.')
+  }
+
+  // Con dos o tres casos por peldaño, P(movimiento) solo puede valer 0, 50 o
+  // 100: la curva describe el sorteo, no el fenómeno.
+  const flacos = filas.filter((f) => (f.n_eventos as number) < 5).length
+  if (flacos) {
+    console.log('')
+    console.log(`⚠️  ${flacos} de ${filas.length} peldaños tienen menos de 5 casos.`)
+    console.log('   Con esa muestra la proporción solo puede dar unos pocos valores y la')
+    console.log('   curva describe el sorteo más que el fenómeno. Hace falta más corpus.')
+  }
   console.log('')
 }
 
