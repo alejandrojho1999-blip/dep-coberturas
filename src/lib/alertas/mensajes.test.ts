@@ -117,9 +117,9 @@ describe('mensajeGuerra', () => {
   it('usa el enlace acortado en lugar del original cuando llega', () => {
     const m = mensajeGuerra({
       titular, clasificacion, niveles: [nivelOro], mercadoAbierto: true,
-      enlace: 'https://is.gd/aB3xY9',
+      enlace: 'https://tinyurl.com/aB3xY9',
     })
-    expect(m).toContain('🔗 is.gd · https://is.gd/aB3xY9')
+    expect(m).toContain('🔗 https://tinyurl.com/aB3xY9')
     expect(m).not.toContain('https://ejemplo.com/n1')
   })
 

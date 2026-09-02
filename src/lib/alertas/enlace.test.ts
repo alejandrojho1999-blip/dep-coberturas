@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  ACORTADORES,
   acortarUrl,
-  dominioDe,
   LARGO_TOLERABLE,
   limpiarUrl,
   lineaEnlace,
@@ -29,22 +29,12 @@ describe('limpiarUrl', () => {
   })
 })
 
-describe('dominioDe', () => {
-  it('quita el www', () => {
-    expect(dominioDe('https://www.reuters.com/a/b')).toBe('reuters.com')
-  })
-
-  it('devuelve null si no se puede leer', () => {
-    expect(dominioDe('rota')).toBeNull()
-  })
-})
-
 describe('lineaEnlace', () => {
-  it('pone el medio delante del enlace', () => {
-    expect(lineaEnlace('https://is.gd/abc123')).toBe('🔗 is.gd · https://is.gd/abc123')
+  it('deja solo el enlace, sin el dominio delante', () => {
+    expect(lineaEnlace('https://tinyurl.com/abc123')).toBe('🔗 https://tinyurl.com/abc123')
   })
 
-  it('sin dominio legible, deja solo el enlace', () => {
+  it('no añade nada aunque la URL no sea legible', () => {
     expect(lineaEnlace('rota')).toBe('🔗 rota')
   })
 })
@@ -60,13 +50,40 @@ describe('acortarUrl', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  it('devuelve el alias cuando is.gd responde bien', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('https://is.gd/aB3xY9\n', { status: 200 })))
+  it('devuelve el alias cuando el primer acortador responde bien', async () => {
+    const fetchSpy = vi.fn(async () => new Response('https://tinyurl.com/aB3xY9\n', { status: 200 }))
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await expect(acortarUrl(LARGA)).resolves.toBe('https://tinyurl.com/aB3xY9')
+    // Con el primero basta: no se molesta al resto.
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('pasa al siguiente acortador cuando el primero devuelve un 200 con su error', async () => {
+    // El fallo real del 2026-09-02: is.gd respondía 200 con este mismo cuerpo.
+    const fetchSpy = vi.fn(async (url: string) =>
+      url.includes('tinyurl.com')
+        ? new Response('Error, database insert failed', { status: 200 })
+        : new Response('https://is.gd/aB3xY9', { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await expect(acortarUrl(LARGA)).resolves.toBe('https://is.gd/aB3xY9')
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('pasa al siguiente acortador cuando el primero ni siquiera responde', async () => {
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes('tinyurl.com')) throw new Error('timeout')
+      return new Response('https://is.gd/aB3xY9', { status: 200 })
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+
     await expect(acortarUrl(LARGA)).resolves.toBe('https://is.gd/aB3xY9')
   })
 
   it('manda la URL ya limpia al acortador, no la original', async () => {
-    const fetchSpy = vi.fn(async (_url: string) => new Response('https://is.gd/aB3xY9', { status: 200 }))
+    const fetchSpy = vi.fn(async (_url: string) => new Response('https://tinyurl.com/aB3xY9', { status: 200 }))
     vi.stubGlobal('fetch', fetchSpy)
 
     await acortarUrl(LARGA)
@@ -75,17 +92,20 @@ describe('acortarUrl', () => {
     expect(pedida).not.toContain('ceid=')
   })
 
-  it('cae a la URL limpia si is.gd responde un error', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 502 })))
+  it('cae a la URL limpia si todos responden un error de red', async () => {
+    const fetchSpy = vi.fn(async () => new Response('nope', { status: 502 }))
+    vi.stubGlobal('fetch', fetchSpy)
+
     await expect(acortarUrl(LARGA)).resolves.toBe(limpiarUrl(LARGA))
+    expect(fetchSpy).toHaveBeenCalledTimes(ACORTADORES.length)
   })
 
-  it('cae a la URL limpia si is.gd responde 200 con un texto que no es un enlace suyo', async () => {
+  it('cae a la URL limpia si todos responden 200 con un texto que no es un enlace suyo', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('Error: invalid URL', { status: 200 })))
     await expect(acortarUrl(LARGA)).resolves.toBe(limpiarUrl(LARGA))
   })
 
-  it('cae a la URL limpia si la red falla, sin lanzar', async () => {
+  it('cae a la URL limpia si la red falla en todos, sin lanzar', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('timeout') }))
     await expect(acortarUrl(LARGA)).resolves.toBe(limpiarUrl(LARGA))
   })

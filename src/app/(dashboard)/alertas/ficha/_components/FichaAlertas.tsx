@@ -252,7 +252,7 @@ export function FichaAlertas() {
         <ListaPuntos
           puntos={[
             'El mensaje sale por el puente de Nexus hacia el WhatsApp del administrador, en local.',
-            'El enlace de la noticia se acorta con is.gd para que quepa en una línea. Si el servicio tarda, responde mal o rechaza la URL, se manda la URL limpia: el aviso nunca se queda sin enlace por culpa del acortador.',
+            'El enlace de la noticia se acorta para que quepa en una línea: primero se prueba TinyURL y, si falla, is.gd. Si ninguno responde, se manda la URL limpia: el aviso nunca se queda sin enlace por culpa del acortador.',
             'El registro distingue aceptado de entregado. Una señal encolada con la sesión de WhatsApp caída no llegó a ningún sitio, así que cuenta como fallida igual que una que el puente rechazó, y aparece en el KPI «No entregados».',
           ]}
         />

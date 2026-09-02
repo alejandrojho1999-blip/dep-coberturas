@@ -334,6 +334,28 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 
 ## Completado
 
+### Sesión del 2026-09-02 — el enlace del WhatsApp deja de ocupar media pantalla
+
+Los avisos salían con la URL de Google News entera, de más de 350 caracteres, y
+con el dominio del acortador delante haciendo de segundo enlace clicable a una
+portada que no interesa a nadie.
+
+La causa no estaba en el formato sino en el acortador: **is.gd lleva días
+respondiendo `200` con el cuerpo «Error, database insert failed»**. El código ya
+comprobaba la forma de la respuesta, así que no enviaba basura —caía a la URL
+limpia, que es justo la larga—. El fallo era silencioso por diseño.
+
+- `enlace.ts` prueba ahora **una cadena de acortadores**: TinyURL primero,
+  verificado el 2026-09-02 contra la URL real que había salido esa mañana (354
+  caracteres → 28), e is.gd como respaldo por si el que cae es el otro.
+- `lineaEnlace` deja **solo el enlace**. El dominio se quitó porque con el alias
+  ya no era el del medio sino el del acortador, así que no decía quién lo cuenta
+  —eso está en la línea de la fuente, justo encima— y sí añadía un segundo
+  enlace clicable inútil.
+- La ficha técnica de `/alertas/ficha` describe la cadena nueva.
+
+Suite completa en verde: 894/894, `tsc` y `eslint` limpios.
+
 ### Sesión del 2026-09-02 — inflación, ficha técnica y tesis de inversión
 
 Tres peticiones del usuario, ninguna empezada. Se hicieron las tres.
