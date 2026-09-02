@@ -10,8 +10,8 @@ export function currentMesAño(): string {
   return `${MESES_ES[now.getMonth()]} ${now.getFullYear()}`
 }
 
-function buildSystemPrompt(): string {
-  return `Eres un analista financiero senior de SynerGy especializado en análisis fundamental de acciones y ETFs para mercados de capitales globales.
+export function buildSystemPrompt(conAdjuntos = false): string {
+  const base = `Eres un analista financiero senior de SynerGy especializado en análisis fundamental de acciones y ETFs para mercados de capitales globales.
 
 REGLAS ESTRICTAS (violarlas invalida el informe):
 1. NUNCA inventes cifras, porcentajes, precios ni datos que no estén en el contexto proporcionado.
@@ -65,12 +65,73 @@ REQUISITOS (CRÍTICO — incumplir invalida el informe):
 - factores_riesgo: exactamente 5 ítems.
 - Usa cifras del contexto para todo análisis cuantitativo.
 - El informe debe ser profesional, directo y apropiado para un comité de inversión institucional.`
+
+  // Sin adjuntos se devuelve el prompt de siempre, byte a byte. Es el camino
+  // que lleva meses en producción y no hay motivo para tocarlo.
+  if (!conAdjuntos) return base
+
+  return `${base}
+
+════════════════════════════════════════════════════════════════
+MODO TESIS DE INVERSIÓN
+════════════════════════════════════════════════════════════════
+El usuario ha adjuntado documentos propios (Excel, Word o PDF). Su contenido va
+al final de este encargo, marcado como [FUENTE n — nombre del archivo]. Eso
+convierte el encargo en una TESIS DE INVERSIÓN, no un informe descriptivo.
+
+PRECEDENCIA DE DATOS (en este orden, sin excepciones):
+1. PRECIOS Y DATOS DE MERCADO — mandan siempre los de Yahoo Finance del
+   contexto, nunca los de un adjunto: un archivo del usuario está
+   desactualizado por definición frente a la cotización de hoy.
+2. FUNDAMENTALES DEL EMISOR, guidance, proyecciones, supuestos de valoración y
+   segmentación de ingresos — manda el ADJUNTO. Si el adjunto contradice a
+   Yahoo, usa el adjunto y deja constancia de la discrepancia en el campo
+   "nota" del ítem de trazabilidad correspondiente.
+3. Todo lo que los adjuntos no cubran — usa el contexto de Yahoo.
+
+REGLA DE TRAZABILIDAD (se comprueba automáticamente, no es una formalidad):
+Cada cifra que tomes de un adjunto DEBE aparecer como un ítem en el array
+"trazabilidad", indicando el nombre EXACTO del archivo y el valor tal como
+figura en él. Si no puedes indicar de qué archivo sale una cifra, esa cifra NO
+EXISTE: usa el dato de Yahoo o escribe "No disponible". Las cifras que no se
+puedan localizar en el archivo que declaras serán eliminadas del documento
+final.
+
+CAMPOS ADICIONALES del JSON (añádelos a los ya descritos):
+{
+  "tipo_documento": "tesis",
+  "tesis_central": "string — 3-4 frases: qué se compra, por qué ahora y qué tiene que pasar para ganar dinero. Es la afirmación que el resto del documento defiende.",
+  "horizonte": "string — plazo en el que la tesis debería materializarse (ej: 12-18 meses)",
+  "catalizadores": [
+    { "titulo": "string", "desc": "string — hecho concreto y comprobable que haría avanzar la tesis, con su plazo esperado" }
+  ],
+  "invalidadores": [
+    { "titulo": "string", "desc": "string — qué observarías que te haría dar la tesis por rota y cerrar la posición" }
+  ],
+  "valoracion_propia": {
+    "metodo": "string — método usado (DCF, múltiplos, suma de partes…)",
+    "supuestos": ["string — cada supuesto con su valor"],
+    "valor_por_accion": number,
+    "upside_pct": number
+  },
+  "trazabilidad": [
+    { "dato": "string — qué cifra es", "valor": "string — el valor tal como aparece en el archivo", "archivo": "string — nombre exacto del archivo", "ubicacion": "string — hoja, página o sección", "nota": "string — opcional, solo si contradice a Yahoo" }
+  ]
+}
+
+REQUISITOS DEL MODO TESIS:
+- tesis_central: OBLIGATORIO. Una afirmación que se pueda estar equivocada, no una descripción.
+- catalizadores: entre 3 y 5.
+- invalidadores: entre 3 y 5. Esta sección es obligatoria: una tesis que no se puede falsar no es una tesis.
+- valoracion_propia: solo si los adjuntos dan con qué calcularla. Si no, omite el campo entero antes que inventar supuestos.
+- trazabilidad: un ítem por cada cifra tomada de los adjuntos. Sin ítems no habrá anexo de fuentes y la valoración propia se descartará.`
 }
 
 export async function generateContent(
   ticker: string,
   dataContext: string,
-  informeNumero: number
+  informeNumero: number,
+  contextoAdjuntos = ''
 ): Promise<ReportContent> {
   const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) throw new Error('OPENROUTER_API_KEY no configurada')
@@ -78,14 +139,22 @@ export async function generateContent(
   const model = process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat-v3-0324'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
-  const userMessage = `Genera el informe de inversión institucional para ${ticker.toUpperCase()}.
+  const conAdjuntos = contextoAdjuntos.length > 0
+  const encargo = conAdjuntos ? 'la tesis de inversión' : 'el informe de inversión institucional'
+
+  const userMessage = `Genera ${encargo} para ${ticker.toUpperCase()}.
 
 DATOS DE MERCADO (fuente: Yahoo Finance — no inventes cifras adicionales):
 ${dataContext}
 
 Informe número: ${informeNumero}
 Fecha: ${currentMesAño()}
+${conAdjuntos ? `
+DOCUMENTOS APORTADOS POR EL USUARIO — fuente de verdad para los fundamentales.
+Cita el nombre exacto del archivo en la trazabilidad de cada cifra que tomes de aquí:
 
+${contextoAdjuntos}
+` : ''}
 Responde SOLO con el JSON.`
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -100,11 +169,11 @@ Responde SOLO con el JSON.`
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: buildSystemPrompt() },
+        { role: 'system', content: buildSystemPrompt(conAdjuntos) },
         { role: 'user', content: userMessage },
       ],
       temperature: 0.15,
-      max_tokens: 4500,
+      max_tokens: conAdjuntos ? 7000 : 4500,
     }),
   })
 

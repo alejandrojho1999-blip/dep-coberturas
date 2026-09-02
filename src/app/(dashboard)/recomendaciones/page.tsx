@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { BarChart2, Cpu, Download, Eye, FileText, Loader2, Search, Trash2, Upload, X } from 'lucide-react'
+import { BarChart2, Cpu, Download, Eye, FileText, Loader2, Paperclip, Search, Trash2, Upload, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { HistoryEntry, ReportContent } from '@/lib/informes/types'
 import { contractKey, type OptionContractRef } from '@/lib/options/occ-symbol'
@@ -25,6 +25,15 @@ interface Toast {
   id: number
   message: string
   variant: 'success' | 'error'
+}
+
+/** Archivo aportado como fuente de una tesis, ya guardado en el servidor. */
+interface AdjuntoSubido {
+  id: string
+  filename: string
+  doc_type: string
+  size_bytes: number
+  chars: number
 }
 
 
@@ -281,6 +290,14 @@ export default function RecomendacionesPage() {
   const [uploadingId,     setUploadingId]     = useState<string | null>(null)
   const fileInputRef                          = useRef<HTMLInputElement>(null)
   const uploadTargetRef                       = useRef<HistoryEntry | null>(null)
+  // Fuentes que el usuario aporta ANTES de generar. No confundir con
+  // `fileInputRef`, que reemplaza el Word ya generado de una fila del histórico.
+  const adjuntosInputRef                      = useRef<HTMLInputElement>(null)
+  const [adjuntos, setAdjuntos]               = useState<AdjuntoSubido[]>([])
+  const [subiendoAdjuntos, setSubiendoAdjuntos] = useState(false)
+  // El lote identifica los archivos de una tesis que todavía no existe: la fila
+  // del informe se crea después, así que no puede ser ella quien los agrupe.
+  const loteIdRef                             = useRef<string | null>(null)
   const [livePrices,    setLivePrices]        = useState<Record<string, number>>({})
   const [pricesLoading, setPricesLoading]     = useState(false)
   const [optionPrices,  setOptionPrices]      = useState<Record<string, number>>({})
@@ -743,13 +760,56 @@ export default function RecomendacionesPage() {
 
   // ─────────────────────────────────────────────────────────────────────────────
 
+  /** Abre el selector de fuentes. Distinto del Word editado del histórico. */
+  const triggerAdjuntos = () => adjuntosInputRef.current?.click()
+
+  const handleAdjuntosSeleccionados = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (files.length === 0) return
+    if (!ticker.trim()) {
+      addToast('Escribe primero el ticker al que pertenecen las fuentes.', 'error')
+      return
+    }
+
+    loteIdRef.current ??= crypto.randomUUID()
+    setSubiendoAdjuntos(true)
+    try {
+      const fd = new FormData()
+      fd.append('loteId', loteIdRef.current)
+      fd.append('ticker', ticker.trim().toUpperCase())
+      for (const f of files) fd.append('files', f)
+
+      const res = await fetch('/api/informes/adjuntos', { method: 'POST', body: fd })
+      const body = await res.json().catch(() => ({})) as {
+        adjuntos?: AdjuntoSubido[]
+        rechazados?: Array<{ filename: string; motivo: string }>
+        detail?: string
+      }
+      if (!res.ok) throw new Error(body.detail ?? `Error ${res.status}`)
+
+      setAdjuntos(prev => [...prev, ...(body.adjuntos ?? [])])
+      for (const r of body.rechazados ?? []) {
+        addToast(`${r.filename}: ${r.motivo}`, 'error')
+      }
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'No se pudieron subir las fuentes', 'error')
+    } finally { setSubiendoAdjuntos(false) }
+  }
+
+  const quitarAdjunto = async (id: string) => {
+    setAdjuntos(prev => prev.filter(a => a.id !== id))
+    await fetch(`/api/informes/adjuntos?id=${id}`, { method: 'DELETE' }).catch(() => {})
+  }
+
   const generateReport = async (tickerVal: string, force = false) => {
     setLoading(true)
+    const conFuentes = adjuntos.length > 0
     try {
       const res = await fetch('/api/informes/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: tickerVal, force }),
+        body: JSON.stringify({ ticker: tickerVal, force, loteId: conFuentes ? loteIdRef.current : null }),
       })
       if (res.status === 409) {
         const body = await res.json().catch(() => ({})) as { detail?: string; code?: string }
@@ -770,8 +830,16 @@ export default function RecomendacionesPage() {
         try { const m = JSON.parse(atob(metaHeader)) as { filename?: string }; if (m.filename) filename = m.filename } catch { /**/ }
       }
       triggerDownload(blob, filename)
-      addToast(`Informe de ${tickerVal} generado correctamente.`, 'success')
+      addToast(
+        conFuentes
+          ? `Tesis de ${tickerVal} generada con ${adjuntos.length} fuente${adjuntos.length === 1 ? '' : 's'}.`
+          : `Informe de ${tickerVal} generado correctamente.`,
+        'success',
+      )
       setPendingDuplicate(null)
+      // El lote queda consumido: las fuentes ya están asociadas a este informe.
+      setAdjuntos([])
+      loteIdRef.current = null
       await fetchHistory()
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Error desconocido', 'error')
@@ -788,13 +856,22 @@ export default function RecomendacionesPage() {
 
   return (
     <div className="min-h-full">
-      {/* Hidden file input for Word upload */}
+      {/* Reemplaza el Word FINAL de una fila del histórico. */}
       <input
         ref={fileInputRef}
         type="file"
         accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         className="hidden"
         onChange={handleFileSelected}
+      />
+      {/* Fuentes de datos para la tesis, antes de generarla. Es otra cosa. */}
+      <input
+        ref={adjuntosInputRef}
+        type="file"
+        multiple
+        accept=".xlsx,.xls,.docx,.doc,.pdf,.csv"
+        className="hidden"
+        onChange={handleAdjuntosSeleccionados}
       />
       {/* Duplicate confirmation dialog */}
       {pendingDuplicate && (
@@ -804,6 +881,13 @@ export default function RecomendacionesPage() {
             <p className="text-xs text-text-secondary">
               Generaste un informe de <span className="font-mono text-positive">{pendingDuplicate}</span> en las últimas 24 horas. ¿Deseas regenerarlo de todas formas?
             </p>
+            {adjuntos.length > 0 && (
+              <p className="text-xs text-text-secondary">
+                Esta vez se incorporarán <span className="font-semibold text-text-primary">
+                  {adjuntos.length} fuente{adjuntos.length === 1 ? '' : 's'}
+                </span> propias, así que el documento no será el mismo: saldrá una tesis de inversión.
+              </p>
+            )}
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setPendingDuplicate(null)}
@@ -892,6 +976,17 @@ export default function RecomendacionesPage() {
                 <p className="mt-1 text-xs text-text-secondary">{selectedResult.name} · {selectedResult.exchange}</p>
               )}
             </div>
+            {/* Fuentes propias: convierten el informe en una tesis */}
+            <button
+              type="button"
+              onClick={triggerAdjuntos}
+              disabled={loading || subiendoAdjuntos}
+              title="Excel, Word o PDF con las cifras del emisor. Se usarán como fuente de verdad de los fundamentales."
+              className="flex shrink-0 items-center gap-2 rounded-lg border border-border-subtle bg-background px-4 py-2.5 text-sm text-text-secondary transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:border-accent hover:text-text-primary"
+            >
+              {subiendoAdjuntos ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+              {subiendoAdjuntos ? 'Leyendo…' : 'Adjuntar fuentes'}
+            </button>
             {/* Submit button */}
             <button
               type="submit"
@@ -900,11 +995,41 @@ export default function RecomendacionesPage() {
               style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)' }}
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-              {loading ? 'Generando…' : 'Generar Informe'}
+              {loading ? 'Generando…' : adjuntos.length > 0 ? 'Generar Tesis' : 'Generar Informe'}
             </button>
             {/* Inline loading indicator */}
             {loading && (
               <span className="self-center text-xs text-text-secondary">Generando con IA… 30–60s</span>
+            )}
+            {/* Fuentes ya subidas para este lote */}
+            {adjuntos.length > 0 && (
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-wide text-text-muted">
+                  Fuentes de la tesis:
+                </span>
+                {adjuntos.map(a => (
+                  <span
+                    key={a.id}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs text-text-secondary"
+                    title={a.chars > 0
+                      ? `${a.doc_type} · ${a.chars.toLocaleString('es-ES')} caracteres leídos`
+                      : `${a.doc_type} · no se pudo leer el texto de este archivo`}
+                  >
+                    <Paperclip size={11} className={a.chars > 0 ? '' : 'text-warning'} />
+                    <span className="max-w-[200px] truncate">{a.filename}</span>
+                    <span className="text-text-muted">{(a.size_bytes / 1024).toFixed(0)} KB</span>
+                    <button
+                      type="button"
+                      onClick={() => void quitarAdjunto(a.id)}
+                      disabled={loading}
+                      className="text-text-muted transition-colors hover:text-negative disabled:opacity-50"
+                      aria-label={`Quitar ${a.filename}`}
+                    >
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
             )}
           </form>
         </div>
@@ -1287,7 +1412,7 @@ export default function RecomendacionesPage() {
                               {downloadingId === entry.id ? '…' : '.docx'}
                             </button>
                             <button
-                              title={uploadingId === entry.id ? 'Subiendo…' : entry.custom_docx_path ? 'Reemplazar Word' : 'Subir Word editado'}
+                              title={uploadingId === entry.id ? 'Subiendo…' : entry.custom_docx_path ? 'Reemplazar el Word final' : 'Subir el Word final editado'}
                               onClick={() => triggerUpload(entry)}
                               disabled={uploadingId !== null || downloadingId !== null}
                               className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"

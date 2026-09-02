@@ -57,7 +57,9 @@ function separator(): Paragraph {
   })
 }
 
-function cellBg(color: string, text: string, bold = false, size = 18, align = AlignmentType.CENTER): TableCell {
+// `align` se anota: sin el tipo, TypeScript infiere del valor por defecto el
+// literal 'center' y rechaza cualquier otra alineación.
+function cellBg(color: string, text: string, bold = false, size = 18, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.CENTER): TableCell {
   return new TableCell({
     shading: { type: ShadingType.CLEAR, color: 'auto', fill: color },
     children: [
@@ -179,6 +181,21 @@ function buildChartSvg(prices: { fecha: string; cierre: number }[]): Buffer | nu
   return Buffer.from(svg)
 }
 
+/** Lista con viñeta de «Título: explicación», el formato de los factores. */
+function vinetas(items: readonly { titulo: string; desc: string }[]): Paragraph[] {
+  return items.map(
+    (f) =>
+      new Paragraph({
+        spacing: { after: 60 },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({ text: `${f.titulo}: `, bold: true, size: half(10.5), font: 'Roboto' }),
+          new TextRun({ text: f.desc, size: half(10.5), font: 'Roboto' }),
+        ],
+      })
+  )
+}
+
 export async function createDocxBuffer(
   content: ReportContent,
   marketData: MarketData,
@@ -188,12 +205,23 @@ export async function createDocxBuffer(
   const firmante = solicitante?.trim() || 'Operador — SynerGy'
   const currency = marketData.moneda ?? 'USD'
 
-  // Load logo
+  // Una tesis abre con la afirmación que defiende, así que todo lo demás baja
+  // un número. Los informes antiguos no traen `tipo_documento` y conservan la
+  // numeración con la que se generaron.
+  const esTesis = content.tipo_documento === 'tesis'
+  const sec = (n: number) => n + (esTesis ? 1 : 0)
+
+  // Logotipo de cabecera. La variante azul es la del manual para fondos claros,
+  // que es exactamente lo que es una hoja de Word. El fallo se avisa en vez de
+  // tragarse en silencio: el logotipo anterior llevaba borrado desde el rebrand
+  // y este `catch` mudo escondió el desperfecto durante semanas de informes.
   let logoBuffer: Buffer | null = null
   try {
-    const logoPath = path.join(process.cwd(), 'public', 'emporium-logo.jpg')
+    const logoPath = path.join(process.cwd(), 'public', 'brand', 'logo-hrz-azul.png')
     logoBuffer = fs.readFileSync(logoPath)
-  } catch { /* no logo — skip gracefully */ }
+  } catch (e) {
+    console.warn('[informes] logotipo no disponible, el documento sale sin marca:', e)
+  }
 
   const headerChildren: Paragraph[] = []
   if (logoBuffer) {
@@ -203,8 +231,10 @@ export async function createDocxBuffer(
         children: [
           new ImageRun({
             data: logoBuffer,
-            transformation: { width: 200, height: 55 },
-            type: 'jpg',
+            // 1920×616 en el original: con 55 de alto el logotipo saldría
+            // aplastado.
+            transformation: { width: 200, height: 64 },
+            type: 'png',
           }),
         ],
       })
@@ -416,7 +446,7 @@ export async function createDocxBuffer(
             spacing: { before: 200, after: 120 },
             children: [
               new TextRun({
-                text: 'INFORME DE INVERSIÓN',
+                text: esTesis ? 'TESIS DE INVERSIÓN' : 'INFORME DE INVERSIÓN',
                 bold: true,
                 size: half(22),
                 color: COLOR_DARK,
@@ -462,47 +492,77 @@ export async function createDocxBuffer(
 
           separator(),
 
-          // ── SECCIÓN 1: RESUMEN EJECUTIVO ─────────────────────────
-          heading('1. RESUMEN EJECUTIVO'),
+          // ── SECCIÓN 1 (solo tesis): TESIS CENTRAL ────────────────
+          ...(content.tesis_central
+            ? [
+                heading('1. TESIS CENTRAL'),
+                new Table({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  borders: TableBorders.NONE,
+                  rows: [
+                    new TableRow({
+                      children: [
+                        cellBg(COLOR_DARK, content.tesis_central, false, half(11), AlignmentType.LEFT),
+                      ],
+                    }),
+                  ],
+                }),
+                ...(content.horizonte
+                  ? [
+                      new Paragraph({
+                        spacing: { before: 100, after: 60 },
+                        children: [
+                          new TextRun({ text: 'Horizonte: ', bold: true, size: half(10.5), font: 'Roboto' }),
+                          new TextRun({ text: content.horizonte, size: half(10.5), font: 'Roboto' }),
+                        ],
+                      }),
+                    ]
+                  : []),
+                separator(),
+              ]
+            : []),
+
+          // ── RESUMEN EJECUTIVO ────────────────────────────────────
+          heading(`${sec(1)}. RESUMEN EJECUTIVO`),
           body(content.resumen),
 
           separator(),
 
           // ── SECCIÓN 2: DESCRIPCIÓN DEL ACTIVO ───────────────────
-          heading('2. DESCRIPCIÓN DEL ACTIVO'),
+          heading(`${sec(2)}. DESCRIPCIÓN DEL ACTIVO`),
 
-          subheading('2.1 Modelo de Negocio'),
+          subheading(`${sec(2)}.1 Modelo de Negocio`),
           body(content.negocio),
 
-          subheading('2.2 Fuentes de Ingresos'),
+          subheading(`${sec(2)}.2 Fuentes de Ingresos`),
           fuentesTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.3 Histórico Anual de Ingresos'),
+          subheading(`${sec(2)}.3 Histórico Anual de Ingresos`),
           incomeTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.4 Indicadores Financieros Clave (TTM)'),
+          subheading(`${sec(2)}.4 Indicadores Financieros Clave (TTM)`),
           ttmTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.5 Flujo de Caja Libre (FCF)'),
+          subheading(`${sec(2)}.5 Flujo de Caja Libre (FCF)`),
           fcfTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.6 Principales Clientes'),
+          subheading(`${sec(2)}.6 Principales Clientes`),
           clientesTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.7 Principales Proveedores'),
+          subheading(`${sec(2)}.7 Principales Proveedores`),
           proveedoresTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.8 Principales Competidores'),
+          subheading(`${sec(2)}.8 Principales Competidores`),
           competidoresTable,
           new Paragraph({ spacing: { after: 100 }, children: [] }),
 
-          subheading('2.9 Evolución del Precio — Últimas 52 Semanas'),
+          subheading(`${sec(2)}.9 Evolución del Precio — Últimas 52 Semanas`),
           ...(svgBuffer
             ? [new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -519,23 +579,23 @@ export async function createDocxBuffer(
           separator(),
 
           // ── SECCIÓN 3: DESEMPEÑO Y VALORACIÓN ───────────────────
-          heading('3. DESEMPEÑO Y VALORACIÓN'),
+          heading(`${sec(3)}. DESEMPEÑO Y VALORACIÓN`),
 
-          subheading('3.1 Resultados Financieros'),
+          subheading(`${sec(3)}.1 Resultados Financieros`),
           body(content.financieros),
 
-          subheading('3.2 Valoración de Mercado y Múltiplos'),
+          subheading(`${sec(3)}.2 Valoración de Mercado y Múltiplos`),
           body(content.valoracion),
 
-          subheading('3.3 Flujo de Caja Libre y Valoración DCF'),
+          subheading(`${sec(3)}.3 Flujo de Caja Libre y Valoración DCF`),
           body(content.dcf_analysis ?? 'Análisis DCF no disponible.'),
 
           separator(),
 
           // ── SECCIÓN 4: FACTORES DE INVERSIÓN ────────────────────
-          heading('4. FACTORES DE INVERSIÓN'),
+          heading(`${sec(4)}. FACTORES DE INVERSIÓN`),
 
-          subheading('4.1 Factores Positivos'),
+          subheading(`${sec(4)}.1 Factores Positivos`),
           ...content.factores_positivos.map(
             (f) =>
               new Paragraph({
@@ -550,7 +610,7 @@ export async function createDocxBuffer(
 
           new Paragraph({ spacing: { after: 80 }, children: [] }),
 
-          subheading('4.2 Factores de Riesgo'),
+          subheading(`${sec(4)}.2 Factores de Riesgo`),
           ...content.factores_riesgo.map(
             (f) =>
               new Paragraph({
@@ -566,8 +626,124 @@ export async function createDocxBuffer(
           separator(),
 
           // ── SECCIÓN 5: CONCLUSIÓN Y RECOMENDACIÓN ───────────────
-          heading('5. CONCLUSIÓN Y RECOMENDACIÓN'),
+          heading(`${sec(5)}. CONCLUSIÓN Y RECOMENDACIÓN`),
           body(content.conclusion),
+
+          // ── SECCIÓN 6 (solo tesis): CATALIZADORES E INVALIDADORES ─
+          // Una tesis que no se puede falsar no es una tesis, así que los dos
+          // bloques van juntos: lo que la haría avanzar y lo que la rompería.
+          ...(content.catalizadores?.length || content.invalidadores?.length
+            ? [
+                separator(),
+                heading('6. CATALIZADORES Y QUÉ INVALIDARÍA LA TESIS'),
+                ...(content.catalizadores?.length
+                  ? [subheading('6.1 Catalizadores'), ...vinetas(content.catalizadores)]
+                  : []),
+                ...(content.invalidadores?.length
+                  ? [
+                      new Paragraph({ spacing: { after: 80 }, children: [] }),
+                      subheading('6.2 Qué daría la tesis por rota'),
+                      ...vinetas(content.invalidadores),
+                    ]
+                  : []),
+              ]
+            : []),
+
+          // ── SECCIÓN 7 (solo tesis): VALORACIÓN PROPIA ────────────
+          // Solo llega aquí si el servidor pudo respaldarla con al menos una
+          // cifra localizada en los adjuntos.
+          ...(content.valoracion_propia
+            ? [
+                separator(),
+                heading('7. VALORACIÓN PROPIA'),
+                new Paragraph({
+                  spacing: { after: 80 },
+                  children: [
+                    new TextRun({ text: 'Método: ', bold: true, size: half(10.5), font: 'Roboto' }),
+                    new TextRun({ text: content.valoracion_propia.metodo, size: half(10.5), font: 'Roboto' }),
+                  ],
+                }),
+                ...(content.valoracion_propia.supuestos ?? []).map(
+                  (sup) =>
+                    new Paragraph({
+                      spacing: { after: 40 },
+                      bullet: { level: 0 },
+                      children: [new TextRun({ text: sup, size: half(10.5), font: 'Roboto' })],
+                    })
+                ),
+                ...(content.valoracion_propia.valor_por_accion != null
+                  ? [
+                      new Paragraph({
+                        spacing: { before: 100 },
+                        children: [
+                          new TextRun({ text: 'Valor por acción: ', bold: true, size: half(10.5), font: 'Roboto' }),
+                          new TextRun({
+                            text: formatCurrency(content.valoracion_propia.valor_por_accion, currency),
+                            bold: true,
+                            size: half(10.5),
+                            color: COLOR_MID,
+                            font: 'Roboto',
+                          }),
+                          new TextRun({
+                            text: content.valoracion_propia.upside_pct != null
+                              ? `  (${content.valoracion_propia.upside_pct >= 0 ? '+' : ''}${content.valoracion_propia.upside_pct.toFixed(1)}% sobre el precio actual)`
+                              : '',
+                            size: half(10.5),
+                            font: 'Roboto',
+                          }),
+                        ],
+                      }),
+                    ]
+                  : []),
+              ]
+            : []),
+
+          // ── ANEXO A (solo tesis): FUENTES Y TRAZABILIDAD ─────────
+          // Cada fila de esta tabla se comprobó contra el texto del archivo que
+          // dice citar. Lo que no se pudo localizar no llegó hasta aquí.
+          ...(content.trazabilidad?.length || content.fuentes_adjuntas?.length
+            ? [
+                separator(),
+                heading('ANEXO A. FUENTES APORTADAS Y TRAZABILIDAD'),
+                ...(content.fuentes_adjuntas?.length
+                  ? [
+                      body(
+                        `Documentos aportados: ${content.fuentes_adjuntas
+                          .map((f) => `${f.filename} (${f.doc_type}, ${f.chars.toLocaleString('es-ES')} caracteres)`)
+                          .join('; ')}.`
+                      ),
+                    ]
+                  : []),
+                ...(content.trazabilidad?.length
+                  ? [
+                      new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                          new TableRow({
+                            children: ['Dato', 'Valor', 'Archivo', 'Ubicación'].map((h) =>
+                              cellBg(COLOR_MID, h, true, half(10))
+                            ),
+                          }),
+                          ...content.trazabilidad.map((t, i) =>
+                            stripedRow([t.dato, t.valor, t.archivo, t.ubicacion], i % 2 === 1)
+                          ),
+                        ],
+                      }),
+                      new Paragraph({
+                        spacing: { before: 100 },
+                        children: [
+                          new TextRun({
+                            text: 'Cada cifra de esta tabla se localizó en el archivo indicado. Las que no se pudieron comprobar se excluyeron del documento.',
+                            italics: true,
+                            size: half(9),
+                            font: 'Roboto',
+                          }),
+                        ],
+                      }),
+                    ]
+                  : []),
+              ]
+            : []),
 
           // ── FIRMA ───────────────────────────────────────────────
           new Paragraph({ spacing: { before: 300 }, children: [] }),
@@ -602,6 +778,11 @@ export async function createDocxBuffer(
   return Buffer.from(await Packer.toBuffer(doc))
 }
 
-export function buildFilename(ticker: string, mesAño: string): string {
-  return `${ticker.toUpperCase()}_Informe_${mesAño.replace(/\s+/g, '')}.docx`
+export function buildFilename(
+  ticker: string,
+  mesAño: string,
+  tipo: 'informe' | 'tesis' = 'informe',
+): string {
+  const que = tipo === 'tesis' ? 'Tesis' : 'Informe'
+  return `${ticker.toUpperCase()}_${que}_${mesAño.replace(/\s+/g, '')}.docx`
 }

@@ -71,6 +71,38 @@ export interface ClienteProveedor {
   relevancia: string
 }
 
+/** Valoración construida con los datos que aportó el usuario, no con Yahoo. */
+export interface ValoracionPropia {
+  metodo: string
+  supuestos: string[]
+  valor_por_accion: number | null
+  upside_pct: number | null
+}
+
+/**
+ * Una cifra y el archivo del que salió.
+ *
+ * Es la pieza que convierte «el adjunto es fuente de verdad» en algo
+ * comprobable: sin poder señalar el archivo, una cifra no entra en el
+ * documento. `verificado` lo pone el servidor tras buscar el valor en el texto
+ * extraído; el modelo no puede escribirlo.
+ */
+export interface TrazaDato {
+  dato: string
+  valor: string
+  archivo: string
+  ubicacion: string
+  nota?: string
+  verificado?: boolean
+}
+
+/** Archivo que el usuario adjuntó y que alimentó la tesis. */
+export interface FuenteAdjunta {
+  filename: string
+  doc_type: string
+  chars: number
+}
+
 export interface ReportContent {
   ticker: string
   empresa: string
@@ -91,6 +123,24 @@ export interface ReportContent {
   factores_riesgo: FactorInversion[]
   conclusion: string
   mes_año: string
+
+  // ── Campos de tesis ───────────────────────────────────────────────────────
+  // Todos opcionales, y a propósito: las filas de `informes_history` anteriores
+  // a esta versión guardan el esquema de arriba y tienen que seguir
+  // regenerándose sin ramas especiales. Ausentes ⇒ el documento sale como el
+  // informe de siempre.
+
+  /** Ausente equivale a 'informe'. */
+  tipo_documento?: 'informe' | 'tesis'
+  /** Qué se compra y por qué, en tres o cuatro frases. */
+  tesis_central?: string
+  horizonte?: string
+  catalizadores?: FactorInversion[]
+  /** Qué habría que observar para dar la tesis por rota. */
+  invalidadores?: FactorInversion[]
+  valoracion_propia?: ValoracionPropia
+  trazabilidad?: TrazaDato[]
+  fuentes_adjuntas?: FuenteAdjunta[]
 }
 
 export interface HistoryEntry {

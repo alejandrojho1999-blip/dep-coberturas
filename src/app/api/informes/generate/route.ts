@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { fetchMarketData, buildDataContext } from '@/lib/informes/yahoo'
 import { generateContent, currentMesAño } from '@/lib/informes/prompt'
 import { createDocxBuffer, buildFilename } from '@/lib/informes/docx'
+import { construirContextoAdjuntos, resumirFuentes } from '@/lib/informes/adjuntos'
+import { validarTrazabilidad, valoracionRespaldada } from '@/lib/informes/trazabilidad'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -12,9 +14,10 @@ export async function POST(request: Request): Promise<Response> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json() as { ticker?: string; force?: boolean }
+  const body = await request.json() as { ticker?: string; force?: boolean; loteId?: string }
   const ticker = body.ticker?.trim().toUpperCase()
   const force = body.force ?? false
+  const loteId = body.loteId?.trim() || null
   if (!ticker) return Response.json({ detail: 'ticker requerido' }, { status: 400 })
 
   const apiKey = process.env.OPENROUTER_API_KEY
@@ -63,10 +66,24 @@ export async function POST(request: Request): Promise<Response> {
 
   const dataContext = buildDataContext(marketData)
 
+  // Archivos que el usuario aportó para esta tesis. Sin lote, o con un lote
+  // vacío, el flujo es exactamente el de siempre y sale un informe.
+  const { data: adjuntos } = loteId
+    ? await supabase
+        .from('informe_adjuntos')
+        .select('id, filename, doc_type, texto_extraido')
+        .eq('user_id', user.id)
+        .eq('lote_id', loteId)
+        .order('created_at', { ascending: true })
+    : { data: null }
+
+  const conAdjuntos = (adjuntos ?? []).length > 0
+  const contextoAdjuntos = conAdjuntos ? construirContextoAdjuntos(adjuntos ?? []) : ''
+
   // Generate content via LLM
   let content
   try {
-    content = await generateContent(ticker, dataContext, informeNumero)
+    content = await generateContent(ticker, dataContext, informeNumero, contextoAdjuntos)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return Response.json({ detail: `Error generando contenido: ${msg}` }, { status: 500 })
@@ -81,6 +98,28 @@ export async function POST(request: Request): Promise<Response> {
   if (!content.mes_año) content.mes_año = currentMesAño()
   content.informe_numero = informeNumero
 
+  // Comprobación de la trazabilidad. El prompt pide al modelo que señale de qué
+  // archivo sale cada cifra, pero la garantía no puede ser que lo prometa: cada
+  // valor se busca literalmente en el texto extraído del archivo que dice
+  // citar, y lo que no aparece no llega al documento.
+  if (conAdjuntos) {
+    content.tipo_documento = 'tesis'
+    const { verificados, descartados } = validarTrazabilidad(content.trazabilidad, adjuntos ?? [])
+    content.trazabilidad = verificados
+    content.valoracion_propia = valoracionRespaldada(content.valoracion_propia, verificados)
+    content.fuentes_adjuntas = resumirFuentes(adjuntos ?? [])
+    if (descartados > 0) {
+      console.warn(`[informes/generate] ${descartados} referencias sin respaldo descartadas para ${ticker}`)
+    }
+  } else {
+    // Sin archivos no hay tesis que sostener: si el modelo se adelantó, se
+    // retiran los campos que no puede respaldar nadie.
+    delete content.tipo_documento
+    delete content.trazabilidad
+    delete content.valoracion_propia
+    delete content.fuentes_adjuntas
+  }
+
   // Build DOCX
   let docxBuffer: Buffer
   try {
@@ -90,10 +129,10 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ detail: `Error generando DOCX: ${msg}` }, { status: 500 })
   }
 
-  const filename = buildFilename(ticker, content.mes_año)
+  const filename = buildFilename(ticker, content.mes_año, conAdjuntos ? 'tesis' : 'informe')
 
   // Persist to Supabase
-  const { error: dbErr } = await supabase
+  const { data: filaInforme, error: dbErr } = await supabase
     .from('informes_history')
     .insert({
       user_id:          user.id,
@@ -109,9 +148,21 @@ export async function POST(request: Request): Promise<Response> {
       precio_objetivo_personal:  marketData.precio_objetivo ?? null,
       estado:                    'Observacion',
     })
+    .select('id')
+    .single()
 
   if (dbErr) {
     console.error('[informes/generate] DB insert error:', dbErr.message)
+  }
+
+  // Los adjuntos se subieron antes de que existiera esta fila, así que es ahora
+  // cuando se les puede poner el informe al que alimentaron.
+  if (loteId && filaInforme?.id) {
+    await supabase
+      .from('informe_adjuntos')
+      .update({ informe_id: filaInforme.id })
+      .eq('user_id', user.id)
+      .eq('lote_id', loteId)
   }
 
   const meta = {
@@ -122,6 +173,7 @@ export async function POST(request: Request): Promise<Response> {
     solicitante:       autoSolicitante,
     informe_numero:    informeNumero,
     fecha_generacion:  new Date().toISOString(),
+    tipo_documento:    conAdjuntos ? 'tesis' : 'informe',
   }
 
   return new Response(new Uint8Array(docxBuffer), {

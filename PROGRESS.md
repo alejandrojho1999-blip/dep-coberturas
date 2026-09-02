@@ -7,14 +7,14 @@
 
 ## Estado actual
 
-**Último commit:** la cobertura de una call vendida se comprueba contra las
-acciones del portafolio, rama `main`
+**Último commit:** tesis de inversión con archivos adjuntos como fuente de
+verdad, rama `main`
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **825/825** (60 ficheros) |
+| `npm run test:run` | **894/894** (67 ficheros) |
 | `npm run build` | exit 0 |
 | `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
@@ -34,6 +34,23 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 ---
 
 ## Pendiente
+
+### Tesis de inversión — falta aplicar la migración 026
+
+- **Aplicar `supabase/migrations/026_informe_adjuntos.sql` a mano** desde el
+  panel de Supabase. Crea la tabla `informe_adjuntos`, el bucket privado
+  `informe-adjuntos` (10 MB por archivo, seis MIME permitidos) y sus políticas.
+  Hasta entonces el botón «Adjuntar fuentes» falla al subir; el resto de
+  `/recomendaciones` funciona igual que siempre, porque sin lote el generador
+  cae exactamente en el camino de antes.
+- **Comprobar `pdf-parse` en producción.** Es la primera vez que se ejecuta de
+  verdad: el código heredado llamaba al módulo como si fuera una función, que
+  es la API de la versión 1, y la 2 exporta una clase. Está corregido y
+  probado con mocks, pero un PDF real en Vercel es otra cosa. Un archivo
+  ilegible degrada a cero caracteres, no tumba el lote.
+- **Adjuntos huérfanos:** un lote subido cuya tesis nunca se generó deja filas
+  con `informe_id NULL`. No molestan; convendría una limpieza de los que pasen
+  de una semana.
 
 ### Calibración de severidad — falta aplicar la migración 025
 
@@ -314,6 +331,65 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — inflación, ficha técnica y tesis de inversión
+
+Tres peticiones del usuario, ninguna empezada. Se hicieron las tres.
+
+**1. La inflación en el panel de alerta temprana.** El IPC ya se descargaba de
+FRED pero se pintaba como nivel del índice (~323), que nadie lee como
+inflación. Cada serie declara ahora su `lectura` —`'nivel'` o `'var12m'`— y el
+IPC se publica como porcentaje interanual, al lado de la tasa real. Se añade
+`CPILFESL`, el subyacente, que es el que mira la Fed. La traducción serie →
+métrica sale a `metricaDesde`, función pura: es lo que hace testeable la lógica
+sin simular FRED ni Yahoo, que es por lo que `medirDebasement` nunca tuvo
+pruebas.
+
+**2. Ficha técnica en `/alertas/ficha`.** Ruta propia con guard de
+administrador, enlazada desde la cabecera del registro. Documenta los ocho
+ciclos con el porqué de cada cadencia, las fuentes de datos, cómo se decide la
+severidad, cómo llega el aviso, las curvas de probabilidad y una sección de
+límites conocidos. El dato de arquitectura que no estaba en ninguna pantalla:
+el motor corre en el **cron del propio servidor**, no en Vercel ni en Actions,
+porque el puente hacia WhatsApp solo escucha en `127.0.0.1`.
+
+**3. Tesis de inversión con adjuntos.** El informe DOCX pasa a ser tesis cuando
+el usuario aporta Excel, Word o PDF. Lo delicado no era leer los archivos sino
+no fiarse del modelo:
+
+- `src/lib/documentos/extraer.ts` — extractor compartido, sacado de
+  `api/causal/analyze-docs` (una ruta sin callers). **Tenía un fallo latente:**
+  llamaba a `pdf-parse` como función, que es la API de la versión 1; la 2
+  exporta la clase `PDFParse`. Habría lanzado «pdfParse is not a function» con
+  el primer PDF. Corregido, y de paso a `await import()` en vez de `require`.
+- `src/lib/informes/adjuntos.ts` — reparto de 16 000 caracteres entre los
+  archivos, redistribuyendo lo que sobra de los cortos.
+- `src/lib/informes/trazabilidad.ts` — **la pieza que sostiene el diseño.** El
+  prompt obliga al modelo a decir de qué archivo sale cada cifra, pero la
+  garantía no puede ser que lo prometa: el servidor busca cada valor en el
+  texto extraído del archivo citado, normalizando formatos (`1.234,50` y
+  `$1,234.50` son el mismo número). Lo que no aparece no se imprime, y una
+  valoración propia sin ninguna cifra verificada se retira entera.
+- Precedencia en tres niveles: los precios siempre de Yahoo (un adjunto está
+  desactualizado por definición), los fundamentales del adjunto, y el resto de
+  Yahoo. El pisado de precios que ya existía se conserva intacto.
+- `ReportContent` se extiende **solo con campos opcionales**: las filas
+  antiguas de `content_json` siguen regenerándose sin ramas especiales.
+  `buildSystemPrompt(false)` devuelve el literal de siempre byte a byte, con un
+  test que lo congela.
+- **Fallo de marca corregido:** `docx.ts` cargaba `public/emporium-logo.jpg`,
+  borrado en el rebrand, y el `catch` mudo lo escondía. Todos los informes
+  salían sin logotipo. Ahora usa `public/brand/logo-hrz-azul.png` con el alto
+  correcto para su ratio (1920×616), y avisa si falla.
+
+| Check | Resultado |
+|---|---|
+| `npm run lint` | 0 problemas |
+| `npx tsc --noEmit` | exit 0 |
+| `npm run test:run` | **894/894** (67 ficheros) |
+| `npm run build` | exit 0 |
+
+Queda aplicar la migración 026 a mano; hasta entonces todo lo demás funciona.
 
 ### Sesión del 2026-09-02 (cierre) — la cobertura de las calls deja de ser una convención
 

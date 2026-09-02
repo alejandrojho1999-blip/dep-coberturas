@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUniqueTreatments, getSectorConfig } from '@/lib/causal/dag-configs'
+import { extraerTexto, tipoDocumento } from '@/lib/documentos/extraer'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -51,41 +52,6 @@ Responde EXCLUSIVAMENTE en JSON válido sin markdown:
 }
 `.trim()
 
-async function extractText(filename: string, buffer: Buffer): Promise<string> {
-  const ext = filename.toLowerCase().split('.').pop() ?? ''
-
-  if (ext === 'pdf') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>
-    const result = await pdfParse(buffer)
-    return result.text.slice(0, 12000)
-  }
-
-  if (ext === 'docx' || ext === 'doc') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mammoth = require('mammoth') as { extractRawText: (opts: { buffer: Buffer }) => Promise<{ value: string }> }
-    const result = await mammoth.extractRawText({ buffer })
-    return result.value.slice(0, 12000)
-  }
-
-  if (ext === 'xlsx' || ext === 'xls') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const XLSX = require('xlsx') as {
-      read: (buf: Buffer, opts: { type: string }) => { SheetNames: string[]; Sheets: Record<string, unknown> }
-      utils: { sheet_to_csv: (sheet: unknown) => string }
-    }
-    const wb = XLSX.read(buffer, { type: 'buffer' })
-    const texts: string[] = []
-    for (const sheetName of wb.SheetNames.slice(0, 3)) {
-      const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName])
-      texts.push(`[${sheetName}]\n${csv.slice(0, 3000)}`)
-    }
-    return texts.join('\n\n').slice(0, 12000)
-  }
-
-  return buffer.toString('utf-8').slice(0, 12000)
-}
-
 export async function POST(request: Request): Promise<Response> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -118,11 +84,9 @@ export async function POST(request: Request): Promise<Response> {
   for (const file of files.slice(0, 5)) {
     try {
       const buffer = Buffer.from(await file.arrayBuffer())
-      const text = await extractText(file.name, buffer)
+      const text = await extraerTexto(file.name, buffer)
       extractedTexts.push(`[Archivo: ${file.name}]\n${text}`)
-      const ext = file.name.toLowerCase().split('.').pop() ?? 'other'
-      const docType = ['pdf'].includes(ext) ? 'pdf' : ['xlsx', 'xls'].includes(ext) ? 'excel' : ['docx', 'doc'].includes(ext) ? 'word' : 'other'
-      fileMetadata.push({ filename: file.name, docType })
+      fileMetadata.push({ filename: file.name, docType: tipoDocumento(file.name) })
     } catch { /* skip unreadable files */ }
   }
 
