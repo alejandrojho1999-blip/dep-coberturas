@@ -73,6 +73,18 @@ export interface MovimientoMedido {
 const SOLO_AL_ALZA = new Set(['^VIX'])
 
 /**
+ * El desplazamiento de un activo en la escala en la que se compara con su umbral.
+ *
+ * Existe para que la regla del VIX viva en un solo sitio. `huboMovimiento`
+ * responde sí o no, pero para describir un día normal hace falta la magnitud, y
+ * si cada uno la calculase por su cuenta acabarían discrepando en el único
+ * activo donde el signo importa.
+ */
+export function magnitudComparable(ticker: string, extremo: number): number {
+  return SOLO_AL_ALZA.has(ticker) ? extremo : Math.abs(extremo)
+}
+
+/**
  * ¿Se movió algo de verdad tras este evento?
  *
  * Basta con que **un** activo supere su umbral: un evento que dispara el VIX sin
@@ -84,7 +96,7 @@ export function huboMovimiento(movimientos: readonly MovimientoMedido[]): boolea
   return movimientos.some((m) => {
     const umbral = UMBRAL_MATERIAL[m.ticker]
     if (umbral == null || m.extremo == null) return false
-    return SOLO_AL_ALZA.has(m.ticker) ? m.extremo >= umbral : Math.abs(m.extremo) >= umbral
+    return magnitudComparable(m.ticker, m.extremo) >= umbral
   })
 }
 

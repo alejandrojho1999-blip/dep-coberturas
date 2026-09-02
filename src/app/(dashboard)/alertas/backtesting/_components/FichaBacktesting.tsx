@@ -8,6 +8,7 @@ import {
   lineaBase,
   movimientoDe,
   pctConSigno,
+  perfilNormalidad,
   resumirGlobal,
   resumirPorClase,
   soloCurados,
@@ -42,6 +43,12 @@ function Severidad({ valor }: { valor: number }) {
   )
 }
 
+/** Magnitud sin signo, para las columnas que describen un desplazamiento. */
+function pctPlano(valor: number | null, decimales = 1): string {
+  if (valor == null || !Number.isFinite(valor)) return '—'
+  return `${(valor * 100).toFixed(decimales)}%`
+}
+
 /** Verde si el mercado se movió, apagado si no. El color es el dato. */
 function Movio({ si }: { si: boolean }) {
   return si
@@ -57,6 +64,7 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
   const global = resumirGlobal(curados)
   const porClase = resumirPorClase(curados)
   const base = lineaBase(eventos)
+  const perfil = perfilNormalidad(eventos)
 
   // Los tramos no son comparables entre sí —el mercado de tasas cero reaccionaba
   // a la geopolítica de otra manera—, así que la tabla va separada por tramo y
@@ -77,6 +85,15 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
             Qué hizo de verdad el precio después de cada hecho histórico del patrón oro. Es el
             contraste con el que se corrige la severidad del clasificador: si la etiqueta dice 5
             y el mercado no se movió, manda el mercado.
+          </p>
+          <p className="mt-2 max-w-3xl text-xs leading-relaxed text-text-muted">
+            El sistema trabaja en cuatro pasos: el corpus mide qué hizo el precio tras cada hecho,
+            el grupo de control mide qué hace en fechas al azar, el replay pregunta al clasificador
+            qué peldaño le habría dado, y la curva traduce el peldaño del modelo al que el precio
+            respalda. Lo que decide esa traducción no es la proporción bruta sino{' '}
+            <strong className="text-text-secondary">lo que añade sobre la línea base</strong>: un
+            peldaño que mueve el precio tanto como un martes cualquiera no vale nada, por grave que
+            suene el titular.
           </p>
         </div>
         <Link
@@ -145,6 +162,65 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
             <code className="font-mono">npm run calibracion:placebo</code>.
           </p>
         )}
+      </Panel>
+
+      <Panel
+        titulo="El día normal, activo por activo"
+        descripcion="La línea base dice cuántas veces se mueve algo, pero no cuánto ni cuál. Esta tabla enseña la distribución de la que sale esa cifra, que es lo que permite ver a qué distancia queda un día corriente del umbral de un evento."
+      >
+        <TablaScroll>
+          <table className="w-full min-w-[52rem] border-collapse">
+            <thead>
+              <tr className="border-b border-border-subtle">
+                <Th>Activo</Th>
+                <Th alinear="right">Umbral</Th>
+                <Th alinear="right">Mediana</Th>
+                <Th alinear="right">p90</Th>
+                <Th alinear="right">Máximo</Th>
+                <Th alinear="right">Umbral / mediana</Th>
+                <Th alinear="right">Cruza sin noticia</Th>
+                <Th alinear="right">Cruza con noticia</Th>
+                <Th alinear="right">Separación</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {perfil.map((p) => (
+                <tr key={p.ticker} className="border-b border-border-subtle/60">
+                  <Td mono>{ETIQUETA_TICKER[p.ticker] ?? p.ticker}</Td>
+                  <Td alinear="right" mono>{pctPlano(p.umbral, 0)}</Td>
+                  <Td alinear="right" mono>{pctPlano(p.p50)}</Td>
+                  <Td alinear="right" mono>{pctPlano(p.p90)}</Td>
+                  <Td alinear="right" mono>{pctPlano(p.max)}</Td>
+                  <Td alinear="right" mono>
+                    {p.vecesLaMediana == null ? '—' : `×${p.vecesLaMediana.toFixed(1)}`}
+                  </Td>
+                  <Td alinear="right" mono>{p.n ? `${p.cruces} de ${p.n}` : '—'}</Td>
+                  <Td alinear="right" mono>{p.nCurados ? `${p.crucesCurados} de ${p.nCurados}` : '—'}</Td>
+                  <Td alinear="right" mono>
+                    <span className={
+                      p.separacion == null ? 'text-text-muted'
+                        : p.separacion >= 0.15 ? 'text-emerald-500'
+                          : 'text-amber-500'
+                    }>
+                      {p.separacion == null
+                        ? '—'
+                        : `${p.separacion >= 0 ? '+' : ''}${(p.separacion * 100).toFixed(0)} pts`}
+                    </span>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TablaScroll>
+        <NotaPie>
+          Las tres primeras columnas describen el desplazamiento del activo en {VENTANA_JUICIO}{' '}
+          sesiones <strong>sin</strong> ningún hecho detrás; en el VIX solo cuenta la subida, porque
+          un desplome es el mercado calmándose y no un susto. «Separación» es cuánto más cruza el
+          umbral con noticia que sin ella, y es la única columna que dice si el activo sirve: se
+          compara en tasa y no en cuenta porque los dos grupos no tienen el mismo tamaño. Un activo
+          cerca de cero cruza igual pase o no pase algo y, como basta con que <strong>uno</strong>{' '}
+          cruce para dar por movido el precio, arrastra el veredicto sin aportar información.
+        </NotaPie>
       </Panel>
 
       <Panel

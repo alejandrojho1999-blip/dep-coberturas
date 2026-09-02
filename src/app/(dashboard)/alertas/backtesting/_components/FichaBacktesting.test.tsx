@@ -130,3 +130,89 @@ describe('FichaBacktesting', () => {
     expect(screen.getByText('El corpus en cifras')).toBeInTheDocument()
   })
 })
+
+/**
+ * El panel del día normal es el que sostiene la interpretación de todo lo
+ * demás, así que lo que se prueba es que no confunda los dos grupos: las
+ * columnas de la izquierda son fechas sin hecho detrás y las de la derecha
+ * hechos curados. Mezclarlas haría parecer discriminante a cualquier activo.
+ */
+describe('FichaBacktesting · el día normal', () => {
+  const conControl: EventoMedido[] = [
+    ...EVENTOS,
+    {
+      fecha: '2023-05-02',
+      titulo: 'Sesión de control 2023-05-02',
+      tramo: 'placebo',
+      tema: 'guerra',
+      clase: 'dia-corriente',
+      severidad: 1,
+      nota: null,
+      movimientos: [
+        // Un día tranquilo: lejos del umbral en los dos activos.
+        { ticker: 'SI=F', ventana: 5, retorno: 0.004, extremo: UMBRAL_MATERIAL['SI=F'] * 0.2 },
+        { ticker: 'GC=F', ventana: 5, retorno: 0.002, extremo: UMBRAL_MATERIAL['GC=F'] * 0.2 },
+      ],
+    },
+    {
+      fecha: '2023-05-09',
+      titulo: 'Sesión de control 2023-05-09',
+      tramo: 'placebo',
+      tema: 'guerra',
+      clase: 'dia-corriente',
+      severidad: 1,
+      nota: null,
+      movimientos: [
+        { ticker: 'SI=F', ventana: 5, retorno: 0.005, extremo: UMBRAL_MATERIAL['SI=F'] * 0.4 },
+        // El oro cruza su umbral sin que haya pasado nada: es ruido, y la
+        // tabla tiene que enseñarlo como tal.
+        { ticker: 'GC=F', ventana: 5, retorno: 0.07, extremo: UMBRAL_MATERIAL['GC=F'] * 1.2 },
+      ],
+    },
+  ]
+
+  /**
+   * El panel, aislado. Los tickers también salen en las tablas por tramo, así
+   * que sin acotar el ámbito `getByRole('cell')` encuentra varias filas.
+   */
+  const panelDiaNormal = () =>
+    within(screen.getByRole('heading', { name: /el día normal, activo por activo/i })
+      .closest('section')!)
+
+  it('cuenta los cruces sin noticia aparte de los cruces con noticia', () => {
+    render(<FichaBacktesting eventos={conControl} />)
+    const fila = panelDiaNormal().getByRole('cell', { name: 'Oro' }).closest('tr')
+
+    // Uno de los dos días de control cruzó; de los hechos, dos de los tres.
+    expect(within(fila!).getByText('1 de 2')).toBeInTheDocument()
+    expect(within(fila!).getByText('2 de 3')).toBeInTheDocument()
+  })
+
+  it('mide la separación en tasa y no en número de cruces', () => {
+    render(<FichaBacktesting eventos={conControl} />)
+    const fila = panelDiaNormal().getByRole('cell', { name: 'Oro' }).closest('tr')
+
+    // Los dos grupos no tienen el mismo tamaño: 2 de 3 hechos frente a 1 de 2
+    // fechas al azar son +17 pts. Restar cruces a secas daría 1 y no
+    // significaría nada, que es el error que esta columna existe para evitar.
+    expect(within(fila!).getByText('+17 pts')).toBeInTheDocument()
+  })
+
+  it('describe el día normal aunque el activo nunca cruce su umbral', () => {
+    render(<FichaBacktesting eventos={conControl} />)
+    const fila = panelDiaNormal().getByRole('cell', { name: 'Plata' }).closest('tr')
+
+    // La plata no cruza nunca: la fila existe igual y su mediana no es una raya.
+    expect(within(fila!).getByText('0 de 2')).toBeInTheDocument()
+    expect(within(fila!).getByText('3.0%')).toBeInTheDocument()
+  })
+
+  it('sin grupo de control no inventa un día normal', () => {
+    render(<FichaBacktesting eventos={EVENTOS} />)
+    const fila = panelDiaNormal().getByRole('cell', { name: 'Plata' }).closest('tr')
+
+    // Sin control las columnas del día normal son desconocidas, no ceros: un
+    // cero diría «nunca se mueve», que es justo lo contrario de «no se sabe».
+    expect(within(fila!).getAllByText('—').length).toBeGreaterThan(0)
+  })
+})

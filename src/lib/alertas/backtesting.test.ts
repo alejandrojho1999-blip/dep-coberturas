@@ -7,6 +7,8 @@ import {
   movimientoDe,
   movimientosDeJuicio,
   pctConSigno,
+  percentil,
+  perfilNormalidad,
   resumirGlobal,
   resumirPorClase,
   type EventoMedido,
@@ -232,5 +234,87 @@ describe('el grupo de control', () => {
     const soloReales = resumirGlobal(soloCurados(conPlacebo))
     expect(soloReales.eventos).toBe(1)
     expect(soloReales.levesConEfecto).toBe(0)
+  })
+})
+
+describe('percentil', () => {
+  it('devuelve null sin datos, que no es un cero', () => {
+    expect(percentil([], 0.5)).toBeNull()
+  })
+
+  it('con un solo valor lo devuelve para cualquier percentil', () => {
+    expect(percentil([0.07], 0.9)).toBe(0.07)
+  })
+
+  it('interpola entre los dos valores que rodean la posición', () => {
+    // Cuatro valores: la mediana cae entre el segundo y el tercero.
+    expect(percentil([0, 1, 2, 3], 0.5)).toBe(1.5)
+    expect(percentil([0, 1, 2, 3], 0)).toBe(0)
+    expect(percentil([0, 1, 2, 3], 1)).toBe(3)
+  })
+
+  it('no depende del orden de entrada', () => {
+    expect(percentil([3, 0, 2, 1], 0.5)).toBe(1.5)
+  })
+})
+
+describe('perfilNormalidad', () => {
+  /** Una fecha de control con un solo activo medido. */
+  const control = (ticker: string, factor: number, fecha: string) =>
+    evento({
+      fecha, tramo: 'placebo', clase: 'dia-corriente', severidad: 1,
+      titulo: `Sesión de control ${fecha}`,
+      movimientos: [mov(ticker, factor)],
+    })
+
+  const curado = (ticker: string, factor: number, fecha: string) =>
+    evento({ fecha, movimientos: [mov(ticker, factor)] })
+
+  it('separa el día normal de los hechos y mide la distancia al umbral', () => {
+    const perfil = perfilNormalidad([
+      control('GC=F', 0.25, '2023-01-02'),
+      control('GC=F', 0.75, '2023-01-03'),
+      curado('GC=F', 2, '2022-02-24'),
+    ])
+    const oro = perfil.find((p) => p.ticker === 'GC=F')
+
+    expect(oro).toMatchObject({ n: 2, cruces: 0, nCurados: 1, crucesCurados: 1 })
+    // Mediana del control = 0,5 umbrales, así que el umbral está al doble.
+    expect(oro?.vecesLaMediana).toBeCloseTo(2)
+    // Cruza el 100% de los hechos y el 0% del control.
+    expect(oro?.separacion).toBeCloseTo(1)
+  })
+
+  it('en el VIX una caída no acerca al umbral: solo cuenta la subida', () => {
+    // Un desplome del VIX es el mercado calmándose, no un susto.
+    const perfil = perfilNormalidad([control('^VIX', -3, '2023-01-02')])
+    const vix = perfil.find((p) => p.ticker === '^VIX')
+
+    expect(vix?.cruces).toBe(0)
+    expect(vix?.p50).toBeLessThan(0)
+    // Con mediana negativa el múltiplo no significa nada y no se inventa.
+    expect(vix?.vecesLaMediana).toBeNull()
+  })
+
+  it('ordena por poder discriminante, no por número de cruces', () => {
+    const perfil = perfilNormalidad([
+      // El oro cruza en el control y en los hechos: no distingue nada.
+      control('GC=F', 2, '2023-01-02'),
+      curado('GC=F', 2, '2022-02-24'),
+      // La plata solo cruza con noticia detrás.
+      control('SI=F', 0.1, '2023-01-02'),
+      curado('SI=F', 2, '2022-02-24'),
+    ])
+
+    expect(perfil[0].ticker).toBe('SI=F')
+    expect(perfil.find((p) => p.ticker === 'SI=F')?.separacion).toBeCloseTo(1)
+    expect(perfil.find((p) => p.ticker === 'GC=F')?.separacion).toBeCloseTo(0)
+  })
+
+  it('sin control ni hechos deja la separación en null en vez de en cero', () => {
+    // Cero significaría «no distingue»; null significa «no se sabe».
+    const perfil = perfilNormalidad([])
+    expect(perfil.every((p) => p.separacion === null)).toBe(true)
+    expect(perfil.every((p) => p.n === 0)).toBe(true)
   })
 })

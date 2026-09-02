@@ -32,6 +32,7 @@
     "calibracion:ajustar": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/calibracion/ajustar.mts",
     "calibracion:placebo": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/calibracion/placebo.mts",
     "calibracion:comparar": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/calibracion/comparar.mts",
+    "calibracion:normalidad": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/calibracion/normalidad.mts",
     "calibracion:medir": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/calibracion/medir.mts",
     "alertas:prueba": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local --import ./scripts/backtest/register-alias.mjs scripts/alertas/ejecutar.mts prueba"
   },

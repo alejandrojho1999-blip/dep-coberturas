@@ -12,7 +12,13 @@
  * Todo aquí es puro. Quien lee de la base es la página.
  */
 
-import { huboMovimiento, VENTANA_JUICIO, type MovimientoMedido } from '@/lib/alertas/calibracion'
+import {
+  huboMovimiento,
+  magnitudComparable,
+  UMBRAL_MATERIAL,
+  VENTANA_JUICIO,
+  type MovimientoMedido,
+} from '@/lib/alertas/calibracion'
 
 export interface Movimiento extends MovimientoMedido {
   ventana: number
@@ -189,6 +195,115 @@ export function resumirGlobal(eventos: readonly EventoMedido[]): ResumenGlobal {
     gravesSinEfecto: eventos.filter((e) => e.severidad >= 4 && !eventoMovioElPrecio(e)).length,
     levesConEfecto: eventos.filter((e) => e.severidad <= 2 && eventoMovioElPrecio(e)).length,
   }
+}
+
+/**
+ * El percentil `q` (0-1) de una lista, por interpolación lineal.
+ *
+ * Con 60 fechas de control no hay muestra para nada sofisticado, y este es el
+ * método que usan `numpy` y las hojas de cálculo, así que las cifras se pueden
+ * comprobar a mano si alguien duda de ellas.
+ */
+export function percentil(valores: readonly number[], q: number): number | null {
+  if (!valores.length) return null
+  const orden = [...valores].sort((a, b) => a - b)
+  if (orden.length === 1) return orden[0]
+  const pos = (orden.length - 1) * q
+  const bajo = Math.floor(pos)
+  const alto = Math.ceil(pos)
+  if (bajo === alto) return orden[bajo]
+  return orden[bajo] + (orden[alto] - orden[bajo]) * (pos - bajo)
+}
+
+export interface PerfilActivo {
+  ticker: string
+  /** El umbral a partir del cual el movimiento se considera material. */
+  umbral: number
+  /** Mediciones válidas del activo en el grupo de control. */
+  n: number
+  /** Mediana del desplazamiento en una fecha sin hecho detrás. */
+  p50: number | null
+  p90: number | null
+  /** El desplazamiento más grande que se vio sin que pasara nada. */
+  max: number | null
+  /** Veces que el activo cruzó su umbral en el grupo de control. */
+  cruces: number
+  /**
+   * Cuánto le falta a un día normal para llegar al umbral, en múltiplos de la
+   * mediana. Un 8 significa que el umbral está a ocho veces el día corriente:
+   * cuanto más alto, más raro es que salte por casualidad.
+   */
+  vecesLaMediana: number | null
+  /** Las mismas cifras en los hechos curados, para poder comparar. */
+  nCurados: number
+  p50Curados: number | null
+  crucesCurados: number
+  /**
+   * Cuánto más cruza el umbral con noticia que sin ella, en puntos.
+   *
+   * Es la única columna que dice si el activo sirve. Se compara en tasa y no en
+   * cuenta porque los dos grupos tienen tamaños distintos: 60 fechas de control
+   * frente a 32 hechos. Un activo con separación cercana a cero cruza igual
+   * pase o no pase algo, así que solo añade ruido al veredicto.
+   */
+  separacion: number | null
+}
+
+/**
+ * Cómo se comporta cada activo en un día cualquiera, y a qué distancia queda
+ * eso de su umbral.
+ *
+ * La línea base dice que el 25% de las fechas al azar «mueven el precio», pero
+ * no dice **cuánto** ni **cuál**: con esa cifra sola no se sabe si un umbral
+ * está bien puesto o si un activo salta por su cuenta. Este perfil enseña la
+ * distribución de la que sale ese 25%, activo por activo, que es lo que permite
+ * ver cuándo un día se está saliendo de lo suyo y acercándose al umbral de un
+ * evento noticioso.
+ *
+ * Se calcula sobre el `extremo`, igual que el veredicto, y con la misma regla de
+ * signo: en el VIX solo cuenta la subida.
+ */
+export function perfilNormalidad(eventos: readonly EventoMedido[]): PerfilActivo[] {
+  const control = eventos.filter(esPlacebo)
+  const curados = soloCurados(eventos)
+
+  const magnitudes = (grupo: readonly EventoMedido[], ticker: string): number[] =>
+    grupo
+      .map((e) => movimientoDe(e, ticker)?.extremo)
+      .filter((v): v is number => v != null)
+      .map((v) => magnitudComparable(ticker, v))
+
+  return Object.entries(UMBRAL_MATERIAL)
+    .map(([ticker, umbral]) => {
+      const normales = magnitudes(control, ticker)
+      const deEventos = magnitudes(curados, ticker)
+      const p50 = percentil(normales, 0.5)
+      const cruces = normales.filter((v) => v >= umbral).length
+      const crucesCurados = deEventos.filter((v) => v >= umbral).length
+
+      return {
+        ticker,
+        umbral,
+        n: normales.length,
+        p50,
+        p90: percentil(normales, 0.9),
+        max: normales.length ? Math.max(...normales) : null,
+        cruces,
+        // Con mediana cero o negativa el múltiplo no significa nada: pasa en el
+        // VIX, donde más de la mitad de los días normales son de bajada.
+        vecesLaMediana: p50 != null && p50 > 0 ? umbral / p50 : null,
+        nCurados: deEventos.length,
+        p50Curados: percentil(deEventos, 0.5),
+        crucesCurados,
+        separacion: normales.length && deEventos.length
+          ? crucesCurados / deEventos.length - cruces / normales.length
+          : null,
+      }
+    })
+    // Por poder discriminante: arriba el activo que más distingue una noticia de
+    // un martes cualquiera, que es el orden en el que interesa leerlos.
+    .sort((a, b) => (b.separacion ?? -Infinity) - (a.separacion ?? -Infinity)
+      || a.ticker.localeCompare(b.ticker))
 }
 
 /** Porcentaje con signo, para los retornos. Nulo se escribe como raya. */
