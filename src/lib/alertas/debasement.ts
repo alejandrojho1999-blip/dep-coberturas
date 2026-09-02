@@ -3,9 +3,11 @@
  *
  * La pregunta no es cuánto sube el oro, sino cuánto se degrada aquello con lo
  * que se mide. Por eso el panel no mira el precio nominal: mira el oro y el
- * bitcoin **por unidad de M2**, la tasa real a 10 años y el tamaño del balance
- * de la Reserva Federal. Cuando M2 crece más rápido que el oro, el refugio va
- * por detrás; cuando la tasa real cae, el coste de guardar refugio desaparece.
+ * bitcoin **por unidad de M2**, la tasa real a 10 años, la inflación —general y
+ * subyacente— y el tamaño del balance de la Reserva Federal. Cuando M2 crece
+ * más rápido que el oro, el refugio va por detrás; cuando la tasa real cae, el
+ * coste de guardar refugio desaparece. Tasa real e inflación son las dos caras
+ * de la misma moneda: la nominal menos lo que se lleva la subida de precios.
  */
 
 import { fetchFREDObservations, type FREDObservation } from '@/lib/data/fred'
@@ -41,12 +43,68 @@ function variacion12m(obs: FREDObservation[]): { ultimo: FREDObservation | null;
   return { ultimo, var12mPct: ((ultimo.value - previa.value) / Math.abs(previa.value)) * 100 }
 }
 
-const SERIES: ReadonlyArray<{ id: string; clave: string; etiqueta: string; unidad: string }> = [
-  { id: 'M2SL',  clave: 'm2',        etiqueta: 'M2 (masa monetaria)',        unidad: 'miles de millones USD' },
-  { id: 'WALCL', clave: 'balance',   etiqueta: 'Balance de la Fed',          unidad: 'millones USD' },
-  { id: 'DFII10',clave: 'tasa_real', etiqueta: 'Tasa real 10 años (TIPS)',   unidad: '%' },
-  { id: 'CPIAUCSL', clave: 'ipc',    etiqueta: 'IPC (índice)',               unidad: 'índice' },
+/**
+ * Cómo se lee una serie.
+ *
+ * De una tasa interesa el nivel: «tasa real 10 años, 1,9 %» es la frase
+ * completa. De un índice de precios no interesa el nivel —nadie sabe qué
+ * significa un IPC de 323— sino cuánto ha subido en un año, que es lo que la
+ * gente llama inflación. Declararlo por serie evita que el panel tenga que
+ * adivinarlo.
+ */
+type Lectura = 'nivel' | 'var12m'
+
+interface SerieDef {
+  id: string
+  clave: string
+  etiqueta: string
+  unidad: string
+  lectura: Lectura
+}
+
+const SERIES: readonly SerieDef[] = [
+  { id: 'M2SL',     clave: 'm2',        etiqueta: 'M2 (masa monetaria)',       unidad: 'miles de millones USD', lectura: 'nivel'  },
+  { id: 'WALCL',    clave: 'balance',   etiqueta: 'Balance de la Fed',         unidad: 'millones USD',          lectura: 'nivel'  },
+  { id: 'DFII10',   clave: 'tasa_real', etiqueta: 'Tasa real 10 años (TIPS)',  unidad: '%',                     lectura: 'nivel'  },
+  { id: 'CPIAUCSL', clave: 'ipc',       etiqueta: 'Inflación IPC (interanual)', unidad: '%',                    lectura: 'var12m' },
+  { id: 'CPILFESL', clave: 'ipc_core',  etiqueta: 'IPC subyacente (interanual)', unidad: '%',                   lectura: 'var12m' },
 ]
+
+/**
+ * Traduce una serie de FRED a la métrica que se publica.
+ *
+ * Devuelve `null` cuando no hay con qué: sin observaciones, o sin un año de
+ * historia en una serie que se publica como variación. Se prefiere omitir la
+ * métrica a enseñar un hueco, porque el panel se lee de un vistazo y una
+ * casilla vacía se confunde con un cero.
+ */
+export function metricaDesde(def: SerieDef, obs: FREDObservation[]): MetricaDebasement | null {
+  const { ultimo, var12mPct } = variacion12m(obs)
+  if (!ultimo) return null
+
+  if (def.lectura === 'var12m') {
+    if (var12mPct == null) return null
+    // El valor ya *es* la variación: repetirla debajo sería decir dos veces lo
+    // mismo con dos formatos distintos.
+    return {
+      clave: def.clave,
+      etiqueta: def.etiqueta,
+      valor: var12mPct,
+      unidad: def.unidad,
+      var12mPct: null,
+      fecha: ultimo.date,
+    }
+  }
+
+  return {
+    clave: def.clave,
+    etiqueta: def.etiqueta,
+    valor: ultimo.value,
+    unidad: def.unidad,
+    var12mPct,
+    fecha: ultimo.date,
+  }
+}
 
 /**
  * Foto del envilecimiento.
@@ -73,20 +131,18 @@ export async function medirDebasement(ahora = new Date()): Promise<Debasement> {
       errores.push(`${def.id}: ${(r.reason as Error).message}`)
       return
     }
-    const { ultimo, var12mPct } = variacion12m(r.value)
-    if (!ultimo) {
-      errores.push(`${def.id}: sin observaciones`)
+    // El nivel crudo se guarda siempre, aunque la métrica se publique como
+    // variación: los cocientes de refugio necesitan M2 en unidades de dinero,
+    // no en porcentaje.
+    const ultimo = r.value.at(-1)
+    if (ultimo) valores.set(def.clave, ultimo.value)
+
+    const metrica = metricaDesde(def, r.value)
+    if (!metrica) {
+      errores.push(`${def.id}: sin observaciones suficientes`)
       return
     }
-    valores.set(def.clave, ultimo.value)
-    metricas.push({
-      clave: def.clave,
-      etiqueta: def.etiqueta,
-      valor: ultimo.value,
-      unidad: def.unidad,
-      var12mPct,
-      fecha: ultimo.date,
-    })
+    metricas.push(metrica)
   })
 
   // Refugio por unidad de dinero: es el cociente lo que dice si el activo está

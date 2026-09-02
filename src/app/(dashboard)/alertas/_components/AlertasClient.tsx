@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
+import { AlertTriangle, FileText, RefreshCw } from 'lucide-react'
 import { Panel, Chip } from '@/app/(dashboard)/estrategias/_components/ui'
 import { KpiCard, KpiRow } from '@/app/(dashboard)/portafolios/_components/KpiCard'
 import { PulsoPublico } from '@/app/(dashboard)/alertas/_components/PulsoPublico'
@@ -105,14 +106,23 @@ export function AlertasClient({ proximoEventoIso, proximoEventoEtiqueta }: {
             avisos salen por WhatsApp desde la tarea del servidor; esta pantalla es el registro.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void cargar()}
-          className="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide text-text-secondary hover:text-text-primary"
-        >
-          <RefreshCw className={`h-3 w-3 ${cargando ? 'animate-spin' : ''}`} />
-          Actualizar
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/alertas/ficha"
+            className="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide text-text-secondary hover:text-text-primary"
+          >
+            <FileText className="h-3 w-3" />
+            Ficha técnica
+          </Link>
+          <button
+            type="button"
+            onClick={() => void cargar()}
+            className="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide text-text-secondary hover:text-text-primary"
+          >
+            <RefreshCw className={`h-3 w-3 ${cargando ? 'animate-spin' : ''}`} />
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {error && (
