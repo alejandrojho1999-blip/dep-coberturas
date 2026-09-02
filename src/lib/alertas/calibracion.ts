@@ -44,6 +44,17 @@ export interface MovimientoMedido {
 }
 
 /**
+ * Activos en los que solo cuenta la subida, no la bajada.
+ *
+ * El VIX es un índice de miedo: que suba un 30% es un susto y que baje un 30% es
+ * el mercado calmándose. Medirlo en valor absoluto daba «hubo movimiento» en la
+ * incursión de Kursk (06-08-2024), donde el VIX **cayó** un 51%. Para el oro o
+ * el S&P el valor absoluto sí es lo correcto: da igual la dirección, lo que
+ * importa es que la posición cubierta se comporta distinto.
+ */
+const SOLO_AL_ALZA = new Set(['^VIX'])
+
+/**
  * ¿Se movió algo de verdad tras este evento?
  *
  * Basta con que **un** activo supere su umbral: un evento que dispara el VIX sin
@@ -54,7 +65,8 @@ export interface MovimientoMedido {
 export function huboMovimiento(movimientos: readonly MovimientoMedido[]): boolean {
   return movimientos.some((m) => {
     const umbral = UMBRAL_MATERIAL[m.ticker]
-    return umbral != null && m.extremo != null && Math.abs(m.extremo) >= umbral
+    if (umbral == null || m.extremo == null) return false
+    return SOLO_AL_ALZA.has(m.ticker) ? m.extremo >= umbral : Math.abs(m.extremo) >= umbral
   })
 }
 

@@ -93,8 +93,11 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2023-06-24', tramo: 'principal', tema: 'guerra', clase: 'inestabilidad-interna',
     titulo: 'Motín del grupo Wagner y marcha sobre Moscú',
-    severidad: 3, verificado: true,
-    nota: 'Inestabilidad en una potencia nuclear, resuelta en 36 horas y en fin de semana.',
+    severidad: 2, verificado: true,
+    nota: 'Baja de 3 a 2 el 2026-09-02: inestabilidad en una potencia nuclear, resuelta en 36 '
+      + 'horas y en fin de semana, con oro +0,1% y VIX +9,4% a cinco sesiones. Ningún activo '
+      + 'vigilado superó su umbral. Es el ejemplo de suceso grave sin transmisión al precio, y '
+      + 'el prompt ya lo usaba como tal en el peldaño 2.',
   },
   {
     fecha: '2024-08-06', tramo: 'principal', tema: 'guerra', clase: 'invasion',
@@ -111,8 +114,12 @@ export const EVENTOS: readonly EventoHistorico[] = [
   {
     fecha: '2025-09-10', tramo: 'principal', tema: 'guerra', clase: 'incursion-otan',
     titulo: 'Cazas de la OTAN derriban drones rusos sobre Polonia; Polonia invoca el artículo 4',
-    severidad: 4, verificado: true,
-    nota: 'Primera vez que la OTAN dispara contra material ruso sobre su territorio desde 2022.',
+    severidad: 3, verificado: true,
+    nota: 'Llevaba un 4 por ser la primera vez que la OTAN dispara contra material ruso sobre '
+      + 'su territorio, que es importancia histórica y no efecto de precio: corregido el '
+      + '2026-09-02. Oro +1,3% y VIX +8,9% a cinco sesiones, sin un solo activo por encima de '
+      + 'su umbral. Queda a la altura de la violación de Estonia de nueve días después, que es '
+      + 'su misma clase y sí movió dos activos.',
   },
   {
     fecha: '2025-09-19', tramo: 'principal', tema: 'guerra', clase: 'incursion-otan',

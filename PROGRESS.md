@@ -86,22 +86,17 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   entrada de la sesión en «Completado».
 - ~~**Las tres contradicciones restantes de `fed_tesoro`**~~ — **corregidas el
   2026-09-02**. El tema entero quedó coherente; ver la entrada de la sesión.
-- **En `guerra` quedan dos discrepancias con el prompt, y una es de las gordas.**
-  No las he tocado porque cada una es un juicio de analista y porque el tramo de
-  guerra es el que alimenta las anclas del prompt:
-
-  | evento | corpus | lo que dice el prompt | medición a 5 sesiones |
-  |---|---|---|---|
-  | Drones sobre Polonia (10-09-2025) | **4** | lo lista como **3** | VIX +8,9%, **ningún activo movió** |
-  | Motín de Wagner (24-06-2023) | **3** | lo lista como **2** | VIX +9,4%, **ningún activo movió** |
-
-  Los dos llevan una severidad por encima de lo que el propio prompt les asigna
-  y ninguno movió un solo activo por encima de su umbral. La de Polonia es la
-  más llamativa: un 4 con efecto de precio nulo, en el tramo que sirve de ancla.
-  El argumento a favor de mantenerlo es que fue la primera vez que la OTAN
-  disparó contra material ruso sobre su territorio, pero ese es exactamente el
-  razonamiento por importancia que se acaba de corregir cuatro veces en
-  `fed_tesoro`.
+- ~~**Las dos discrepancias de `guerra`**~~ — **corregidas el 2026-09-02**. El
+  corpus entero queda alineado con el prompt y con el precio; ver la entrada de
+  la sesión.
+- ~~**`huboMovimiento` cuenta la caída del VIX como si fuera un susto**~~ —
+  **corregido el 2026-09-02**, aunque no cambió ninguna cifra. Ver la entrada de
+  la sesión: el bug era real y el efecto medible sobre este corpus es cero.
+- **El clasificador apenas distingue el 2 del 3 en `guerra`.** Con el corpus ya
+  corregido, la severidad media que merece cada peldaño es 2,7 para el 2 y 2,9
+  para el 3: dos peldaños distintos que describen lo mismo. En `fed_tesoro` la
+  separación es limpia (2,0 · 3,0 · 4,0 · 4,8). Merece mirarse cuando el corpus
+  de guerra crezca.
 - **Medir el efecto:** volver a pasar `npm run calibracion:auditar` tras una
   semana con el prompt nuevo y comprobar si el 60,9% de peldaños 4-5 baja.
 
@@ -373,6 +368,57 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — el VIX deja de contar sus caídas como sustos
+
+`huboMovimiento` medía el extremo en valor absoluto para todos los activos. Para
+el oro o el S&P es lo correcto —da igual la dirección, la posición cubierta se
+comporta distinto igual—, pero el VIX es un índice de miedo: que suba un 30% es
+un susto y que baje un 30% es el mercado calmándose. Ahora el `^VIX` solo cuenta
+al alza; el resto sigue en valor absoluto.
+
+**El efecto medible sobre este corpus es cero, y conviene decirlo.** Al
+proponerlo escribí que P(movimiento) salía inflada y que eso alimentaba el sesgo
+de la curva. Comprobado después: **no cambia ni un veredicto**. Hay tres eventos
+con el VIX cayendo un 20% o más —Kursk (−51%), la primera subida de 2022 (−24%)
+y Skripal (−32%)— y en los tres había otros activos que sí superaban su umbral,
+así que el evento se contaba como movido de todas formas. La curva sale idéntica
+antes y después.
+
+Se deja arreglado igualmente porque el fallo es real y esperaba a un caso que no
+ha llegado: un evento en el que **solo** el VIX se mueva, y a la baja, se habría
+contado como que el mercado reaccionó cuando lo que hizo fue relajarse. Con el
+corpus creciendo, ese caso aparecerá.
+
+Suite completa en verde: 919/919 más 2 tests nuevos, `tsc` y `eslint` limpios.
+
+### Sesión del 2026-09-02 — el corpus entero queda alineado con el precio
+
+Las dos discrepancias que quedaban, las de `guerra`, corregidas con el mismo
+criterio que las cuatro de la Fed:
+
+| evento | antes | ahora | medición a 5 sesiones |
+|---|---|---|---|
+| Drones sobre Polonia (10-09-2025) | 4 | **3** | oro +1,3%, VIX +8,9%, ningún activo movió |
+| Motín de Wagner (24-06-2023) | 3 | **2** | oro +0,1%, VIX +9,4%, ningún activo movió |
+
+El 4 de Polonia estaba puesto por ser la primera vez que la OTAN disparaba
+contra material ruso sobre su territorio. Es importancia histórica, no efecto de
+precio, y es el mismo razonamiento corregido cuatro veces en `fed_tesoro`. Queda
+a la altura de la violación de Estonia de nueve días después, que es su misma
+clase y sí movió dos activos.
+
+**Error medio del clasificador: 0,31 → 0,23.** Acumulado desde el inicio de la
+sesión, 0,50 → 0,23.
+
+Con esto los seis eventos mal etiquetados están corregidos y el corpus, el
+prompt y la medición dicen lo mismo en los dos temas.
+
+**Dos cosas que salieron a la luz al hacerlo y que NO he tocado**, anotadas en
+«Pendiente»: `huboMovimiento` cuenta la caída del VIX como si fuera un susto, y
+el clasificador apenas distingue el peldaño 2 del 3 en `guerra` (2,7 contra 2,9).
+
+Suite completa en verde: 919/919, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — el tramo de la Fed queda coherente de arriba abajo
 

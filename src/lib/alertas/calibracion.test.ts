@@ -29,8 +29,23 @@ describe('huboMovimiento', () => {
     expect(huboMovimiento([{ ticker: 'ES=F', extremo: -0.04 }])).toBe(true)
   })
 
+  it('en el VIX solo cuenta la subida: es un índice de miedo', () => {
+    // El caso real: en la incursión de Kursk el VIX cayó un 51%, que es el
+    // mercado calmándose, y en valor absoluto se contaba como un susto.
+    expect(huboMovimiento([{ ticker: '^VIX', extremo: -0.51 }])).toBe(false)
+    expect(huboMovimiento([{ ticker: '^VIX', extremo: 0.35 }])).toBe(true)
+  })
+
+  it('un VIX que se desploma no tapa el movimiento real de otro activo', () => {
+    expect(huboMovimiento([
+      { ticker: '^VIX', extremo: -0.51 },
+      { ticker: 'GC=F', extremo: 0.05 },
+    ])).toBe(true)
+  })
+
   it('el umbral es inclusivo: justo en el borde cuenta', () => {
     expect(huboMovimiento([{ ticker: 'GC=F', extremo: UMBRAL_MATERIAL['GC=F'] }])).toBe(true)
+    expect(huboMovimiento([{ ticker: '^VIX', extremo: UMBRAL_MATERIAL['^VIX'] }])).toBe(true)
   })
 
   it('un extremo nulo es "no se sabe", nunca un movimiento', () => {
