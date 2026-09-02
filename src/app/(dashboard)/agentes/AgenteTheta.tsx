@@ -375,13 +375,16 @@ export default function AgenteTheta({ puedeEjecutar = false }: { puedeEjecutar?:
         const score = t.contractScore ?? 0
         const ivOk    = iv > 0.30
         const dteOk   = dte >= 21 && dte <= 45
-        const deltaOk = delta >= 0.15 && delta <= 0.35
+        // El mismo rango que premia `scoreDelta` en strategy-scoring.ts. Antes
+        // empezaba en 0.15 y dejaba pasar contratos que el score ya había
+        // penalizado con −10 por estar fuera de rango.
+        const deltaOk = delta >= 0.20 && delta <= 0.35
         const scoreOk = score >= 60
         const pass = ivOk && dteOk && deltaOk && scoreOk
         const fails = [
           !ivOk    && `IV=${(iv * 100).toFixed(0)}%<30%`,
           !dteOk   && `DTE=${dte} ∉ [21-45]`,
-          !deltaOk && `Δ${delta.toFixed(2)} ∉ [0.15-0.35]`,
+          !deltaOk && `Δ${delta.toFixed(2)} ∉ [0.20-0.35]`,
           !scoreOk && `score=${score}<60`,
         ].filter(Boolean).join(', ')
         addLog(`${pass ? '✓' : '✗'} ${t.ticker}: IV${(iv * 100).toFixed(0)}% · DTE${dte} · Δ${delta.toFixed(2)} · score${score}${!pass ? ` → ${fails}` : ''}`)
@@ -493,6 +496,10 @@ export default function AgenteTheta({ puedeEjecutar = false }: { puedeEjecutar?:
                   : (t.strike ?? 0) + premium,
                 maxProfit: premium,
                 maxLoss: t.strategy === 'SELL_PUT' ? (t.strike ?? 0) - premium : null,
+                // El precio de la ACCIÓN al abrir. Sin él, el portafolio valora
+                // el colateral de una call cubierta con el strike en vez de con
+                // lo que valen las acciones que la respaldan.
+                underlying: t.underlyingPrice ?? null,
                 forecastReturn: t.forecastReturn,
                 conviction: t.conviction,
                 // Distingue estas filas de las de Peter/Small: aquí
@@ -539,7 +546,7 @@ export default function AgenteTheta({ puedeEjecutar = false }: { puedeEjecutar?:
     { label: 'UNIVERSO THETA',  desc: 'Lista fija de 36 subyacentes',         phase: step1Phase, icon: Layers },
     { label: 'PROYECCIÓN 30d',  desc: 'Elige lado: put ≥-5% · call ≤+8%',            phase: step2Phase, icon: TrendingDown },
     { label: 'CADENA OPCIONES', desc: 'Sell-put / Covered-call mayor score',       phase: step3Phase, icon: BarChart2 },
-    { label: 'CALIDAD PRIMA',   desc: 'IV>30% · DTE 21-45 · |Δ| .15-.35 · ≥60',     phase: step4Phase, icon: Filter },
+    { label: 'CALIDAD PRIMA',   desc: 'IV>30% · DTE 21-45 · |Δ| .20-.35 · ≥60',     phase: step4Phase, icon: Filter },
     { label: 'CONFIRMACIÓN IA', desc: 'Convicción del modelo ≥7',                  phase: step5Phase, icon: Brain },
     { label: 'PICKS & INFORME', desc: 'Sin duplicados, crédito registrado',        phase: step6Phase, icon: CheckCircle2 },
   ]

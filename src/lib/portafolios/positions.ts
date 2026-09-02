@@ -162,9 +162,16 @@ export function buildOptionPositions(
     const abierta = estaAbierta(rec)
     const side = sideForCategory(rec.category)
     const outcome = optionOutcome(rec, primas[contractKey(ref)], side)
-    const subyacente = (rec.ai_report ?? {}).underlying as number | undefined
+    // `underlying` es el precio de la acción al abrir la posición. Se valida el
+    // tipo en vez de castearlo: las filas antiguas de Gamma guardaban aquí el
+    // ticker, y un string colándose como número convertiría el colateral de una
+    // call cubierta en `NaN` sin que nada avisara.
+    const underlyingCrudo = (rec.ai_report ?? {}).underlying
+    const subyacente = typeof underlyingCrudo === 'number' && underlyingCrudo > 0
+      ? underlyingCrudo
+      : null
     const { capital, detalle } = capitalComprometidoOpcion(
-      posicion, ref.strike, primaEntrada, subyacente ?? null, CONTRATOS_POR_SENAL
+      posicion, ref.strike, primaEntrada, subyacente, CONTRATOS_POR_SENAL
     )
     const cierre = resolveClosedDate(rec)
     const pnl = outcome ? outcome.usd * CONTRATOS_POR_SENAL : null

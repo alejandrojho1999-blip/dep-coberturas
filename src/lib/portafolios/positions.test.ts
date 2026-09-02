@@ -148,6 +148,39 @@ describe('buildOptionPositions', () => {
     expect(p.capitalComprometido).toBeCloseTo(40_000, 6)
   })
 
+  it('valora una call cubierta con el precio del subyacente, no con el strike', () => {
+    const cubierta = rec({
+      id: 'cc1',
+      ticker: 'AAPL',
+      category: 'OPTIONS_THETA',
+      precio_entrada: 3,
+      ai_report: {
+        strike: 250, expiration: '2026-07-17', strategy: 'COVERED_CALL', underlying: 231.4,
+      },
+    })
+    const { positions } = buildOptionPositions([cubierta], {})
+    const p = positions[0]
+    expect(p.posicion).toBe('COVERED_CALL')
+    // Las acciones que respaldan la call valen 231.4, no los 250 del strike.
+    expect(p.capitalComprometido).toBeCloseTo(23_140, 6)
+  })
+
+  it('ignora un underlying que no sea un número y cae al strike', () => {
+    // Las filas antiguas de Gamma guardaban el ticker en este campo. Si se
+    // colara como número, el colateral saldría NaN sin que nada avisara.
+    const heredada = rec({
+      id: 'cc2',
+      ticker: 'AAPL',
+      category: 'OPTIONS_THETA',
+      precio_entrada: 3,
+      ai_report: {
+        strike: 250, expiration: '2026-07-17', strategy: 'COVERED_CALL', underlying: 'AAPL',
+      },
+    })
+    const { positions } = buildOptionPositions([heredada], {})
+    expect(positions[0].capitalComprometido).toBeCloseTo(25_000, 6)
+  })
+
   it('usa el vencimiento como fecha de cierre cuando falta closed_at', () => {
     const { positions } = buildOptionPositions([{ ...gamma, estado: 'Vender', precio_venta: 27.7 }], {})
     expect(positions[0].abierta).toBe(false)

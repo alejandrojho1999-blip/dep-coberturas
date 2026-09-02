@@ -7,13 +7,14 @@
 
 ## Estado actual
 
-**Último commit:** recalibración de la severidad del clasificador, rama `main`
+**Último commit:** deuda de los agentes de opciones (colateral de las calls
+cubiertas y rangos de delta), rama `main`
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **798/798** (59 ficheros) |
+| `npm run test:run` | **819/819** (60 ficheros) |
 | `npm run build` | exit 0 |
 | `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
@@ -247,25 +248,31 @@ ese FastAPI es la única pieza que no es Next, y sin él la migración deja de
 tener parte difícil.
 
 ### Deudas conocidas en los agentes de opciones
-Detectadas al escribir las fichas técnicas. Ninguna se tocó: son cambios de
-comportamiento con dinero real detrás y merecen su propia sesión.
+Detectadas al escribir las fichas técnicas. Tres de las cuatro quedaron
+cerradas el 2026-09-02; la que sigue abierta es la última.
 
-- **Gamma no tiene stop ni toma de beneficios.** Guarda `precio_objetivo`
-  (prima × 2,5) y `stop_loss` (prima × 0,5) que **ningún proceso consulta**: la
-  posición vive hasta el vencimiento pase lo que pase. Lo mismo en Theta con
-  `stop_loss = prima × 2`, que no tiene un solo lector en `src/`. O se
-  implementan o se dejan de escribir, pero guardar cifras que nadie usa invita a
-  creer que hay una protección que no existe. La ficha de cada agente lo dice.
-- **Todo covered-call se valora con `strike × 100`.** `positions.ts` lee el
-  precio del subyacente de `ai_report.underlying`, campo que Theta nunca guarda.
-  Ahora los agentes sí capturan `underlyingPrice` de la cadena para el análisis
-  de IA, así que persistirlo en `ai_report` cerraría el hueco casi gratis.
-- **Los rangos de delta no coinciden entre el score y los filtros.**
-  `strategy-scoring.ts` premia 0,20–0,35 (venta) y 0,45–0,65 (compra), pero los
-  agentes aceptan 0,15–0,35 y 0,30–0,65: un contrato puede pasar el filtro
-  arrastrando la penalización de −10 que le impuso el score.
+- ~~**Gamma no tiene stop ni toma de beneficios.**~~ — resuelto antes de esta
+  sesión: `exit-levels.ts` declara `CATEGORIAS_CON_NIVELES` y Gamma ya **no
+  escribe** `precio_objetivo` ni `stop_loss`. La decisión está razonada con el
+  backtest de 21 años en el comentario del módulo. Theta sí usa niveles, y su
+  revisión los lee en `/api/agentes/review-exits`. Esta nota estaba obsoleta.
+- ~~**Todo covered-call se valora con `strike × 100`.**~~ — cerrado el
+  2026-09-02. `AgenteTheta.tsx` persiste ahora `underlying: t.underlyingPrice`
+  en el `ai_report`, que es el dato que `positions.ts` ya buscaba. Además
+  `positions.ts` valida el tipo en vez de castear: las filas antiguas de Gamma
+  guardaban el **ticker** en ese mismo campo, y un string colándose como número
+  habría dado un colateral `NaN` en silencio. Gamma pasa a guardar el precio.
+- ~~**Los rangos de delta no coinciden entre el score y los filtros.**~~ —
+  cerrado el 2026-09-02 estrechando los filtros hacia el score: Theta pasa de
+  0,15–0,35 a **0,20–0,35** y Gamma de 0,30–0,65 a **0,45–0,65**. Ningún
+  contrato entra ya arrastrando la penalización de −10.
+  ⚠️ **Esto reduce el número de candidatos**, sobre todo en Gamma, donde el
+  suelo sube 15 puntos de delta. Conviene mirar en la próxima ejecución cuántos
+  tickers sobreviven al paso 4; si se queda seco, la alternativa es la
+  contraria (ampliar el score a los rangos anchos).
 - **Nadie comprueba que se posean las acciones de un covered-call.** La
   estrategia solo está «cubierta» por convención; el sistema no lo verifica.
+  **Sigue abierta.**
 
 ### Funcionalidad por definir
 - *(nada pendiente: `/estrategias` ya está implementada)*
@@ -312,6 +319,44 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 (tarde) — deuda de los agentes de opciones
+
+Tres de las cuatro deudas anotadas al escribir las fichas técnicas. La primera
+resultó estar **ya resuelta**: la nota sobre los niveles de Gamma llevaba tiempo
+sin reflejar el código.
+
+**El colateral de las calls cubiertas estaba mal medido.** `positions.ts` leía
+el precio del subyacente de `ai_report.underlying`, pero Theta nunca escribía
+ese campo, así que el fallback `subyacenteEntrada ?? strike` valoraba toda call
+cubierta con el strike. El dato estaba a mano —`t.underlyingPrice`, el mismo que
+ya se le pasaba a la IA— y ahora se persiste.
+
+**Un bug de tipos que nadie había anotado:** `AgenteGamma.tsx` guardaba
+`underlying: t.ticker`, un string, en el campo que `positions.ts` casteaba con
+`as number`. Hoy no reventaba porque Gamma es largo y su capital sale de la
+prima, pero el cast era falso. Gamma pasa a guardar el precio y `positions.ts`
+valida el tipo con `typeof === 'number' && > 0` en vez de castear a ciegas, así
+que las filas históricas con el ticker caen limpiamente al strike.
+
+**Rangos de delta alineados hacia el score** (decisión del usuario: estrechar
+los filtros, no ampliar el score). Theta 0,15→**0,20** de suelo, Gamma
+0,30→**0,45**. Actualizadas también las etiquetas de los pasos y los mensajes de
+fallo, que enseñaban los rangos viejos.
+
+Dos tests nuevos en `positions.test.ts`: una call cubierta con `underlying`
+numérico debe valorarse con el precio de la acción (23 140, no 25 000), y un
+`underlying` string debe ignorarse en vez de propagarse.
+
+| Check | Resultado |
+|---|---|
+| `npx tsc --noEmit` | exit 0 |
+| `npm run lint` | 0 problemas |
+| `npm run test:run` | **819/819** (60 ficheros) |
+| `npm run build` | exit 0 |
+
+Lo que **no** se tocó: que nadie verifica la posesión de las acciones en un
+covered-call. Sigue abierto.
 
 ### Sesión del 2026-09-02 — recalibración de la severidad del clasificador
 

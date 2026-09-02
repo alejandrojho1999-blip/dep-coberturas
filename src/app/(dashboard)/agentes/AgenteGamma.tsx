@@ -355,12 +355,15 @@ export default function AgenteGamma({ puedeEjecutar = false }: { puedeEjecutar?:
         const delta = Math.abs(t.delta ?? 0)
         const dte = t.dte ?? 0
         const score = t.contractScore ?? 0
-        const deltaOk = delta >= 0.30 && delta <= 0.65
+        // El mismo rango direccional que premia `scoreDelta` en
+        // strategy-scoring.ts. Antes empezaba en 0.30 y dejaba pasar contratos
+        // que el score ya había penalizado con −10 por estar fuera de rango.
+        const deltaOk = delta >= 0.45 && delta <= 0.65
         const dteOk   = dte >= 21 && dte <= 90
         const scoreOk = score >= 50
         const pass = deltaOk && dteOk && scoreOk
         const fails = [
-          !deltaOk && `Δ${delta.toFixed(2)} ∉ [0.30-0.65]`,
+          !deltaOk && `Δ${delta.toFixed(2)} ∉ [0.45-0.65]`,
           !dteOk   && `DTE=${dte} ∉ [21-90]`,
           !scoreOk && `score=${score}<50`,
         ].filter(Boolean).join(', ')
@@ -476,7 +479,11 @@ export default function AgenteGamma({ puedeEjecutar = false }: { puedeEjecutar?:
                 optionType: t.optionType,
                 forecastReturn: t.forecastReturn,
                 conviction: t.conviction,
-                underlying: t.ticker,
+                // El precio de la ACCIÓN, no el ticker: `underlying` lo lee el
+                // portafolio como número para calcular el colateral. Guardar
+                // aquí la cadena "AAPL" hacía que ese cálculo dependiera de un
+                // cast que nunca fue cierto. El ticker ya viaja en `rec.ticker`.
+                underlying: t.underlyingPrice ?? null,
                 // Distingue estas filas de las de Peter/Small y deja constancia
                 // de que la ausencia de niveles es deliberada, no un fallo al
                 // guardarlos.
@@ -521,7 +528,7 @@ export default function AgenteGamma({ puedeEjecutar = false }: { puedeEjecutar?:
     { label: 'CANDIDATOS',      desc: 'Picks Peter + Small + fallback',         phase: step1Phase, icon: Layers },
     { label: 'PROYECCIÓN 30d',  desc: 'Alcista=CALL ≥+2% · Bajista=PUT ≤-3%', phase: step2Phase, icon: TrendingUp },
     { label: 'CADENA OPCIONES', desc: 'Mejor buy-call o buy-put por score',     phase: step3Phase, icon: Activity },
-    { label: 'CALIDAD',         desc: 'Δ 0.30-0.65 · DTE 21-75 · score ≥50',  phase: step4Phase, icon: Filter },
+    { label: 'CALIDAD',         desc: 'Δ 0.45-0.65 · DTE 21-75 · score ≥50',  phase: step4Phase, icon: Filter },
     { label: 'CONFIRMACIÓN IA', desc: 'Convicción del modelo ≥7',               phase: step5Phase, icon: Brain },
     { label: 'PICKS & INFORME', desc: 'Sin duplicados, solo aprobados',         phase: step6Phase, icon: CheckCircle2 },
   ]
