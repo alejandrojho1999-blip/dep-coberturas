@@ -213,8 +213,9 @@ decidir si migrarlas al admin o dejarlas ocultas.
   sección de `/portafolios`.
 
 ### Rebrand SynerGy — cierre
-- **Commitear y pushear.** El rebrand está completo y verificado pero sigue en
-  el working tree, sin commit.
+- ~~**Commitear y pushear.**~~ — hecho: el rebrand está en `73df0c5` («feat:
+  rebrand completo a SynerGy según el manual de marca») y el working tree está
+  limpio. La nota llevaba tiempo sin reflejar el repositorio.
 - **Recorrido visual autenticado** de las 8 rutas del dashboard. Solo se
   comprobaron en navegador `/login`, `/register` y el shell del dashboard (con
   una ruta temporal ya borrada). `recomendaciones/page.tsx` concentraba 419
