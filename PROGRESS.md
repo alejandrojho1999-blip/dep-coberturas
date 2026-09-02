@@ -59,9 +59,31 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 > públicas, tal y como se diseñaron. `npm run calibracion:cargar` ya tiene
 > dónde escribir.
 
-- **La curva numérica sigue vacía.** `severity_calibration` necesita antes
-  reejecutar el prompt nuevo sobre el corpus y guardarlo en
-  `severity_llm_replay`. Con 27 eventos la curva sería ruido.
+> Las cuatro tablas **ya tienen datos** (2026-09-02): 27 eventos, 627
+> mediciones de precio, 27 respuestas del replay y 7 puntos de curva. El
+> pipeline completo funciona de extremo a extremo.
+
+- **La curva calculada NO se puede aplicar, y el motivo importa.** Sale
+  subiendo la severidad en 6 de los 7 peldaños —justo lo contrario de lo que se
+  buscaba— por **sesgo de selección**: el corpus está hecho de eventos elegidos
+  por haber sido importantes, así que P(movimiento) sale entre el 50% y el 100%
+  en todos los peldaños. Faltan los días anodinos, que son la mayoría de las
+  señales reales. `ajustar.mts` detecta el caso y lo avisa en pantalla.
+  **Lo que hace falta**: ampliar `eventos.ts` con 30-50 titulares corrientes de
+  severidad 1-2 que no movieron nada. Es trabajo de curación, no de código.
+- **El replay descubrió fallos reales del prompt.** 10 de 27 eventos salieron
+  `no relevante`. Algunos con razón —el 11-S y la invasión de Irak no son
+  sucesos Rusia-OTAN, y el prompt de guerra solo cubre eso—, pero otros son
+  agujeros de verdad:
+  - **La Fed sube 75 pb (2022-06-15), severidad 5** — descartada por el prompt
+    macro. Es el mayor movimiento de tasas desde 1994.
+  - **S&P rebaja el AAA de EEUU (2011-08-05), severidad 4** — descartada.
+  - **MH17 (2014-07-17)** y **Skripal (2018-03-04)**: daño a ciudadanos y suelo
+    OTAN, que el prompt dice cubrir explícitamente.
+  - **Zaporiyia (2022-03-04)**: incendio en central nuclear durante combate.
+
+  Estos cinco valen más que la curva: son casos concretos con los que reescribir
+  los criterios de `relevante` y comprobar el arreglo sin adivinar.
 - **Medir el efecto:** volver a pasar `npm run calibracion:auditar` tras una
   semana con el prompt nuevo y comprobar si el 60,9% de peldaños 4-5 baja.
 
@@ -333,6 +355,37 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — la calibración de severidad deja de ser una tabla vacía
+
+El pipeline de calibración estaba escrito desde el 2026-09-02 de madrugada pero
+nunca se había ejecutado: las cuatro tablas `severity_*` estaban a cero. Ahora
+tienen 27 eventos, 627 mediciones, 27 respuestas del clasificador y 7 puntos de
+curva.
+
+Lo que se añadió para poder cerrarlo:
+- **`scripts/calibracion/replay.mts`** — reejecuta el prompt de hoy sobre los
+  titulares del corpus. Cada tanda se etiqueta con `prompt_version`, así que dos
+  revisiones del prompt se pueden comparar sin borrar la anterior.
+- **`clasificarTitular` acepta un `ahora` inyectable.** El prompt descarta por
+  diseño todo lo anterior a 48 horas; sin esto, el replay sobre eventos de 2001
+  habría dado `relevante: false` 27 veces y no habría medido nada. En
+  producción el parámetro no se pasa y el comportamiento es idéntico.
+- **`src/lib/alertas/calibracion.ts`** — umbrales por activo, el criterio de
+  «movimiento material», los cortes de probabilidad y la monotonía. Vive en
+  `src/lib/` y no en el script porque el motor necesitará las mismas reglas al
+  aplicar la curva: separadas, el umbral con el que se ajusta y el umbral con el
+  que se publica podrían divergir sin que nadie se enterase. 19 tests.
+- **`scripts/calibracion/ajustar.mts`** — construye la curva y avisa en pantalla
+  cuando sale sesgada, que es exactamente lo que pasó.
+
+**El resultado honesto: la curva no sirve todavía, y saber por qué es el
+hallazgo.** Ver el detalle en «Pendiente». En resumen: el corpus solo tiene
+eventos que fueron importantes, así que todos movieron el precio y la curva
+acaba subiendo la severidad en vez de bajarla. La infraestructura está bien; lo
+que falta es curar 30-50 eventos anodinos.
+
+Suite completa en verde: 913/913, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — el enlace del WhatsApp deja de ocupar media pantalla
 

@@ -1,0 +1,117 @@
+/**
+ * Las reglas con las que se corrige la severidad del clasificador.
+ *
+ * Viven aquí y no en `scripts/calibracion/` porque son dos cosas a la vez: lo
+ * que el script de ajuste usa para construir la curva, y lo que el motor usará
+ * para aplicarla. Si estuvieran en el script, el umbral con el que se ajusta y
+ * el umbral con el que se publica podrían divergir sin que nadie se enterara.
+ *
+ * El problema que resuelven: el prompt puntuaba gravedad humana en vez de efecto
+ * en el precio, y repartía 4 y 5 al 60,9% de las señales. Un aviso que grita
+ * siempre no avisa de nada.
+ */
+
+/**
+ * Cuánto tiene que moverse cada activo para que la cobertura lo note.
+ *
+ * No son iguales porque los activos no lo son: un 3% en el oro es un día
+ * histórico y en Bitcoin es un martes cualquiera. Los valores salen de la
+ * desviación diaria típica de cada uno, redondeada a algo que se pueda defender
+ * en voz alta.
+ */
+export const UMBRAL_MATERIAL: Record<string, number> = {
+  'GC=F': 0.03,
+  'SI=F': 0.05,
+  'BTC-USD': 0.08,
+  'CL=F': 0.06,
+  'NQ=F': 0.03,
+  'ES=F': 0.025,
+  '^VIX': 0.20,
+  'DX-Y.NYB': 0.015,
+}
+
+/** La ventana sobre la que se juzga si un evento movió el mercado. */
+export const VENTANA_JUICIO = 5
+
+export interface MovimientoMedido {
+  ticker: string
+  /**
+   * Mayor desplazamiento absoluto dentro de la ventana. Se juzga por el extremo
+   * y no por el cierre porque lo que importa es si hubo susto en algún momento,
+   * no si el viernes ya se había deshecho.
+   */
+  extremo: number | null
+}
+
+/**
+ * ¿Se movió algo de verdad tras este evento?
+ *
+ * Basta con que **un** activo supere su umbral: un evento que dispara el VIX sin
+ * tocar el oro sigue siendo un evento del que había que avisar. Un `extremo`
+ * nulo es «no se sabe» —el activo no cotizaba esa fecha— y nunca cuenta como
+ * movimiento.
+ */
+export function huboMovimiento(movimientos: readonly MovimientoMedido[]): boolean {
+  return movimientos.some((m) => {
+    const umbral = UMBRAL_MATERIAL[m.ticker]
+    return umbral != null && m.extremo != null && Math.abs(m.extremo) >= umbral
+  })
+}
+
+/**
+ * De probabilidad observada a peldaño publicado.
+ *
+ * Los cortes reparten el 1-5 sobre la probabilidad de que el precio se moviera
+ * de verdad. Son deliberadamente exigentes arriba: un 5 debe querer decir «esto
+ * casi siempre mueve el mercado», no «esto suena grave».
+ */
+export function peldanoDesdeProbabilidad(p: number): number {
+  if (p >= 0.80) return 5
+  if (p >= 0.60) return 4
+  if (p >= 0.40) return 3
+  if (p >= 0.20) return 2
+  return 1
+}
+
+/**
+ * Impone que la curva no baje al subir el peldaño del LLM.
+ *
+ * Recorre de menor a mayor arrastrando el máximo visto. Con 27 eventos hay
+ * peldaños con dos o tres casos, y ahí manda el ruido: esto es lo que impide que
+ * un peldaño flaco invierta el orden y el sistema acabe avisando más fuerte de
+ * lo pequeño que de lo grande.
+ *
+ * Devuelve una copia ordenada; no toca la entrada.
+ */
+export function forzarMonotonia<T extends { llm: number; final: number }>(puntos: readonly T[]): T[] {
+  const ordenados = [...puntos].sort((a, b) => a.llm - b.llm)
+  let maximo = 0
+  return ordenados.map((punto) => {
+    const final = Math.max(punto.final, maximo)
+    maximo = final
+    return { ...punto, final }
+  })
+}
+
+export interface PuntoCurva {
+  tema: string
+  severidadLlm: number
+  severidadFinal: number
+}
+
+/**
+ * Traduce el peldaño del modelo al peldaño que se publica.
+ *
+ * Sin punto de curva para ese tema y peldaño, devuelve el original **sin
+ * tocarlo**. Es lo correcto: la curva se construyó con 27 eventos y hay
+ * combinaciones que no aparecen ni una vez. Inventar una corrección donde no hay
+ * dato sería peor que no corregir.
+ */
+export function aplicarCurva(
+  severidadLlm: number,
+  tema: string,
+  curva: readonly PuntoCurva[],
+): number {
+  const punto = curva.find((p) => p.tema === tema && p.severidadLlm === severidadLlm)
+  return punto?.severidadFinal ?? severidadLlm
+}

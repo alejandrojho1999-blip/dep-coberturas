@@ -196,9 +196,18 @@ export function normalizar(bruto: RespuestaLlm | null, tipo: TipoAlerta): Clasif
   }
 }
 
+/**
+ * @param ahora Momento que se le presenta al modelo como «ahora». En producción
+ *   es la hora real y no hay que pasarlo. Existe para la recalibración: el
+ *   prompt descarta por diseño todo lo anterior a 48 horas, así que reejecutarlo
+ *   sobre el corpus histórico con la hora de hoy daría `relevante: false` en los
+ *   27 eventos y no mediría nada. Pasando la fecha del suceso, el modelo juzga
+ *   el titular como lo habría juzgado el día que ocurrió.
+ */
 export async function clasificarTitular(
   titular: Titular,
   tipo: 'guerra' | 'fed_tesoro',
+  ahora: Date = new Date(),
 ): Promise<Clasificacion> {
   const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) throw new Error('OPENROUTER_API_KEY no configurada')
@@ -210,7 +219,7 @@ export async function clasificarTitular(
 FUENTE: ${titular.fuente}
 PUBLICADO: ${titular.publicadoAt ?? 'desconocido'}
 URL: ${titular.url}
-AHORA: ${new Date().toISOString()}
+AHORA: ${ahora.toISOString()}
 
 Responde SOLO con el JSON.`
 
