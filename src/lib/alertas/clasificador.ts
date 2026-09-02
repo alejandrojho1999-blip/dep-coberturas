@@ -68,16 +68,31 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   con desplome previo del futuro del S&P. Reservado a la ruptura del marco, no a su amenaza.
 - 4 · Amenaza nuclear con acto detrás. Movilización parcial de Putin (21-09-2022): oro -2,0%,
   VIX +25,7%, S&P -5,5%. Sabotaje del Nord Stream (26-09-2022): oro +1,0%, VIX +16,6%.
-- 3 · Incidente militar directo con la OTAN. Drones rusos derribados sobre Polonia (10-09-2025):
-  oro +1,3%, VIX +8,9%. MiG-31 sobre Estonia (19-09-2025): oro +2,6%, VIX +13,0%.
-  Misil con dos muertos en Przewodów, Polonia (15-11-2022): oro -2,0%, VIX +10,5%, S&P -0,2%.
-  Este último es la referencia que importa: hubo muertos en suelo OTAN y el mercado no se movió.
-  Derribo del MH17 con 298 muertos, la mayoría de países OTAN (17-07-2014): oro +0,4%,
-  S&P +0,3% al quinto día, pero VIX +39,8% en el pico de la ventana.
-- 2 · Suceso grave sin transmisión al precio. Motín de Wagner y marcha sobre Moscú
-  (24-06-2023): oro +0,1%, VIX +9,4%, S&P +2,3%. Envenenamiento de Skripal con Novichok en
-  suelo británico (04-03-2018): agente químico de un Estado y expulsión masiva de
-  diplomáticos, y aun así oro +0,1%, S&P +3,5%, VIX -32,1%. Los dos son "relevante": true
+  Nord Stream es un 4 y los sabotajes del Báltico son un 2 por una sola razón: el volumen
+  cortado. Lo que separa un peldaño de otro en el sabotaje NO es la audacia del acto ni el
+  país afectado, sino cuánta energía o cuánto tráfico deja de circular. Un cable de datos o
+  un interconector eléctrico entre dos países no mueve el precio de nada.
+- 3 · Incidente con la OTAN al que le sigue una respuesta material: intervención armada de
+  la Alianza, corte real de suministro energético, o cierre de espacio aéreo o de una ruta
+  comercial. Es un peldaño ESTRECHO. No basta con que el incidente sea grave ni con que se
+  invoque el artículo 4: hace falta que algo se interrumpa de verdad.
+- 2 · Incidente militar directo con la OTAN, aislado y sin respuesta material. ESTE ES EL
+  PELDAÑO QUE MÁS SE FALLA, Y EL QUE MÁS CASOS RECIBE. Una violación del espacio aéreo, un
+  derribo, un sabotaje de infraestructura o un cambio declarado de doctrina son un 2 cuando
+  se quedan en el incidente y en la protesta formal. Ocho casos medidos, y siete no movieron
+  el precio por encima de su umbral: drones rusos derribados sobre Polonia (10-09-2025, oro
+  +1,5%, VIX +8,9%), MiG-31 sobre Estonia (19-09-2025, oro +3,9%, VIX +13,0%), Su-24 ruso
+  derribado por Turquía (24-11-2015, oro -1,5%, VIX +10,2%), sabotaje del Estlink 2
+  (25-12-2024, oro +1,6%, VIX +36,6%), corte de los cables del Báltico (18-11-2024, oro
+  +5,6%, VIX +16,4%), rebaja del umbral de la doctrina nuclear rusa (19-11-2024, oro +3,8%,
+  VIX +20,6%) y el derribo del MH17 con 298 muertos (17-07-2014, oro +1,9%, VIX +39,8%).
+  Los tres artículos 4 de la lista están aquí: invocarlo no sube el peldaño.
+  Como grupo mueven el precio MENOS que una fecha al azar, así que puntuarlos por encima
+  del 2 no es prudencia, es ruido.
+  También son 2 los sucesos graves sin transmisión al precio: motín de Wagner y marcha sobre
+  Moscú (24-06-2023): oro +0,1%, VIX +9,4%, S&P +2,3%. Envenenamiento de Skripal con Novichok
+  en suelo británico (04-03-2018): agente químico de un Estado y expulsión masiva de
+  diplomáticos, y aun así oro +0,1%, S&P +3,5%, VIX -32,1%. Todos son "relevante": true
   con severidad baja: es exactamente la combinación que hay que saber emitir.
 - 1 · Declaración, amenaza retórica o movimiento ya descontado.
 

@@ -83,11 +83,21 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   añadir hechos intermedios no reparte la muestra como uno espera. Para llenar
   el 2 y el 4 hacen falta hechos que **el modelo** puntúe ahí, no que lo
   merezcan.
-- **El peldaño 3 de `guerra` no distingue nada, y ya tiene muestra para
-  decirlo.** Con 8 casos, sus eventos mueven el precio el 13% de las veces,
-  **por debajo** de la línea base del 25%. Es el peldaño más poblado del tema y
-  el que peor separa: merece mirarse antes que ninguno cuando se retoque el
-  prompt.
+- ~~**El peldaño 3 de `guerra` no distingue nada**~~ — **corregido el
+  2026-09-02** con `v5-peldano2`: los ocho casos bajan al 2 y el peldaño queda
+  vacío. Ver la entrada de la sesión.
+- **Decidir si el corpus se re-etiqueta con el criterio nuevo.** Es la deuda que
+  deja `v5-peldano2` y no se ha tocado por ser un cambio de la vara de medir. El
+  corpus sigue diciendo `merece=3` para los ocho hechos que el prompt ya puntúa
+  2, así que el error medio contra el analista subió de 0,29 a 0,46. **Esa cifra
+  ya no se puede leer como antes**: mide la distancia a unas etiquetas escritas
+  con el criterio viejo. Si se acepta que severidad es efecto de precio —y el
+  precio dice que esos ocho mueven menos que una fecha al azar— las etiquetas
+  del corpus son las que hay que bajar. Hasta que se decida, comparar contra
+  `v4-otan` no dice nada útil.
+- **`guerra` ya no tiene peldaño 3 y `fed_tesoro` casi tampoco** (n=1). El motor
+  publica sin corregir los peldaños que no aparecen en la curva, que es lo
+  correcto, pero conviene saber que ahí no hay red.
 - **Revisar los umbrales cuando el corpus crezca.** Se eligieron comparando
   siete criterios sobre los mismos 60 días de control y 27 eventos, así que
   parte de su ventaja es sobreajuste; tres de los siete quedaron empatados
@@ -389,6 +399,42 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — el peldaño 3 de `guerra` se vacía y deja de mentir
+
+El peldaño 3 era el más poblado del tema y el que peor separaba: 8 casos, 13%
+de movimiento contra una línea base del 25%. Antes de tocar nada se miró caso
+por caso, y lo que apareció descartó la hipótesis fácil. **El modelo no estaba
+fallando**: en 7 de los 8 coincidía con la severidad que el analista había
+puesto en el corpus. El que estaba mal definido era el peldaño.
+
+El prompt decía «3 · Incidente militar directo con la OTAN» y citaba como
+precedentes drones sobre Polonia (VIX +8,9%) y MiG-31 sobre Estonia
+(VIX +13,0%) — es decir, se apoyaba en casos que no mueven nada para definir un
+peldaño intermedio. Modelo y analista aplicaban bien una regla equivocada.
+
+**El cambio.** El 3 pasa a exigir respuesta material —intervención armada,
+corte real de suministro, cierre de espacio aéreo o de una ruta—, y los
+incidentes aislados bajan al 2 con las ocho mediciones escritas en el propio
+prompt. Se añade explícito que **invocar el artículo 4 no sube el peldaño**: los
+tres casos del corpus que lo invocan están en el 2. Y se separa Nord Stream (4)
+de los sabotajes bálticos (2) por el único criterio que los distingue de verdad,
+que es el volumen cortado, no la audacia del acto.
+
+**El resultado, medido con `v5-peldano2` sobre el mismo corpus.** Los ocho casos
+bajaron a 2 y el peldaño 3 de `guerra` quedó vacío. El 2 pasa a 11 casos con
+**lift 0%** (18% de movimiento contra el 25% de la línea base) y la curva los
+baja a **1/5**. En la práctica: el sistema deja de emitir un aviso de severidad
+3 por una violación de espacio aéreo que históricamente no mueve el precio, que
+es el problema que se venía persiguiendo desde la auditoría del 60,9%.
+
+**Lo que no se ha hecho, a propósito.** El error medio contra el corpus subió de
+0,29 a 0,46, y no es una regresión: el corpus sigue etiquetado con el criterio
+viejo. Re-etiquetarlo es cambiar la vara de medir, así que queda como decisión
+abierta en «Pendiente» en vez de resolverse de tapadillo.
+
+Sigue en pie el aviso de muestra pequeña: 5 de los 7 peldaños tienen menos de 5
+casos. Suite completa en verde: 961/961, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — el corpus crece a 32, con dos errores propios de por medio
 
