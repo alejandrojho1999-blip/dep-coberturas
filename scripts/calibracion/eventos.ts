@@ -248,6 +248,43 @@ export const EVENTOS: readonly EventoHistorico[] = [
     severidad: 4, verificado: true,
     nota: 'Una sola declaración movió el mundo entero. El contraejemplo de que "declaración" siempre sea bajo.',
   },
+
+  // ── Ampliación del 2026-09-02 · peldaños intermedios ──────────────────────
+  // Los peldaños 2, 3 y 4 tenían dos o tres casos cada uno, y con esa muestra la
+  // proporción solo puede valer 0, 50 o 100: la curva describía el sorteo. Estos
+  // hechos se eligieron por caer en la banda intermedia, no por su desenlace.
+  // Todas las fechas están comprobadas contra fuente (NATO, Wikipedia, CNN,
+  // CNBC, NPR) el 2026-09-02.
+  {
+    fecha: '2023-10-08', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
+    titulo: 'El gasoducto Balticconnector entre Finlandia y Estonia aparece dañado en el Báltico',
+    severidad: 3, verificado: true,
+    nota: 'Infraestructura energética de dos países OTAN, un año después del Nord Stream. Sirve para ver si la repetición agota el efecto.',
+  },
+  {
+    fecha: '2024-11-18', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
+    titulo: 'Cortados dos cables submarinos de datos en el Báltico, entre Finlandia y Alemania y entre Suecia y Lituania',
+    severidad: 2, verificado: true,
+    nota: 'Cuatro países OTAN afectados a la vez. Cobertura enorme y cero transmisión al precio.',
+  },
+  {
+    fecha: '2024-12-25', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
+    titulo: 'Dañado el cable eléctrico Estlink 2 entre Finlandia y Estonia; Finlandia apresa un petrolero de la flota en la sombra',
+    severidad: 3, verificado: true,
+    nota: 'Primera vez que un país OTAN aborda y retiene un buque por sabotaje. Ocurrió en Navidad, con el mercado medio cerrado.',
+  },
+  {
+    fecha: '2023-08-01', tramo: 'principal', tema: 'fed_tesoro', clase: 'crisis-institucional',
+    titulo: 'Fitch rebaja la calificación de Estados Unidos de AAA a AA+',
+    severidad: 3, verificado: true,
+    nota: 'Segunda rebaja del AAA en la historia, doce años después de la de S&P. Sirve para medir si el mercado ya se había vacunado.',
+  },
+  {
+    fecha: '2025-05-16', tramo: 'principal', tema: 'fed_tesoro', clase: 'crisis-institucional',
+    titulo: 'Moody\'s rebaja la calificación de Estados Unidos a Aa1 y cae el último AAA',
+    severidad: 3, verificado: true,
+    nota: 'La última agencia en quitar el AAA, que mantenía desde 1917. Tercera repetición del mismo suceso: la serie dice si el efecto se agota.',
+  },
 ] as const
 
 export function eventosDe(tramo: Tramo): EventoHistorico[] {

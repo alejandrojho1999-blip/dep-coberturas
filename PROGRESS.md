@@ -76,7 +76,18 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   más que el fenómeno. `ajustar.mts` lo avisa. El aviso de saturación ya no
   salta.
   **Lo que hace falta ahora es corpus**: más eventos curados, sobre todo en los
-  peldaños 2, 3 y 4 de ambos temas. Con 27 hechos no se puede cerrar.
+  peldaños 2, 3 y 4 de ambos temas. Con 32 hechos sigue sin poder cerrarse.
+- **Ampliar el corpus da menos de lo que parece, y conviene saber por qué.** El
+  2026-09-02 se pasó de 27 a 32 eventos y los peldaños flacos siguieron siendo
+  6 de 8: el clasificador concentra sus respuestas en el 3 y el 5, así que
+  añadir hechos intermedios no reparte la muestra como uno espera. Para llenar
+  el 2 y el 4 hacen falta hechos que **el modelo** puntúe ahí, no que lo
+  merezcan.
+- **El peldaño 3 de `guerra` no distingue nada, y ya tiene muestra para
+  decirlo.** Con 8 casos, sus eventos mueven el precio el 13% de las veces,
+  **por debajo** de la línea base del 25%. Es el peldaño más poblado del tema y
+  el que peor separa: merece mirarse antes que ninguno cuando se retoque el
+  prompt.
 - **Revisar los umbrales cuando el corpus crezca.** Se eligieron comparando
   siete criterios sobre los mismos 60 días de control y 27 eventos, así que
   parte de su ventaja es sobreajuste; tres de los siete quedaron empatados
@@ -378,6 +389,49 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — el corpus crece a 32, con dos errores propios de por medio
+
+Se añadieron eventos en la banda intermedia. Todas las fechas se comprobaron
+contra fuente (NATO, CNN, CNBC, NPR, Wikipedia) **antes** de escribirlas: una
+fecha mal puesta corrompe la medición entera y es el error más fácil de cometer
+aquí.
+
+**Primer error, de criterio.** Los ocho primeros eventos de guerra —el Moskvá,
+el puente de Kerch, Nova Kajovka, Prigozhin, Navalni, el Crocus City Hall y los
+ingresos de Finlandia y Suecia en la OTAN— salieron **todos** como `no
+relevante` en el replay, y el clasificador tenía razón: son sucesos
+Rusia-Ucrania o internos rusos, y el prompt define su dominio como el conflicto
+**Rusia-OTAN**. Se eligieron por gravedad intermedia sin comprobar que cayeran
+dentro del dominio que el clasificador vigila, así que nunca habrían llegado a
+la curva. Retirados de `eventos.ts` y de la base.
+
+En su lugar entran tres que sí tocan a la Alianza: el gasoducto
+**Balticconnector** (08-10-2023), los **cables del Báltico** entre Finlandia y
+Alemania y entre Suecia y Lituania (18-11-2024), y el **Estlink 2** con el
+apresamiento del petrolero de la flota en la sombra (25-12-2024). Los tres son
+sabotaje de infraestructura de países OTAN, que es un criterio explícito del
+prompt. Y las tres rebajas del AAA —S&P 2011, Fitch 2023, Moody's 2025— dan
+ahora una serie con la que ver si la repetición agota el efecto.
+
+**Segundo error, un bug propio del día anterior.** `placebo.mts` acumulaba
+muestreos: el upsert va por `(fecha, titulo)` y las fechas viejas no colisionan
+con las nuevas, así que al recalcular el control se sumaban. La línea base
+llegó a calcularse sobre **119 fechas** mezclando dos muestreos con distinto
+veto. Ahora borra el control anterior antes de escribir.
+
+**El resultado, sin adornos: 32 eventos y los peldaños flacos siguen siendo 6 de
+8.** Subió la muestra donde ya había algo —`guerra` 3/5 pasa de 7 a 8 casos y
+4/5 de 3 a 4— pero no se llenó ninguno de los huecos. El motivo está en
+«Pendiente»: el clasificador concentra sus respuestas en el 3 y el 5, así que
+añadir hechos intermedios no reparte la muestra como uno espera.
+
+Lo que sí apareció es un dato con muestra suficiente para creérselo: **el
+peldaño 3 de `guerra`, con 8 casos, mueve el precio el 13% de las veces, por
+debajo de la línea base del 25%.** Es el peldaño más poblado del tema y el que
+peor separa.
+
+Suite completa en verde: 961/961, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — los umbrales se duplican y la curva por fin baja
 

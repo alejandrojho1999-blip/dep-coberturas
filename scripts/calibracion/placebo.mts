@@ -18,6 +18,14 @@
  * Reproducible: la misma semilla da el mismo muestreo. Sin eso, cada ejecución
  * movería la línea base y no se sabría si mejoró el prompt o cambió el control.
  *
+ * Ojo con el alcance de esa reproducibilidad: es estable mientras el corpus no
+ * cambie. Al añadir eventos cambian las fechas vetadas por cercanía, y con ellas
+ * la lista de candidatas y el muestreo, aunque la semilla sea la misma. Añadir
+ * diez eventos el 2026-09-02 movió la línea base del 30% al 25%. Es correcto
+ * —las fechas pegadas a un evento no son días corrientes— pero significa que la
+ * base hay que releerla después de cada ampliación del corpus, y que dos curvas
+ * calculadas con corpus distintos no son directamente comparables.
+ *
  * Uso:
  *   npm run calibracion:placebo              # 60 fechas, semilla por defecto
  *   npm run calibracion:placebo -- 100 7     # 100 fechas, semilla 7
@@ -161,6 +169,17 @@ async function main(): Promise<void> {
   console.log(`Candidatas: ${candidatas.length} sesiones desde ${desde}, excluidas ${vetadas.size} por cercanía a un evento.\n`)
 
   const admin = createAdminClient()
+
+  // El muestreo anterior se borra antes de escribir el nuevo. Sin esto los dos
+  // se acumulan —el upsert va por (fecha, titulo) y las fechas viejas no
+  // colisionan con las nuevas—, y la línea base pasa a ser la mezcla de dos
+  // muestreos con distinto veto. Ya pasó: 119 fechas donde debía haber 60.
+  const { error: errorLimpieza, count } = await admin
+    .from('severity_events')
+    .delete({ count: 'exact' })
+    .eq('tramo', 'placebo')
+  if (errorLimpieza) throw new Error(`limpiando el control anterior: ${errorLimpieza.message}`)
+  if (count) console.log(`Borradas ${count} fechas del control anterior.\n`)
   let movidas = 0
   let filasMovimiento = 0
 
