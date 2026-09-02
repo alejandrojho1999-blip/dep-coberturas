@@ -37,12 +37,13 @@
 import {
   forzarMonotonia,
   huboMovimiento,
+  liftSobreBase,
   peldanoDesdeProbabilidad,
   VENTANA_JUICIO,
 } from '@/lib/alertas/calibracion'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-interface FilaEvento { id: number; tema: string; severidad: number }
+interface FilaEvento { id: number; tema: string; severidad: number; tramo: string }
 interface FilaMov { evento_id: number; ticker: string; ventana: number; extremo: number | null }
 interface FilaReplay { evento_id: number | null; severidad_llm: number | null }
 
@@ -66,7 +67,7 @@ async function main(): Promise<void> {
 
   const { data: eventosData, error: errorEventos } = await admin
     .from('severity_events')
-    .select('id, tema, severidad')
+    .select('id, tema, severidad, tramo')
   if (errorEventos) throw new Error(`severity_events: ${errorEventos.message}`)
   const eventos = new Map(
     ((eventosData ?? []) as unknown as FilaEvento[]).map((e) => [e.id, e]),
@@ -83,7 +84,22 @@ async function main(): Promise<void> {
     movsPorEvento.set(m.evento_id, [...(movsPorEvento.get(m.evento_id) ?? []), m])
   }
 
+  // La línea base: qué hace el precio en una fecha sin hecho detrás. Sin ella
+  // P(movimiento) no se puede interpretar, porque no se sabe contra qué compara.
+  const placebo = [...eventos.values()].filter((e) => e.tramo === 'placebo')
+  const placeboMovidos = placebo.filter((e) => huboMovimiento(movsPorEvento.get(e.id) ?? [])).length
+  const base = placebo.length ? placeboMovidos / placebo.length : null
+
   console.log(`\nAJUSTE DE LA CURVA  ·  versión "${version}"  ·  ${replay.length} respuestas\n`)
+
+  if (base == null) {
+    console.log('⚠️  SIN GRUPO DE CONTROL. La curva saldrá sesgada: el corpus solo tiene')
+    console.log('   eventos elegidos por haber sido importantes. Ejecuta antes')
+    console.log('   "npm run calibracion:placebo".\n')
+  } else {
+    console.log(`Línea base: ${placeboMovidos} de ${placebo.length} fechas al azar movieron el precio (${(base * 100).toFixed(1)}%).`)
+    console.log('La columna «lift» es lo que cada peldaño añade sobre eso, y es lo que decide el peldaño final.\n')
+  }
 
   // Se agrupa por tema porque una escalada militar y una decisión de tasas no
   // mueven el precio igual, y el prompt tampoco es el mismo.
@@ -92,7 +108,8 @@ async function main(): Promise<void> {
   for (const r of replay) {
     if (r.evento_id == null || r.severidad_llm == null) continue
     const evento = eventos.get(r.evento_id)
-    if (!evento) continue
+    // El placebo no se clasifica: no hay titular que juzgar. Solo es denominador.
+    if (!evento || evento.tramo === 'placebo') continue
 
     const clave = `${evento.tema}|${r.severidad_llm}`
     const cubo = cubos.get(clave) ?? { movidos: 0, total: 0, merecida: [] }
@@ -104,14 +121,17 @@ async function main(): Promise<void> {
 
   if (!cubos.size) throw new Error('ninguna respuesta del replay cruzó con el corpus medido')
 
-  const porTema = new Map<string, Array<{ llm: number; p: number; final: number; n: number; merecidaMedia: number }>>()
+  const porTema = new Map<string, Array<{ llm: number; p: number; lift: number; final: number; n: number; merecidaMedia: number }>>()
   for (const [clave, cubo] of cubos) {
     const [tema, llmTexto] = clave.split('|')
     const p = cubo.movidos / cubo.total
+    // Sin control se cae a la probabilidad bruta, que es el comportamiento
+    // viejo, y el aviso de arriba ya ha dicho que eso sale sesgado.
+    const lift = base == null ? p : liftSobreBase(p, base)
     const merecidaMedia = cubo.merecida.reduce((a, b) => a + b, 0) / cubo.merecida.length
     porTema.set(tema, [
       ...(porTema.get(tema) ?? []),
-      { llm: Number(llmTexto), p, final: peldanoDesdeProbabilidad(p), n: cubo.total, merecidaMedia },
+      { llm: Number(llmTexto), p, lift, final: peldanoDesdeProbabilidad(lift), n: cubo.total, merecidaMedia },
     ])
   }
 
@@ -120,16 +140,20 @@ async function main(): Promise<void> {
   for (const [tema, sinAjustar] of porTema) {
     const puntos = forzarMonotonia(sinAjustar)
     console.log(`TEMA ${tema}`)
-    console.log('  llm   n   P(movimiento)   merece   →  final')
+    console.log('  llm   n   P(mov)   lift   merece   →  final')
     for (const punto of puntos) {
       console.log(
-        `   ${punto.llm}/5  ${String(punto.n).padStart(2)}      ${(punto.p * 100).toFixed(0).padStart(3)}%`
-        + `        ${punto.merecidaMedia.toFixed(1)}     →    ${punto.final}/5`,
+        `   ${punto.llm}/5  ${String(punto.n).padStart(2)}    ${(punto.p * 100).toFixed(0).padStart(3)}%`
+        + `   ${(punto.lift * 100).toFixed(0).padStart(3)}%`
+        + `      ${punto.merecidaMedia.toFixed(1)}     →    ${punto.final}/5`,
       )
       filas.push({
         tema,
         severidad_llm: punto.llm,
         p_movimiento: Number(punto.p.toFixed(4)),
+        // `severidad_final` sale del lift, no de `p_movimiento`. La columna
+        // guarda la proporción bruta porque es el dato observado; la corrección
+        // ya lleva descontada la línea base.
         severidad_final: punto.final,
         n_eventos: punto.n,
         ajustada_at: new Date().toISOString(),

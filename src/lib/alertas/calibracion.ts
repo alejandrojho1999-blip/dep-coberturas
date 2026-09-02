@@ -76,6 +76,11 @@ export function huboMovimiento(movimientos: readonly MovimientoMedido[]): boolea
  * Los cortes reparten el 1-5 sobre la probabilidad de que el precio se moviera
  * de verdad. Son deliberadamente exigentes arriba: un 5 debe querer decir «esto
  * casi siempre mueve el mercado», no «esto suena grave».
+ *
+ * Úsese solo con una probabilidad ya normalizada por la línea base
+ * (`liftSobreBase`). En bruto no significa nada: si en un día cualquiera algo se
+ * mueve el 55% de las veces, un peldaño con el 60% no distingue nada y aquí
+ * saldría un 4.
  */
 export function peldanoDesdeProbabilidad(p: number): number {
   if (p >= 0.80) return 5
@@ -83,6 +88,25 @@ export function peldanoDesdeProbabilidad(p: number): number {
   if (p >= 0.40) return 3
   if (p >= 0.20) return 2
   return 1
+}
+
+/**
+ * Cuánto se separa un peldaño de lo que hace el mercado por sí solo.
+ *
+ * Devuelve la probabilidad reescalada al tramo que queda por encima de la línea
+ * base: 0 cuando el peldaño no distingue nada del ruido de fondo, 1 cuando
+ * mueve siempre. Es lo que convierte «el 86% de estos eventos movió el precio»
+ * —que suena a mucho y puede no ser nada— en una cifra con sentido.
+ *
+ *   base 0,55 · p 0,60  ->  0,11   apenas distingue
+ *   base 0,55 · p 0,90  ->  0,78   distingue de verdad
+ *
+ * Por debajo de la base el resultado es 0: un peldaño que acierta menos que el
+ * azar no es informativo al revés, es simplemente inútil.
+ */
+export function liftSobreBase(p: number, base: number): number {
+  if (base >= 1) return 0
+  return Math.max(0, (p - base) / (1 - base))
 }
 
 /**

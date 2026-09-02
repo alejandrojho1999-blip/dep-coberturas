@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   aplicarCurva,
+  liftSobreBase,
   resumirReplay,
   forzarMonotonia,
   huboMovimiento,
@@ -81,6 +82,44 @@ describe('peldanoDesdeProbabilidad', () => {
   it('los extremos no se salen del 1-5', () => {
     expect(peldanoDesdeProbabilidad(0)).toBe(1)
     expect(peldanoDesdeProbabilidad(1)).toBe(5)
+  })
+})
+
+describe('liftSobreBase', () => {
+  it('un peldaño que solo iguala al azar no distingue nada', () => {
+    expect(liftSobreBase(0.55, 0.55)).toBe(0)
+  })
+
+  it('reescala al tramo que queda por encima de la base', () => {
+    // Con una base del 55%, el 60% bruto apenas se separa del ruido...
+    expect(liftSobreBase(0.60, 0.55)).toBeCloseTo(0.111, 3)
+    // ...y el 90% sí dice algo.
+    expect(liftSobreBase(0.90, 0.55)).toBeCloseTo(0.778, 3)
+  })
+
+  it('mover siempre es el máximo, valga lo que valga la base', () => {
+    expect(liftSobreBase(1, 0.55)).toBe(1)
+    expect(liftSobreBase(1, 0.1)).toBe(1)
+  })
+
+  it('acertar menos que el azar es inútil, no informativo al revés', () => {
+    expect(liftSobreBase(0.2, 0.55)).toBe(0)
+  })
+
+  it('sin base, el lift es la propia probabilidad', () => {
+    expect(liftSobreBase(0.7, 0)).toBeCloseTo(0.7, 5)
+  })
+
+  it('con una base del 100% nada puede distinguirse', () => {
+    // Todo se mueve siempre: no hay tramo por encima donde separar nada.
+    expect(liftSobreBase(1, 1)).toBe(0)
+  })
+
+  it('cambia el veredicto de un peldaño que en bruto parecía alto', () => {
+    // El caso real del corpus: 86% suena a mucho hasta que se sabe que en un
+    // día cualquiera ya se mueve algo el 80% de las veces.
+    expect(peldanoDesdeProbabilidad(0.86)).toBe(5)
+    expect(peldanoDesdeProbabilidad(liftSobreBase(0.86, 0.80))).toBe(2)
   })
 })
 

@@ -5,10 +5,12 @@ import {
   ETIQUETA_TRAMO,
   TICKERS_RESUMEN,
   eventoMovioElPrecio,
+  lineaBase,
   movimientoDe,
   pctConSigno,
   resumirGlobal,
   resumirPorClase,
+  soloCurados,
   type EventoMedido,
 } from '@/lib/alertas/backtesting'
 import { UMBRAL_MATERIAL, VENTANA_JUICIO } from '@/lib/alertas/calibracion'
@@ -48,13 +50,18 @@ function Movio({ si }: { si: boolean }) {
 }
 
 export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[] }) {
-  const global = resumirGlobal(eventos)
-  const porClase = resumirPorClase(eventos)
+  // El grupo de control se aparta de todo lo que se promedia: sus filas no son
+  // hechos, y su severidad 1 no quiere decir «leve» sino «no hay nada que
+  // puntuar». Mezclarlo haría mentir a cualquier media de esta pantalla.
+  const curados = soloCurados(eventos)
+  const global = resumirGlobal(curados)
+  const porClase = resumirPorClase(curados)
+  const base = lineaBase(eventos)
 
   // Los tramos no son comparables entre sí —el mercado de tasas cero reaccionaba
   // a la geopolítica de otra manera—, así que la tabla va separada por tramo y
   // no mezclada y ordenada por fecha.
-  const tramos = [...new Set(eventos.map((e) => e.tramo))]
+  const tramos = [...new Set(curados.map((e) => e.tramo))]
 
   return (
     <div className="space-y-4">
@@ -109,6 +116,35 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
           desplazamiento de la ventana y no por el cierre final: lo que importa es si hubo susto
           en algún momento, no si el viernes ya se había deshecho.
         </NotaPie>
+      </Panel>
+
+      <Panel
+        titulo="La línea base: qué hace el precio en un día cualquiera"
+        descripcion="Sin esta cifra ninguna de las de arriba se puede interpretar. Si el mercado se mueve solo la mitad de los días, un peldaño que acierta el 60% no distingue casi nada."
+      >
+        {base ? (
+          <>
+            <p className="text-sm leading-relaxed text-text-secondary">
+              En <strong className="font-mono text-text-primary">{base.n}</strong> fechas de sesión
+              elegidas al azar, sin ningún hecho detrás, algún activo superó su umbral el{' '}
+              <strong className="font-mono text-text-primary">{(base.base * 100).toFixed(1)}%</strong>{' '}
+              de las veces. Esa es la cifra contra la que hay que leer cada peldaño: lo que un
+              evento añade sobre ella es lo único que se puede llamar señal.
+            </p>
+            <NotaPie>
+              Las fechas salen de un muestreo con semilla fija, así que el control no cambia entre
+              ejecuciones y dos ajustes se pueden comparar. Se excluyen las sesiones a menos de diez
+              días de un evento del corpus: una fecha pegada a la invasión de Ucrania no es un día
+              corriente, mide la misma sacudida.
+            </NotaPie>
+          </>
+        ) : (
+          <p className="text-sm leading-relaxed text-amber-500">
+            Todavía no hay grupo de control. Hasta que lo haya, las proporciones de arriba no se
+            pueden interpretar y la curva de calibración no debe aplicarse: se construye con{' '}
+            <code className="font-mono">npm run calibracion:placebo</code>.
+          </p>
+        )}
       </Panel>
 
       <Panel

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   eventoMovioElPrecio,
+  lineaBase,
+  soloCurados,
   movimientoDe,
   movimientosDeJuicio,
   pctConSigno,
@@ -179,5 +181,46 @@ describe('pctConSigno', () => {
   it('un nulo se escribe como raya, nunca como cero', () => {
     expect(pctConSigno(null)).toBe('—')
     expect(pctConSigno(Number.NaN)).toBe('—')
+  })
+})
+
+describe('el grupo de control', () => {
+  const conPlacebo: EventoMedido[] = [
+    evento({
+      clase: 'invasion', severidad: 5,
+      movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0.06, extremo: 0.08 }],
+    }),
+    evento({
+      fecha: '2023-04-11', tramo: 'placebo', clase: 'dia-corriente', severidad: 1,
+      titulo: 'Sesión de control 2023-04-11',
+      movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0.05, extremo: 0.05 }],
+    }),
+    evento({
+      fecha: '2023-05-02', tramo: 'placebo', clase: 'dia-corriente', severidad: 1,
+      titulo: 'Sesión de control 2023-05-02',
+      movimientos: [{ ticker: 'GC=F', ventana: 5, retorno: 0.001, extremo: 0.001 }],
+    }),
+  ]
+
+  it('aparta el control de los hechos curados', () => {
+    expect(soloCurados(conPlacebo)).toHaveLength(1)
+    expect(soloCurados(conPlacebo)[0].clase).toBe('invasion')
+  })
+
+  it('la línea base es la proporción del control, no del corpus entero', () => {
+    // Una de las dos fechas al azar movió el precio.
+    expect(lineaBase(conPlacebo)).toEqual({ base: 0.5, n: 2 })
+  })
+
+  it('sin control devuelve null, que no es una base del 0%', () => {
+    // Distinguirlos importa: con null la pantalla avisa, con 0 mentiría.
+    expect(lineaBase(soloCurados(conPlacebo))).toBeNull()
+  })
+
+  it('el control no ensucia las medias del corpus', () => {
+    // Sus severidades son todas 1 y no significan «leve»: hundirían la media.
+    const soloReales = resumirGlobal(soloCurados(conPlacebo))
+    expect(soloReales.eventos).toBe(1)
+    expect(soloReales.levesConEfecto).toBe(0)
   })
 })

@@ -63,14 +63,15 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 > mediciones de precio, 27 respuestas del replay y 7 puntos de curva. El
 > pipeline completo funciona de extremo a extremo.
 
-- **La curva calculada NO se puede aplicar, y el motivo importa.** Sale
-  subiendo la severidad en 6 de los 7 peldaños —justo lo contrario de lo que se
-  buscaba— por **sesgo de selección**: el corpus está hecho de eventos elegidos
-  por haber sido importantes, así que P(movimiento) sale entre el 50% y el 100%
-  en todos los peldaños. Faltan los días anodinos, que son la mayoría de las
-  señales reales. `ajustar.mts` detecta el caso y lo avisa en pantalla.
-  **Lo que hace falta**: ampliar `eventos.ts` con 30-50 titulares corrientes de
-  severidad 1-2 que no movieron nada. Es trabajo de curación, no de código.
+- **APLICAR LA MIGRACIÓN 027** — es lo único que bloquea el cierre de la
+  calibración, y solo puede hacerlo el dueño del proyecto de Supabase. Enviada
+  por correo el 2026-09-02 («SQL para Supabase — migración 027»). Permite el
+  tramo `placebo` en `severity_events`; comprobado contra la base que la
+  constraint actual lo rechaza. Después, en el servidor:
+  `npm run calibracion:placebo` y `npm run calibracion:ajustar`.
+- **La curva sigue sin aplicarse hasta que exista el grupo de control.** El
+  código ya está listo: `ajustar.mts` usa `liftSobreBase` y avisa en pantalla
+  cuando no hay control. La pantalla de backtesting también avisa en ámbar.
 - ~~**Los cinco agujeros del prompt**~~ — **cerrados el 2026-09-02**, con la
   medición delante: descartados **10 → 1**, y los cinco casos recuperados con el
   peldaño correcto o cerca. Ver la entrada de la sesión en «Completado».
@@ -368,6 +369,47 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — la calibración consigue su denominador
+
+El corpus solo tenía la mitad de la tabla: 27 eventos elegidos **por haber sido
+importantes**, así que casi todos movieron el precio y la curva acababa subiendo
+la severidad en vez de bajarla. Faltaba la pregunta que convierte cualquier
+porcentaje en información: **¿y en un día cualquiera, cuántas veces se mueve el
+precio?** Si la respuesta es el 80%, un peldaño que acierta el 86% no distingue
+casi nada.
+
+**Decisión de método, y es la parte que importa.** La tarea pedía curar 30-50
+titulares anodinos a mano. No se hizo así por dos razones: cada titular
+inventado trae una fecha sin verificar —el error que más daño hace en este
+corpus, según su propia cabecera— y, sobre todo, **quien escribe esa lista
+decide qué es anodino**, que es el mismo sesgo del curador que se quería
+eliminar. En su lugar hay un grupo de control por muestreo aleatorio: fechas de
+sesión reales, sin hecho detrás, medidas exactamente igual. Un muestreo no
+opina.
+
+Lo que se añadió:
+- **Migración 027** — permite el tramo `placebo` en `severity_events`. Va en la
+  misma tabla y no en una aparte porque las mediciones ya cuelgan de
+  `severity_events.id`: un control medido por otro camino dejaría de ser
+  comparable, que es su única razón de existir.
+- **`scripts/calibracion/placebo.mts`** — muestrea con semilla fija (el control
+  no puede cambiar entre ejecuciones o no se pueden comparar dos ajustes),
+  excluye las sesiones a menos de diez días de un evento del corpus, y arranca
+  en la primera fecha del corpus para no comparar regímenes distintos.
+- **`liftSobreBase`** en `calibracion.ts` — reescala la probabilidad al tramo
+  que queda por encima de la línea base. `ajustar.mts` decide el peldaño final
+  con esta cifra y no con la proporción bruta; sin control se cae al
+  comportamiento viejo y lo avisa en pantalla.
+- **La ficha de backtesting** aparta el placebo de todo lo que promedia —su
+  severidad 1 no significa «leve» sino «no hay nada que puntuar»— y enseña la
+  línea base, o avisa en ámbar de que no la hay.
+
+**Sigue bloqueado en la migración 027**, que solo puede aplicar el dueño del
+proyecto de Supabase. Comprobado contra la base que la constraint actual rechaza
+el tramo `placebo`.
+
+Suite completa en verde: 961/961, `tsc` y `eslint` limpios.
 
 ### Sesión del 2026-09-02 — el backtesting de eventos deja de vivir solo en la base
 

@@ -49,6 +49,43 @@ export const ETIQUETA_TRAMO: Record<string, string> = {
   principal: 'Principal (2022→hoy)',
   control_2014: 'Control 2014-2020',
   control_shocks: 'Control de shocks',
+  placebo: 'Grupo de control (fechas al azar)',
+}
+
+/**
+ * El tramo que no es un hecho sino el denominador.
+ *
+ * Sus filas son fechas de sesión elegidas al azar, sin suceso detrás. Se separan
+ * de todo lo demás porque mezclarlas con los hechos curados haría mentir a
+ * cualquier media: la severidad 1 de una fecha de control no significa «leve»,
+ * significa que no hay nada que puntuar.
+ */
+export const TRAMO_PLACEBO = 'placebo'
+
+export function esPlacebo(evento: EventoMedido): boolean {
+  return evento.tramo === TRAMO_PLACEBO
+}
+
+/** Los hechos curados: todo menos el grupo de control. */
+export function soloCurados(eventos: readonly EventoMedido[]): EventoMedido[] {
+  return eventos.filter((e) => !esPlacebo(e))
+}
+
+/**
+ * Con qué frecuencia se mueve el precio en un día cualquiera.
+ *
+ * Es la cifra que da sentido a todas las demás. Sin ella, «el 86% de estos
+ * eventos movió el mercado» no se puede interpretar: puede ser mucho o puede ser
+ * menos que el azar. Devuelve `null` cuando todavía no hay grupo de control,
+ * que no es lo mismo que cero.
+ */
+export function lineaBase(eventos: readonly EventoMedido[]): { base: number; n: number } | null {
+  const placebo = eventos.filter(esPlacebo)
+  if (!placebo.length) return null
+  return {
+    base: placebo.filter(eventoMovioElPrecio).length / placebo.length,
+    n: placebo.length,
+  }
 }
 
 /**
