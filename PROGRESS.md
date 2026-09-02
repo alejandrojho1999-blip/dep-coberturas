@@ -7,7 +7,7 @@
 
 ## Estado actual
 
-**Último commit:** `17c8c5d` (merge del PR #13 — alerta temprana viva), rama `main`
+**Último commit:** recalibración de la severidad del clasificador, rama `main`
 
 | Check | Resultado |
 |---|---|
@@ -33,6 +33,18 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/ergos-quant`,
 ---
 
 ## Pendiente
+
+### Calibración de severidad — falta aplicar la migración 025
+
+- **Aplicar `supabase/migrations/025_calibracion_severidad.sql` a mano** desde el
+  panel de Supabase: el MCP conectado no tiene este proyecto. Hasta entonces
+  `npm run calibracion:cargar` falla, y falla diciendo exactamente eso.
+- **La curva numérica sigue vacía.** `severity_calibration` necesita antes
+  reejecutar el prompt nuevo sobre el corpus y guardarlo en
+  `severity_llm_replay`. Con 27 eventos la curva sería ruido.
+- **Medir el efecto:** volver a pasar `npm run calibracion:auditar` tras una
+  semana con el prompt nuevo y comprobar si el 60,9% de peldaños 4-5 baja.
+
 
 ### Alerta temprana viva (Fases 1–4) — en producción desde el 2026-09-01
 > El PR #13 «Alerta temprana viva: pulso público, palabras clave y curvas de
@@ -300,6 +312,31 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-02 — recalibración de la severidad del clasificador
+
+El clasificador marcaba como grave casi todo: **60,9% de las señales en peldaños
+4 o 5**, con doce avisos del mismo ataque de Leipzig y un artículo de opinión
+puntuado 5/5. Se midió el problema, se contrastó contra lo que hizo de verdad el
+mercado en 27 eventos históricos, y se corrigió el prompt con esas cifras.
+
+- **Prompts reescritos con anclas medidas** (`src/lib/alertas/clasificador.ts`).
+  Cada peldaño lleva precedentes reales con su retorno del oro, VIX y S&P. La
+  regla es explícita: severidad = efecto esperado en el precio, no gravedad
+  humana. Przewodów puso dos muertos en suelo OTAN y dejó el S&P en −0,2%.
+- **Claves de evento con vocabulario cerrado.** El slug ya no se improvisa desde
+  el titular: `<tipo-de-hecho>-<lugar>-<AAAA-MM-DD>` con lista fija de tipos. Es
+  lo que hace que el enfriamiento de `alert_dedupe` llegue a activarse.
+- **Suelo de envío** (`src/lib/alertas/dedupe.ts`): `SEVERIDAD_MINIMA_POR_DEFECTO`
+  = 3, ajustable con `ALERTAS_SEVERIDAD_MINIMA`. Manda sobre el resto de reglas.
+- **Despacho silencioso** (`src/lib/alertas/motor.ts`): lo que no suena se guarda
+  igual en `alert_signals`, con `aceptado_at` nulo y el motivo en `canal_detalle`.
+- **Cuatro comandos nuevos**: `calibracion:auditar`, `calibracion:claves`,
+  `calibracion:medir`, `calibracion:cargar`.
+- **Migración `025_calibracion_severidad.sql`** con `severity_events`,
+  `severity_event_moves`, `severity_calibration` y `severity_llm_replay`.
+- Informe completo en `INFORME-CALIBRACION-SEVERIDAD.md`.
+- Suite: **817 tests verdes en 60 ficheros**, lint y typecheck limpios.
 
 ### Sesión del 2026-09-01 (noche) — cierre de la alerta temprana viva
 

@@ -21,15 +21,29 @@ export interface EstadoEvento {
 
 export interface DecisionEnvio {
   enviar: boolean
-  motivo: 'nuevo' | 'escalada' | 'en-enfriamiento' | 'tope-horario'
+  motivo: 'nuevo' | 'escalada' | 'en-enfriamiento' | 'tope-horario' | 'bajo-umbral'
 }
 
 export const COOLDOWN_MIN_POR_DEFECTO = 45
 export const MAX_MSG_HORA_POR_DEFECTO = 6
 
+/**
+ * Peldaño por debajo del cual el hecho se registra pero no suena el teléfono.
+ *
+ * Un 1 o un 2 son contexto, no aviso: se guardan en `alert_signals` para poder
+ * medir después qué se dejó pasar, pero interrumpir a las tres de la mañana por
+ * una declaración tensa es lo que enseña a ignorar el canal.
+ */
+export const SEVERIDAD_MINIMA_POR_DEFECTO = 3
+
 export function cooldownMin(): number {
   const n = Number(process.env.ALERTAS_COOLDOWN_MIN)
   return Number.isFinite(n) && n >= 0 ? n : COOLDOWN_MIN_POR_DEFECTO
+}
+
+export function severidadMinimaEnvio(): number {
+  const n = Number(process.env.ALERTAS_SEVERIDAD_MINIMA)
+  return Number.isFinite(n) && n >= 1 && n <= 5 ? n : SEVERIDAD_MINIMA_POR_DEFECTO
 }
 
 export function maxMensajesHora(): number {
@@ -45,6 +59,7 @@ export function decidirEnvio(params: {
   ahora?: Date
   cooldownMinutos?: number
   maxPorHora?: number
+  severidadMinima?: number
 }): DecisionEnvio {
   const {
     eventoKey,
@@ -54,7 +69,12 @@ export function decidirEnvio(params: {
     ahora = new Date(),
     cooldownMinutos = cooldownMin(),
     maxPorHora = maxMensajesHora(),
+    severidadMinima = severidadMinimaEnvio(),
   } = params
+
+  // El suelo manda sobre todo lo demás: un hecho menor no despierta a nadie
+  // aunque sea nuevo y aunque quede cupo en la hora.
+  if (severidad < severidadMinima) return { enviar: false, motivo: 'bajo-umbral' }
 
   const esNuevo = !estado || estado.eventoKey !== eventoKey
   const escala = !esNuevo && severidad > estado!.maxSeveridad

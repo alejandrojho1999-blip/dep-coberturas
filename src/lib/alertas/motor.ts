@@ -114,11 +114,30 @@ async function despachar(params: {
   senal: Parameters<typeof registrarSenal>[1]
   estadoPrevio: Parameters<typeof tocarEvento>[3]
   resultado: ResultadoCiclo
+  /** Registra el hecho sin enviarlo: por debajo del suelo de severidad. */
+  silencioso?: boolean
 }): Promise<void> {
-  const { admin, dryRun, mensaje, senal, estadoPrevio, resultado } = params
-  resultado.mensajes.push(mensaje)
+  const { admin, dryRun, mensaje, senal, estadoPrevio, resultado, silencioso = false } = params
+  if (!silencioso) resultado.mensajes.push(mensaje)
 
-  if (dryRun) { resultado.enviados++; return }
+  if (dryRun) { if (!silencioso) resultado.enviados++; return }
+
+  // El registro silencioso deja constancia de lo que se dejó pasar, que es lo
+  // único que permite después juzgar si el suelo está bien puesto. No se marca
+  // ni aceptado ni fallido: nunca se intentó enviar.
+  if (silencioso) {
+    await registrarSenal(admin, {
+      ...senal,
+      mensaje,
+      aceptadoAt: null,
+      errorEnvio: null,
+      canalEstado: null,
+      canalDetalle: 'no enviado: por debajo del suelo de severidad',
+    })
+    await tocarEvento(admin, senal.eventoKey, senal.severidad, estadoPrevio)
+    resultado.omitidos++
+    return
+  }
 
   const envio = await enviarNexus(mensaje, senal.tipo)
   if (envio.error) resultado.errores.push(`envío: ${envio.error}`)
@@ -182,12 +201,14 @@ export async function cicloGuerra(
       ahora,
     })
 
-    if (!decision.enviar) { resultado.omitidos++; continue }
+    const silencioso = decision.motivo === 'bajo-umbral'
+    if (!decision.enviar && !silencioso) { resultado.omitidos++; continue }
 
     const principal = niveles[0]
     await despachar({
       admin,
       dryRun,
+      silencioso,
       mensaje: mensajeGuerra({
         titular,
         clasificacion,
@@ -266,11 +287,13 @@ export async function cicloMacro(
       enviadosUltimaHora: enviados,
       ahora,
     })
-    if (!decision.enviar) { resultado.omitidos++; continue }
+    const silencioso = decision.motivo === 'bajo-umbral'
+    if (!decision.enviar && !silencioso) { resultado.omitidos++; continue }
 
     await despachar({
       admin,
       dryRun,
+      silencioso,
       mensaje: mensajeMacro({
         titular,
         clasificacion,
