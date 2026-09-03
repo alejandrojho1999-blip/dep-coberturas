@@ -164,23 +164,37 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   el 2026-09-03** ampliando el corpus con doce hechos anodinos. El aviso de
   saturación dejó de saltar y `fed_tesoro 5/5` se corrige a la baja por primera
   vez. Ver la entrada de la sesión en «Completado».
-- **El prompt descarta ataques en suelo ruso, pero no siempre.** De los seis
-  hechos que saca de su dominio, cuatro son ataques en territorio ruso —Crimea,
-  Kursk, el puente de Kerch, los drones del Kremlin— y sin embargo **Bélgorod,
-  que es lo mismo, lo juzga con un 2/5**. No es una regla, es una
-  inconsistencia: en producción un ataque dentro de Rusia entrará o no en el
-  canal según cómo esté redactado el titular. Es pendiente del prompt, no del
-  corpus.
+- ~~**El prompt descarta ataques en suelo ruso, pero no siempre**~~ —
+  **corregido el 2026-09-03** con `v8-dominio-suelo-ruso`. Los cuatro se
+  recuperan y **cada uno acierta el peldaño curado exacto**. Ver la entrada de
+  la sesión en «Completado».
+- **`forzarMonotonia` amplifica el ruido del peldaño más flaco, y ahora se ve.**
+  El paso que impide que la curva se invierta arrastra hacia arriba todo lo que
+  está por encima del primer peldaño alto, venga de donde venga ese peldaño. Con
+  `v8`, `fed_tesoro 2/5` (n=5, lift 65%) sube a 4/5 y arrastra a **los cuatro
+  peldaños del tema al 4/5**, incluido `3/5`, cuyo lift medido es **0%**. En
+  `guerra` pasa lo mismo desde un peldaño de **n=1**. El resultado es una curva
+  que para `fed_tesoro` publica un 4 diga lo que diga el modelo: deja de
+  discriminar. La corrección natural es **no dejar que un peldaño por debajo de
+  un mínimo de casos fije el suelo de los demás**, pero es una decisión de
+  diseño de la curva y no se ha tomado. Sin riesgo hoy: `aplicarCurva` no está
+  cableada al motor.
+- **El clasificador parte los FOMC idénticos entre el 2 y el 3 por la
+  redacción.** Seis reuniones «la Fed mantiene los tipos» se reparten 2 en el
+  peldaño 2 y 4 en el 3. Y las dos que cayeron en el 2 son justo las dos que
+  movieron el precio —el hold hawkish de septiembre de 2023 (S&P −3,9%) y el
+  giro de noviembre (S&P +4,4%)—, lo que infla ese peldaño al 80%. Es la
+  evidencia más nítida hasta ahora del problema de determinismo del
+  clasificador.
 - ~~**Los cinco agujeros del prompt**~~ — **cerrados el 2026-09-02**, con la
   medición delante: descartados **10 → 1**, y los cinco casos recuperados con el
   peldaño correcto o cerca. Ver la entrada de la sesión en «Completado».
-- **Vigilar el 11-S en producción.** El criterio nuevo dice «ataque atribuido a
-  un Estado contra ciudadanos o territorio de la OTAN, ocurra donde ocurra», y el
-  modelo lo estiró para dejar pasar un atentado de un actor **no** estatal. Para
-  el corpus está bien —merece 5 y da 5— pero en producción abre la puerta a que
-  cualquier atentado entre en un canal pensado para Rusia-OTAN. Si aparecen
-  falsos positivos de ese tipo, la corrección es añadir «por un Estado o con
-  respaldo estatal» al criterio, no quitarlo entero.
+- ~~**Vigilar el 11-S en producción**~~ — **resuelto de rebote el 2026-09-03**.
+  El modelo lo dejaba pasar estirando el criterio a un actor no estatal; con
+  `v8` lo descarta, y con él la invasión de Irak. Son los dos únicos descartados
+  que quedan, y los dos son `control_shocks`: shocks de otra naturaleza que
+  **deben** quedar fuera del dominio Rusia-OTAN. El descarte pasó de 6 a 2 y los
+  2 son los correctos.
 - ~~**Contradicción sobre la Fed de junio de 2022**~~ — **corregida el
   2026-09-02**: la decisión del 15 de junio baja de severidad 5 a 2. Ver la
   entrada de la sesión en «Completado».
@@ -468,6 +482,77 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — el dominio del prompt no terminaba donde decía
+
+La ampliación del corpus dejó a la vista que el prompt descartaba cuatro
+ataques en territorio ruso —Crimea, Kursk, el puente de Kerch, los drones del
+Kremlin— y en cambio juzgaba Bélgorod, que es el mismo tipo de hecho.
+
+**El diagnóstico tenía dos capas.** La primera: el prompt de verdad omitía el
+suelo ruso, porque sus siete criterios de dominio hablaban todos de la OTAN. La
+segunda, y la que explica a Bélgorod: uno de los criterios —«sabotaje de
+infraestructura crítica atribuido a un Estado»— **no lleva restricción
+geográfica**, así que el puente de Kerch debería haber entrado por ahí y aun así
+se descartaba. El modelo estaba leyendo la cabecera («conflicto entre Rusia y la
+OTAN») como un filtro implícito de territorio, y lo aplicaba unas veces sí y
+otras no.
+
+**El arreglo tiene tres partes**, todas en `SISTEMA_GUERRA`:
+
+1. **Un criterio de dominio nuevo y acotado**: escalada mayor en territorio ruso
+   atribuida a un Estado, cuando cruza una de cuatro barras —control de terreno,
+   sede del poder o mando, infraestructura estratégica de tamaño nacional, o
+   instalación nuclear—. El goteo diario de drones sobre refinerías queda
+   explícitamente fuera, que era el riesgo de inundar el canal.
+2. **La ambigüedad geográfica, dicha en voz alta**: el dominio es el *conflicto*,
+   y un conflicto escala por los dos lados de la línea. Que un hecho ocurra en
+   suelo ruso no lo saca del dominio.
+3. **Anclas de severidad medidas, para que entrar no signifique inflar.** Kursk
+   (oro +2,5%, VIX −51,0%), Kremlin (oro +1,1%, VIX +20,0%) y Bélgorod (oro
+   −1,7%, VIX +23,8%) son 2. Solo el cambio de control territorial llega al 4
+   (Crimea). Kerch es 3, y por la respuesta material del 10 de octubre, no por lo
+   espectacular de volar un puente.
+
+**Resultado, con `v8-dominio-suelo-ruso` sobre los 44 hechos:**
+
+| | v7 | v8 |
+|---|---|---|
+| descartados | 6 | **2** |
+| juzgados | 38 | **42** |
+| error medio | 0,29 | **0,24** |
+
+**Los cuatro recuperados aciertan el peldaño curado exacto**: Kursk 2/5, Crimea
+4/5, Kerch 3/5, Kremlin 2/5. Cuatro de cuatro, sin desviación.
+
+**Y los dos descartados que quedan son los correctos**: el 11-S y la invasión de
+Irak, ambos `control_shocks`, shocks de otra naturaleza que deben quedar fuera
+del dominio Rusia-OTAN. Esto cierra de rebote el pendiente «vigilar el 11-S en
+producción», que estaba abierto porque el modelo lo colaba estirando el criterio
+a un actor no estatal.
+
+### Lo que la medición destapó de paso, y no se ha arreglado
+
+**La curva se ha vuelto degenerada, y la culpa es de `forzarMonotonia`.** Para
+`fed_tesoro` publica un 4 diga lo que diga el modelo: los cuatro peldaños salen
+en 4/5, incluido el `3/5` cuyo lift medido es **0%**. El mecanismo es que el
+peldaño más bajo (`2/5`, n=5, lift 65%) sube a 4 y la monotonía arrastra todo lo
+que está por encima. En `guerra` ocurre lo mismo desde un peldaño de **n=1**.
+
+**Y el motivo por el que ese peldaño bajo está inflado es el clasificador**:
+seis reuniones «la Fed mantiene los tipos», que son el mismo hecho, se reparten
+entre el peldaño 2 (dos casos) y el 3 (cuatro casos) según cómo esté redactado
+el titular. Y las dos que cayeron en el 2 resultan ser justo las dos que
+movieron el precio —el hold hawkish de septiembre de 2023 (S&P −3,9%) y el giro
+de noviembre (S&P +4,4%)—, lo que deja ese peldaño en un 80% que es suerte del
+reparto.
+
+La corrección natural sería que un peldaño por debajo de un mínimo de casos no
+pueda fijar el suelo de los demás, pero eso es rediseñar la curva y no es lo que
+se pedía en este turno. Queda anotado como pendiente con la evidencia delante.
+Sin riesgo hoy: `aplicarCurva` no está cableada al motor y `ajustar.mts` avisa.
+
+Verde: **975/975 tests**, `tsc` y ESLint limpios.
 
 ### Sesión del 2026-09-03 — el corpus deja de estar hecho solo de hechos importantes
 

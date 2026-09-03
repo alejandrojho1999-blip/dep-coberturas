@@ -270,6 +270,10 @@ muestra para retirar nada.
 
 ### La curva vigente
 
+> Esta era la curva de `v7`. La versión vigente es `v8-dominio-suelo-ruso`; ver
+> «La curva se ha vuelto degenerada, y no es culpa del prompt» para la de hoy y
+> para por qué la de `v7` se lee mejor que la actual.
+
 Con `v7-corpus-anodino`, 44 hechos, los ocho activos, el control emparejado por
 época, el VIX al 25% y el oro al 3,6%, línea base del **43,3%**:
 
@@ -447,17 +451,12 @@ donde doce hechos no existían cuando se tomó la decisión, sigue ganando al 6%
 por **+10 puntos [2, 20]**, mejorando en el **98%** de los remuestreos, y el
 tramo llano sigue entre el 3,4% y el 3,8%. No era un artefacto.
 
-### Un hallazgo lateral: el prompt descarta ataques en suelo ruso, pero no siempre
+### Un hallazgo lateral que se arregló el mismo día: el suelo ruso
 
-De los seis hechos que el prompt saca de su dominio, cuatro son ataques **en
+De los seis hechos que el prompt sacaba de su dominio, cuatro eran ataques **en
 territorio ruso**: Crimea, Kursk, el puente de Kerch y los drones del Kremlin. Y
-sin embargo **Bélgorod, que es exactamente lo mismo, lo juzga con un 2/5**.
-
-No es una regla, es una inconsistencia. El criterio de dominio dice «ataque
-atribuido a un Estado contra ciudadanos o territorio de la OTAN», y bajo esa
-lectura los cinco deberían descartarse igual. En producción esto significa que
-un ataque dentro de Rusia entra o no en el canal según cómo esté redactado el
-titular. Queda anotado como pendiente del prompt, no del corpus.
+sin embargo **Bélgorod, que es exactamente lo mismo, se juzgaba con un 2/5**.
+Ver «El dominio no terminaba donde el prompt decía».
 
 ### El error medio sube de 0,14 a 0,29, y era de esperar
 
@@ -465,6 +464,96 @@ titular. Queda anotado como pendiente del prompt, no del corpus.
 apuntaba el modelo: era una cifra tautológica, y este informe ya lo advertía.
 Los doce hechos nuevos no pasaron por ese proceso, así que **0,29 es la primera
 medida honesta** de la distancia entre el modelo y el analista.
+
+## El dominio no terminaba donde el prompt decía
+
+El corpus ampliado dejó a la vista que el clasificador descartaba cuatro ataques
+en territorio ruso y en cambio juzgaba Bélgorod, que es el mismo tipo de hecho.
+
+**El diagnóstico tenía dos capas.** La primera es que el prompt de verdad
+omitía el suelo ruso: sus siete criterios de dominio hablaban todos de la OTAN.
+La segunda explica a Bélgorod y es la interesante — uno de esos criterios,
+«sabotaje de infraestructura crítica atribuido a un Estado», **no lleva
+restricción geográfica**. El puente de Kerch encajaba en él literalmente y aun
+así se descartaba. El modelo estaba leyendo la cabecera del prompt («conflicto
+entre Rusia y la OTAN») como un filtro implícito de territorio, y lo aplicaba
+unas veces sí y otras no.
+
+**El arreglo, en `SISTEMA_GUERRA`:**
+
+1. **Un criterio de dominio nuevo y acotado.** Escalada mayor en territorio ruso
+   atribuida a un Estado o a fuerzas respaldadas por uno, cuando cruza una de
+   cuatro barras: control de terreno, sede del poder o mando militar,
+   infraestructura estratégica de tamaño nacional, o instalación nuclear. El
+   goteo diario de drones sobre refinerías rusas queda explícitamente fuera —era
+   el riesgo real de esta ampliación: inundar el canal con el ruido de fondo de
+   la guerra.
+2. **La ambigüedad geográfica, dicha en voz alta.** El dominio es el *conflicto*,
+   y un conflicto escala por los dos lados de la línea. Que un hecho ocurra en
+   suelo ruso no lo saca del dominio; lo que decide es si cambia la probabilidad
+   de una respuesta militar.
+3. **Anclas de severidad medidas, para que entrar no signifique inflar.** Kursk
+   (oro +2,5%, VIX −51,0%), los drones del Kremlin (oro +1,1%, VIX +20,0%) y
+   Bélgorod (oro −1,7%, VIX +23,8%) son **2**: tomar una ciudad rusa un día o
+   hacer estallar drones sobre el Kremlin da titulares de peldaño 5 y precios de
+   peldaño 2. Solo el cambio de control territorial llega al **4** (Crimea).
+   Kerch es un **3**, y por la campaña de misiles del 10 de octubre que fue su
+   respuesta material, no porque volar un puente sea espectacular.
+
+### El resultado
+
+| | `v7` | `v8-dominio-suelo-ruso` |
+| --- | ---: | ---: |
+| descartados | 6 | **2** |
+| juzgados | 38 | **42** |
+| error medio | 0,29 | **0,24** |
+
+**Los cuatro recuperados aciertan el peldaño curado exacto**: Kursk 2/5, Crimea
+4/5, Kerch 3/5, Kremlin 2/5. Cuatro de cuatro.
+
+**Y los dos descartes que quedan son los correctos:** el 11-S y la invasión de
+Irak, ambos del tramo `control_shocks`, que son shocks de otra naturaleza y
+deben quedar fuera de un dominio Rusia-OTAN. Esto cierra de rebote un pendiente
+antiguo —«vigilar el 11-S en producción»—, que estaba abierto porque el modelo
+lo colaba estirando el criterio a un actor no estatal.
+
+## La curva se ha vuelto degenerada, y no es culpa del prompt
+
+Con `v8`, la curva de `fed_tesoro` publica un **4 diga lo que diga el modelo**:
+
+| Tema | Peldaño LLM | n | P(mov) | Lift | → Final |
+| ---- | ----------- | -: | -----: | ---: | ------: |
+| guerra | 2/5 | 16 |  63% |  34% | 2/5 |
+| guerra | 3/5 |  1 | 100% | 100% | 5/5 |
+| guerra | 4/5 |  4 |  75% |  56% | 5/5 |
+| guerra | 5/5 |  1 | 100% | 100% | 5/5 |
+| fed_tesoro | 2/5 |  5 |  80% |  65% | 4/5 |
+| fed_tesoro | 3/5 |  6 |  17% |   0% | **4/5** |
+| fed_tesoro | 4/5 |  3 |  67% |  41% | 4/5 |
+| fed_tesoro | 5/5 |  6 |  83% |  71% | 4/5 |
+
+Fíjese en `fed_tesoro 3/5`: su lift medido es **0%** —mueve el precio menos que
+un día cualquiera— y sale publicado como 4/5.
+
+**El mecanismo es `forzarMonotonia`.** Ese paso existe para que la curva no se
+invierta, y lo hace arrastrando hacia arriba todo lo que está por encima del
+primer peldaño alto. Cuando el peldaño alto es el de abajo, fija un suelo para
+los demás: `fed_tesoro 2/5` sube a 4 y arrastra a los tres restantes. En
+`guerra` pasa lo mismo desde un peldaño de **n=1**.
+
+**Y el peldaño que dispara el arrastre está inflado por el clasificador.** Las
+seis reuniones «la Fed mantiene los tipos» son el mismo hecho y se reparten
+entre el peldaño 2 (dos casos) y el 3 (cuatro casos) según cómo esté redactado
+el titular. Las dos que cayeron en el 2 resultan ser justo **las dos que
+movieron el precio** — el hold hawkish del 20 de septiembre de 2023 (S&P −3,9%)
+y el giro dovish del 1 de noviembre (S&P +4,4%) —, lo que deja ese peldaño en un
+80% que es suerte del reparto, no señal.
+
+La corrección natural sería que un peldaño por debajo de un mínimo de casos no
+pueda fijar el suelo de los demás. Es un rediseño de la curva y **no se ha
+hecho**: queda anotado con la evidencia delante. Sin riesgo hoy, porque
+`aplicarCurva` no está cableada al motor y `ajustar.mts` avisa del tamaño de
+muestra.
 
 ## El oro estaba midiendo con el listón de otro activo
 

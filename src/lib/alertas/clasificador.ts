@@ -48,6 +48,21 @@ Criterios de "relevante" (true solo si se cumple alguno):
   instalación nuclear dentro de la zona de guerra.
 - Sabotaje de infraestructura crítica atribuido a un Estado (cables, gasoductos, red eléctrica).
 - Ruptura o firma de un alto el fuego, o ultimátum formal entre las partes.
+- Escalada mayor EN TERRITORIO RUSO atribuida a un Estado o a fuerzas respaldadas por uno,
+  cuando cruza una de estas cuatro barras: control de terreno (incursión o anexión),
+  sede del poder o mando militar, infraestructura estratégica de tamaño nacional, o
+  instalación nuclear. Los ataques rutinarios dentro de Rusia —drones sobre refinerías o
+  depósitos, un día cualquiera de la guerra— NO entran: son el ruido de fondo del conflicto.
+
+EL DOMINIO NO TERMINA EN LA FRONTERA DE LA OTAN, Y ESTE ES UN FALLO MEDIDO. El dominio es
+el CONFLICTO entre Rusia y la OTAN, y un conflicto escala por los dos lados de la línea.
+Que un hecho ocurra en suelo ruso no lo saca del dominio: lo que decide es si cambia la
+probabilidad de una respuesta militar. La anexión de Crimea, la incursión de Kursk, la
+voladura del puente de Kerch y los drones sobre el Kremlin son TODOS "relevante": true.
+Se comprobó el 2026-09-03 que se descartaban por error, y que Bélgorod —el mismo tipo de
+hecho— sí se juzgaba: la incoherencia estaba en el clasificador, no en el criterio.
+Ojo con el otro extremo: meter en el dominio el goteo diario de drones sobre refinerías
+rusas lo inunda. La barra son las cuatro de la lista de arriba.
 
 Es FALSE: análisis, opinión, encuestas, declaraciones rutinarias, recapitulaciones,
 aniversarios, deportes, cultura, y cualquier suceso anterior a las últimas 48 horas.
@@ -72,6 +87,9 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   cortado. Lo que separa un peldaño de otro en el sabotaje NO es la audacia del acto ni el
   país afectado, sino cuánta energía o cuánto tráfico deja de circular. Un cable de datos o
   un interconector eléctrico entre dos países no mueve el precio de nada.
+  En suelo ruso solo un tipo de hecho llega al 4: el cambio de control territorial. Anexión
+  de Crimea (18-03-2014, oro -4,5% y ese signo importa poco: lo que cuenta es que cruzó el
+  umbral). Es ruptura del marco, no un incidente más.
 - 3 · Incidente con la OTAN al que le sigue una respuesta material CON TAMAÑO DE MERCADO:
   intervención armada de la Alianza, corte de suministro que un operador note en el precio
   de la energía, o cierre de un espacio aéreo o de una ruta comercial de uso general. Es un
@@ -79,7 +97,9 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   ni con que se invoque el artículo 4, ni con que algo se interrumpa: la interrupción tiene
   que ser lo bastante grande como para mover un precio. Un enlace bilateral entre dos países
   —un gasoducto pequeño, un interconector eléctrico, un cable de datos— NO llega, aunque el
-  corte sea real y dure meses.
+  corte sea real y dure meses. En suelo ruso la regla es la misma: el puente de Kerch
+  (08-10-2022, oro -3,5%, VIX +10,1%) es un 3 porque la campaña de misiles del 10 de octubre
+  fue la respuesta material, no porque volar un puente sea espectacular.
 - 2 · Incidente militar directo con la OTAN, aislado y sin respuesta material. ESTE ES EL
   PELDAÑO QUE MÁS SE FALLA, Y EL QUE MÁS CASOS RECIBE. Una violación del espacio aéreo, un
   derribo, un sabotaje de infraestructura o un cambio declarado de doctrina son un 2 cuando
@@ -98,6 +118,12 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   en suelo británico (04-03-2018): agente químico de un Estado y expulsión masiva de
   diplomáticos, y aun así oro +0,1%, S&P +3,5%, VIX -32,1%. Todos son "relevante": true
   con severidad baja: es exactamente la combinación que hay que saber emitir.
+  Y son 2 casi todas las escaladas en suelo ruso, que es lo que hay que saber al admitirlas
+  en el dominio: entrar no es subir de peldaño. Incursión de Kursk (06-08-2024, oro +2,5%,
+  VIX -51,0%), drones sobre el Kremlin presentados como magnicidio (03-05-2023, oro +1,1%,
+  VIX +20,0%) e incursión armada en Bélgorod (22-05-2023, oro -1,7%, VIX +23,8%). Tomar una
+  ciudad rusa durante un día o hacer estallar drones sobre el Kremlin da titulares de
+  peldaño 5 y precios de peldaño 2.
 - 1 · Declaración, amenaza retórica o movimiento ya descontado.
 
 Reglas duras:
