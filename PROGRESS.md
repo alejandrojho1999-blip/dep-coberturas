@@ -100,11 +100,12 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   que `SISTEMA_MACRO` cambiara ni una coma. Una diferencia de un peldaño entre
   dos versiones puede ser ruido de muestreo. Para atribuir un cambio al prompt
   hacen falta o varias pasadas o diferencias grandes, no de un punto.
-- **La cesta de ocho activos no ve dos de los eventos más grandes del corpus.**
-  Nord Stream y la anexión de Crimea salen como «no movió» porque su efecto fue
-  sobre el gas europeo y el trigo, que no se miden. Se quedan en severidad 4 a
-  propósito: el efecto existió, lo que falla es el instrumento. Si alguna vez se
-  amplía la cesta, estos dos son la prueba.
+- **La cesta de ocho activos no ve el Nord Stream.** Sale como «no movió»
+  porque su efecto fue sobre el gas europeo, que no se mide. Se queda en
+  severidad 4 a propósito: el efecto existió, lo que falla es el instrumento. Si
+  alguna vez se amplía la cesta, este es la prueba. **Crimea ya no está en esta
+  lista**: cruzaba por el oro y el umbral del 6% lo tapaba; con el 3,6% del
+  2026-09-03 el instrumento sí lo ve.
 - ~~**La cesta de activos necesita revisión**~~ — **revisada el 2026-09-03**:
   con el grupo de control ya emparejado por época, **ninguna retirada aguanta el
   remuestreo** y la cesta se queda con los ocho activos.
