@@ -270,9 +270,10 @@ muestra para retirar nada.
 
 ### La curva vigente
 
-> Esta era la curva de `v7`. La versión vigente es `v8-dominio-suelo-ruso`; ver
-> «La curva se ha vuelto degenerada, y no es culpa del prompt» para la de hoy y
-> para por qué la de `v7` se lee mejor que la actual.
+> Esta era la curva de `v7`, calculada con el arrastre al máximo que se retiró
+> ese mismo día. La vigente es `v8-dominio-suelo-ruso` con regresión isotónica:
+> ver «La curva degenerada: el problema no era la monotonía, era cómo se
+> imponía».
 
 Con `v7-corpus-anodino`, 44 hechos, los ocho activos, el control emparejado por
 época, el VIX al 25% y el oro al 3,6%, línea base del **43,3%**:
@@ -517,43 +518,72 @@ deben quedar fuera de un dominio Rusia-OTAN. Esto cierra de rebote un pendiente
 antiguo —«vigilar el 11-S en producción»—, que estaba abierto porque el modelo
 lo colaba estirando el criterio a un actor no estatal.
 
-## La curva se ha vuelto degenerada, y no es culpa del prompt
+## La curva degenerada: el problema no era la monotonía, era cómo se imponía
 
-Con `v8`, la curva de `fed_tesoro` publica un **4 diga lo que diga el modelo**:
+Con `v8`, la curva de `fed_tesoro` publicaba un **4 diga lo que diga el modelo**
+—incluido el peldaño `3/5`, cuyo lift medido era del **0%**— y la de `guerra`
+mandaba a 5 todo lo que estuviera por encima de un peldaño de **n=1**.
 
-| Tema | Peldaño LLM | n | P(mov) | Lift | → Final |
-| ---- | ----------- | -: | -----: | ---: | ------: |
-| guerra | 2/5 | 16 |  63% |  34% | 2/5 |
-| guerra | 3/5 |  1 | 100% | 100% | 5/5 |
-| guerra | 4/5 |  4 |  75% |  56% | 5/5 |
-| guerra | 5/5 |  1 | 100% | 100% | 5/5 |
-| fed_tesoro | 2/5 |  5 |  80% |  65% | 4/5 |
-| fed_tesoro | 3/5 |  6 |  17% |   0% | **4/5** |
-| fed_tesoro | 4/5 |  3 |  67% |  41% | 4/5 |
-| fed_tesoro | 5/5 |  6 |  83% |  71% | 4/5 |
+**El mecanismo era `forzarMonotonia`.** La monotonía en sí hace falta: sin ella
+un peldaño flaco invierte el orden y el sistema avisa más fuerte de lo pequeño
+que de lo grande. El problema era **cómo** se imponía. Se recorría de menor a
+mayor arrastrando el máximo visto, sobre el peldaño ya calculado, así que
+cualquier peldaño alto se convertía en un **suelo** para todos los de encima sin
+importar con cuántos casos se había medido.
 
-Fíjese en `fed_tesoro 3/5`: su lift medido es **0%** —mueve el precio menos que
-un día cualquiera— y sale publicado como 4/5.
+Y el peldaño que disparaba el arrastre estaba inflado por el clasificador: las
+seis reuniones «la Fed mantiene los tipos» son el mismo hecho y se repartían
+entre el peldaño 2 (dos casos) y el 3 (cuatro casos) según la redacción del
+titular. Las dos que cayeron en el 2 resultaron ser **justo las dos que movieron
+el precio** —el hold hawkish del 20 de septiembre de 2023 (S&P −3,9%) y el giro
+dovish del 1 de noviembre (S&P +4,4%)—, lo que dejó ese peldaño en un 80% que
+era suerte del reparto.
 
-**El mecanismo es `forzarMonotonia`.** Ese paso existe para que la curva no se
-invierta, y lo hace arrastrando hacia arriba todo lo que está por encima del
-primer peldaño alto. Cuando el peldaño alto es el de abajo, fija un suelo para
-los demás: `fed_tesoro 2/5` sube a 4 y arrastra a los tres restantes. En
-`guerra` pasa lo mismo desde un peldaño de **n=1**.
+### El arreglo: promediar en vez de arrastrar
 
-**Y el peldaño que dispara el arrastre está inflado por el clasificador.** Las
-seis reuniones «la Fed mantiene los tipos» son el mismo hecho y se reparten
-entre el peldaño 2 (dos casos) y el 3 (cuatro casos) según cómo esté redactado
-el titular. Las dos que cayeron en el 2 resultan ser justo **las dos que
-movieron el precio** — el hold hawkish del 20 de septiembre de 2023 (S&P −3,9%)
-y el giro dovish del 1 de noviembre (S&P +4,4%) —, lo que deja ese peldaño en un
-80% que es suerte del reparto, no señal.
+Se sustituye por **regresión isotónica por bloques adyacentes** (*pool adjacent
+violators*), **ponderada por número de casos** y aplicada a la probabilidad en
+vez de al peldaño. Donde dos peldaños contiguos se contradicen, en lugar de
+imponer el mayor se **funden en un bloque** y comparten la media ponderada: el
+peldaño con más casos manda y el de n=1 aporta lo que pesa.
 
-La corrección natural sería que un peldaño por debajo de un mínimo de casos no
-pueda fijar el suelo de los demás. Es un rediseño de la curva y **no se ha
-hecho**: queda anotado con la evidencia delante. Sin riesgo hoy, porque
-`aplicarCurva` no está cableada al motor y `ajustar.mts` avisa del tamaño de
-muestra.
+Aplicarla sobre la probabilidad hace innecesario un segundo paso de monotonía,
+porque `liftSobreBase` y `peldanoDesdeProbabilidad` son las dos crecientes: una
+entrada ordenada sale ordenada.
+
+**Que dos peldaños se fundan es información, no una pérdida.** Dice que el
+modelo no los distingue, y en `fed_tesoro` el 2 y el 3 son literalmente la misma
+reunión de la Fed contada con otras palabras. La salida de `ajustar.mts` los
+marca con un asterisco por eso.
+
+### La curva vigente
+
+`v8-dominio-suelo-ruso`, 44 hechos, línea base del **43,3%**:
+
+| Tema | LLM | n | P(mov) | Isotónica | Lift | → Final |
+| ---- | --- | -: | -----: | --------: | ---: | ------: |
+| guerra | 2/5 | 16 |  63% |  63% |  34% | 2/5 |
+| guerra | 3/5 |  1 | 100% | 80% \* |  65% | 4/5 |
+| guerra | 4/5 |  4 |  75% | 80% \* |  65% | 4/5 |
+| guerra | 5/5 |  1 | 100% | 100% | 100% | 5/5 |
+| fed_tesoro | 2/5 |  5 |  80% | 45% \* |   4% | **1/5** |
+| fed_tesoro | 3/5 |  6 |  17% | 45% \* |   4% | **1/5** |
+| fed_tesoro | 4/5 |  3 |  67% |  67% |  41% | **3/5** |
+| fed_tesoro | 5/5 |  6 |  83% |  83% |  71% | **4/5** |
+
+\* peldaños fundidos.
+
+**`fed_tesoro` vuelve a corregir a la baja en los cuatro peldaños**, que es la
+dirección para la que existe todo esto. El bloque fundido del 2 y el 3 sale al
+45% frente a una línea base del 43,3%: indistinguible de un día cualquiera, y
+por eso baja a 1. El 4 baja a 3 y el 5 a 4.
+
+En `guerra` el bloque fundido del 3 y el 4 lo sostiene un peldaño de **n=1**, que
+aporta una quinta parte del peso. Es mucho mejor que antes —cuando ese mismo
+n=1 mandaba a 5 los tres peldaños de encima— pero sigue siendo poca muestra.
+
+**Lo que no arregla esto es el tamaño del corpus.** Siguen 4 de 8 peldaños con
+menos de 5 casos y `aplicarCurva` sigue sin estar cableada al motor.
 
 ## El oro estaba midiendo con el listón de otro activo
 

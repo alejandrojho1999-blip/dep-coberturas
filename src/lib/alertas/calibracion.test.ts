@@ -4,7 +4,7 @@ import {
   aplicarCurva,
   liftSobreBase,
   resumirReplay,
-  forzarMonotonia,
+  isotonizarProbabilidad,
   huboMovimiento,
   peldanoDesdeProbabilidad,
   UMBRAL_MATERIAL,
@@ -156,42 +156,96 @@ describe('liftSobreBase', () => {
   })
 })
 
-describe('forzarMonotonia', () => {
-  it('levanta el punto que rompe el orden hasta el máximo previo', () => {
-    // El peldaño 4 salió más flojo que el 3: con dos eventos, eso es ruido.
-    const curva = forzarMonotonia([
-      { llm: 3, final: 3 },
-      { llm: 4, final: 1 },
-      { llm: 5, final: 5 },
+describe('isotonizarProbabilidad', () => {
+  it('funde en su media ponderada los peldaños que se contradicen', () => {
+    // El caso real de `fed_tesoro` en v8: el peldaño 2 salió al 80% con 5 casos
+    // y el 3 al 17% con 6. Contradicen el orden, así que se funden.
+    const curva = isotonizarProbabilidad([
+      { llm: 2, p: 0.8, n: 5 },
+      { llm: 3, p: 1 / 6, n: 6 },
+      { llm: 4, p: 2 / 3, n: 3 },
+      { llm: 5, p: 5 / 6, n: 6 },
     ])
-    expect(curva.map((p) => p.final)).toEqual([3, 3, 5])
+    // (5·0,80 + 6·0,1667) / 11 = 0,4545 para los dos primeros.
+    expect(curva[0].p).toBeCloseTo(0.4545, 4)
+    expect(curva[1].p).toBeCloseTo(0.4545, 4)
+    // El 4 y el 5 ya subían, así que no los toca.
+    expect(curva[2].p).toBeCloseTo(2 / 3, 4)
+    expect(curva[3].p).toBeCloseTo(5 / 6, 4)
+  })
+
+  it('el peldaño con más casos manda dentro del bloque', () => {
+    // Mismo desorden, pesos opuestos: la media se va hacia el que tiene n alto.
+    const pocos = isotonizarProbabilidad([
+      { llm: 2, p: 1, n: 1 },
+      { llm: 3, p: 0, n: 9 },
+    ])
+    expect(pocos[0].p).toBeCloseTo(0.1, 5)
+
+    const muchos = isotonizarProbabilidad([
+      { llm: 2, p: 1, n: 9 },
+      { llm: 3, p: 0, n: 1 },
+    ])
+    expect(muchos[0].p).toBeCloseTo(0.9, 5)
+  })
+
+  it('propaga la fusión hacia atrás cuando el bloque nuevo rompe el orden', () => {
+    // Fundir 3 y 4 baja su media por debajo del 2, que también tiene que entrar.
+    const curva = isotonizarProbabilidad([
+      { llm: 2, p: 0.6, n: 1 },
+      { llm: 3, p: 0.9, n: 1 },
+      { llm: 4, p: 0.0, n: 1 },
+    ])
+    expect(curva.map((x) => x.p)).toEqual([0.5, 0.5, 0.5])
   })
 
   it('deja intacta una curva que ya sube', () => {
-    const curva = forzarMonotonia([
-      { llm: 1, final: 1 },
-      { llm: 3, final: 3 },
-      { llm: 5, final: 4 },
+    const curva = isotonizarProbabilidad([
+      { llm: 1, p: 0.1, n: 4 },
+      { llm: 3, p: 0.5, n: 4 },
+      { llm: 5, p: 0.9, n: 4 },
     ])
-    expect(curva.map((p) => p.final)).toEqual([1, 3, 4])
+    expect(curva.map((x) => x.p)).toEqual([0.1, 0.5, 0.9])
+  })
+
+  it('la salida siempre sube, que es lo que se le pide', () => {
+    const curva = isotonizarProbabilidad([
+      { llm: 1, p: 0.9, n: 2 },
+      { llm: 2, p: 0.1, n: 3 },
+      { llm: 3, p: 0.8, n: 1 },
+      { llm: 4, p: 0.2, n: 5 },
+      { llm: 5, p: 1, n: 2 },
+    ])
+    for (let i = 1; i < curva.length; i++) {
+      expect(curva[i].p).toBeGreaterThanOrEqual(curva[i - 1].p)
+    }
   })
 
   it('ordena por peldaño del LLM aunque lleguen desordenados', () => {
-    const curva = forzarMonotonia([
-      { llm: 5, final: 5 },
-      { llm: 1, final: 2 },
+    const curva = isotonizarProbabilidad([
+      { llm: 5, p: 0.9, n: 2 },
+      { llm: 1, p: 0.2, n: 2 },
     ])
-    expect(curva.map((p) => p.llm)).toEqual([1, 5])
+    expect(curva.map((x) => x.llm)).toEqual([1, 5])
+  })
+
+  it('un n de cero cuenta como un caso en vez de romper la media', () => {
+    const curva = isotonizarProbabilidad([
+      { llm: 2, p: 1, n: 0 },
+      { llm: 3, p: 0, n: 0 },
+    ])
+    expect(curva.map((x) => x.p)).toEqual([0.5, 0.5])
   })
 
   it('no muta la entrada', () => {
-    const original = [{ llm: 4, final: 1 }, { llm: 3, final: 3 }]
-    forzarMonotonia(original)
-    expect(original[0].final).toBe(1)
+    const original = [{ llm: 4, p: 0.1, n: 2 }, { llm: 3, p: 0.9, n: 2 }]
+    isotonizarProbabilidad(original)
+    expect(original[0].p).toBe(0.1)
+    expect(original[0].llm).toBe(4)
   })
 
   it('con la lista vacía devuelve la lista vacía', () => {
-    expect(forzarMonotonia([])).toEqual([])
+    expect(isotonizarProbabilidad([])).toEqual([])
   })
 })
 

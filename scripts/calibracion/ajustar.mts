@@ -35,7 +35,7 @@
  *   npm run calibracion:ajustar -- v2-precio    # usa esa versión del prompt
  */
 import {
-  forzarMonotonia,
+  isotonizarProbabilidad,
   huboMovimiento,
   liftSobreBase,
   peldanoDesdeProbabilidad,
@@ -121,43 +121,57 @@ async function main(): Promise<void> {
 
   if (!cubos.size) throw new Error('ninguna respuesta del replay cruzó con el corpus medido')
 
-  const porTema = new Map<string, Array<{ llm: number; p: number; lift: number; final: number; n: number; merecidaMedia: number }>>()
+  // `p` es la proporción observada y `pAjustada` la que sale de la regresión
+  // isotónica. Se guardan las dos porque la tabla debe registrar el dato bruto
+  // y la salida por pantalla tiene que enseñar dónde se fundieron dos peldaños.
+  const porTema = new Map<string, Array<{ llm: number; p: number; n: number; merecidaMedia: number }>>()
   for (const [clave, cubo] of cubos) {
     const [tema, llmTexto] = clave.split('|')
-    const p = cubo.movidos / cubo.total
-    // Sin control se cae a la probabilidad bruta, que es el comportamiento
-    // viejo, y el aviso de arriba ya ha dicho que eso sale sesgado.
-    const lift = base == null ? p : liftSobreBase(p, base)
     const merecidaMedia = cubo.merecida.reduce((a, b) => a + b, 0) / cubo.merecida.length
     porTema.set(tema, [
       ...(porTema.get(tema) ?? []),
-      { llm: Number(llmTexto), p, lift, final: peldanoDesdeProbabilidad(lift), n: cubo.total, merecidaMedia },
+      { llm: Number(llmTexto), p: cubo.movidos / cubo.total, n: cubo.total, merecidaMedia },
     ])
   }
 
   const filas: Array<Record<string, unknown>> = []
 
   for (const [tema, sinAjustar] of porTema) {
-    const puntos = forzarMonotonia(sinAjustar)
+    const ajustados = isotonizarProbabilidad(sinAjustar)
     console.log(`TEMA ${tema}`)
-    console.log('  llm   n   P(mov)   lift   merece   →  final')
-    for (const punto of puntos) {
+    console.log('  llm   n   P(mov)   isot.   lift   merece   →  final')
+    ajustados.forEach((punto, i) => {
+      const bruta = sinAjustar.find((x) => x.llm === punto.llm)!.p
+      // Sin control se cae a la probabilidad bruta, que es el comportamiento
+      // viejo, y el aviso de arriba ya ha dicho que eso sale sesgado.
+      const lift = base == null ? punto.p : liftSobreBase(punto.p, base)
+      const final = peldanoDesdeProbabilidad(lift)
+      // Un peldaño fundido con su vecino comparte probabilidad ajustada: se
+      // marca porque es información —dice que el modelo no los distingue— y sin
+      // la marca la tabla parece una coincidencia.
+      const fundido = ajustados.some((otro, j) => j !== i && otro.p === punto.p)
       console.log(
-        `   ${punto.llm}/5  ${String(punto.n).padStart(2)}    ${(punto.p * 100).toFixed(0).padStart(3)}%`
-        + `   ${(punto.lift * 100).toFixed(0).padStart(3)}%`
-        + `      ${punto.merecidaMedia.toFixed(1)}     →    ${punto.final}/5`,
+        `   ${punto.llm}/5  ${String(punto.n).padStart(2)}    ${(bruta * 100).toFixed(0).padStart(3)}%`
+        + `    ${(punto.p * 100).toFixed(0).padStart(3)}%${fundido ? '*' : ' '}`
+        + `  ${(lift * 100).toFixed(0).padStart(3)}%`
+        + `      ${punto.merecidaMedia.toFixed(1)}     →    ${final}/5`,
       )
       filas.push({
         tema,
         severidad_llm: punto.llm,
-        p_movimiento: Number(punto.p.toFixed(4)),
-        // `severidad_final` sale del lift, no de `p_movimiento`. La columna
-        // guarda la proporción bruta porque es el dato observado; la corrección
-        // ya lleva descontada la línea base.
-        severidad_final: punto.final,
+        p_movimiento: Number(bruta.toFixed(4)),
+        // `severidad_final` sale del lift sobre la probabilidad ya isotonizada,
+        // no de `p_movimiento`. La columna guarda la proporción bruta porque es
+        // el dato observado; la corrección lleva descontada la línea base y el
+        // promediado entre peldaños que se contradicen.
+        severidad_final: final,
         n_eventos: punto.n,
         ajustada_at: new Date().toISOString(),
       })
+    })
+    if (ajustados.some((x, i) => ajustados.some((y, j) => j !== i && y.p === x.p))) {
+      console.log('  * peldaños fundidos: se contradecían entre sí y comparten la media')
+      console.log('    ponderada por casos. Que se fundan dice que el modelo no los distingue.')
     }
     console.log('')
   }

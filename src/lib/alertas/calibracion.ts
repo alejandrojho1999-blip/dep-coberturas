@@ -269,23 +269,76 @@ export function liftSobreBase(p: number, base: number): number {
 }
 
 /**
- * Impone que la curva no baje al subir el peldaño del LLM.
+ * Impone que la curva no baje al subir el peldaño del LLM, promediando en vez
+ * de arrastrar.
  *
- * Recorre de menor a mayor arrastrando el máximo visto. Con este corpus hay
- * peldaños con dos o tres casos, y ahí manda el ruido: esto es lo que impide que
- * un peldaño flaco invierta el orden y el sistema acabe avisando más fuerte de
- * lo pequeño que de lo grande.
+ * La monotonía hace falta: sin ella, un peldaño flaco invierte el orden y el
+ * sistema acaba avisando más fuerte de lo pequeño que de lo grande. La pregunta
+ * es **cómo** se impone, y la respuesta anterior estaba mal.
  *
- * Devuelve una copia ordenada; no toca la entrada.
+ * **Lo que se hacía hasta el 2026-09-03** era recorrer de menor a mayor
+ * arrastrando el máximo visto, sobre el peldaño ya calculado. Eso convierte a
+ * cualquier peldaño alto en un **suelo** para todos los de encima, sin importar
+ * con cuántos casos se midió. Con `v8` el resultado fue una curva degenerada:
+ * `fed_tesoro 2/5` (n=5) subió a 4 y arrastró a los tres peldaños restantes al
+ * 4, incluido el `3/5`, que con n=6 tenía un lift medido del **0%**. El tema
+ * entero publicaba un 4 dijera lo que dijera el modelo.
+ *
+ * **Lo que se hace ahora** es regresión isotónica por el método de los bloques
+ * adyacentes (*pool adjacent violators*), **ponderada por el número de casos** y
+ * aplicada a la probabilidad, no al peldaño. Donde dos peldaños contiguos se
+ * contradicen, en vez de imponer el mayor se **funden en un bloque** y los dos
+ * se quedan con la media ponderada. El peldaño con más casos manda; el de n=1
+ * aporta lo que pesa.
+ *
+ * Sobre el mismo caso: `fed_tesoro 2/5` (n=5, 80%) y `3/5` (n=6, 17%) se funden
+ * en un bloque del 45%, que está a la altura de la línea base y baja los dos a
+ * 1; el `4/5` y el `5/5` quedan libres en 3 y 4. La curva vuelve a discriminar.
+ *
+ * Que dos peldaños se fundan **es información, no una pérdida**: dice que el
+ * modelo no los distingue. En `fed_tesoro` el 2 y el 3 son la misma reunión de
+ * la Fed contada con otras palabras, y la curva ahora lo refleja.
+ *
+ * Aplicarlo sobre la probabilidad y no sobre el peldaño hace innecesario un
+ * segundo paso de monotonía: `liftSobreBase` y `peldanoDesdeProbabilidad` son
+ * las dos crecientes, así que una entrada ordenada sale ordenada.
+ *
+ * Devuelve una copia ordenada por `llm`; no toca la entrada.
  */
-export function forzarMonotonia<T extends { llm: number; final: number }>(puntos: readonly T[]): T[] {
+export function isotonizarProbabilidad<T extends { llm: number; p: number; n: number }>(
+  puntos: readonly T[],
+): T[] {
   const ordenados = [...puntos].sort((a, b) => a.llm - b.llm)
-  let maximo = 0
-  return ordenados.map((punto) => {
-    const final = Math.max(punto.final, maximo)
-    maximo = final
-    return { ...punto, final }
+
+  /** Cada bloque es un tramo contiguo que ya se ha fundido en una sola media. */
+  const bloques: Array<{ suma: number; peso: number; desde: number; hasta: number }> = []
+
+  ordenados.forEach((punto, i) => {
+    // Un peso de 0 dejaría el bloque sin media definida; se cuenta como un caso.
+    const peso = punto.n > 0 ? punto.n : 1
+    bloques.push({ suma: punto.p * peso, peso, desde: i, hasta: i })
+
+    // Mientras el bloque nuevo contradiga al anterior, se funden. Fundir puede
+    // crear una contradicción con el de más atrás, de ahí el bucle.
+    while (bloques.length >= 2) {
+      const ultimo = bloques[bloques.length - 1]
+      const previo = bloques[bloques.length - 2]
+      if (previo.suma / previo.peso <= ultimo.suma / ultimo.peso) break
+      bloques.splice(bloques.length - 2, 2, {
+        suma: previo.suma + ultimo.suma,
+        peso: previo.peso + ultimo.peso,
+        desde: previo.desde,
+        hasta: ultimo.hasta,
+      })
+    }
   })
+
+  const salida = [...ordenados]
+  for (const bloque of bloques) {
+    const media = bloque.suma / bloque.peso
+    for (let i = bloque.desde; i <= bloque.hasta; i++) salida[i] = { ...salida[i], p: media }
+  }
+  return salida
 }
 
 export interface PuntoCurva {

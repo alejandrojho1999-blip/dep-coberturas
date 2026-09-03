@@ -168,17 +168,15 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   **corregido el 2026-09-03** con `v8-dominio-suelo-ruso`. Los cuatro se
   recuperan y **cada uno acierta el peldaño curado exacto**. Ver la entrada de
   la sesión en «Completado».
-- **`forzarMonotonia` amplifica el ruido del peldaño más flaco, y ahora se ve.**
-  El paso que impide que la curva se invierta arrastra hacia arriba todo lo que
-  está por encima del primer peldaño alto, venga de donde venga ese peldaño. Con
-  `v8`, `fed_tesoro 2/5` (n=5, lift 65%) sube a 4/5 y arrastra a **los cuatro
-  peldaños del tema al 4/5**, incluido `3/5`, cuyo lift medido es **0%**. En
-  `guerra` pasa lo mismo desde un peldaño de **n=1**. El resultado es una curva
-  que para `fed_tesoro` publica un 4 diga lo que diga el modelo: deja de
-  discriminar. La corrección natural es **no dejar que un peldaño por debajo de
-  un mínimo de casos fije el suelo de los demás**, pero es una decisión de
-  diseño de la curva y no se ha tomado. Sin riesgo hoy: `aplicarCurva` no está
-  cableada al motor.
+- ~~**`forzarMonotonia` amplifica el ruido del peldaño más flaco**~~ —
+  **corregido el 2026-09-03** sustituyéndolo por regresión isotónica ponderada
+  por casos (`isotonizarProbabilidad`). `fed_tesoro` vuelve a corregir a la baja
+  en los cuatro peldaños. Ver la entrada de la sesión en «Completado».
+- **El bloque fundido de `guerra` lo sostiene un peldaño de n=1.** Con la
+  isotónica, `guerra 3/5` (n=1) y `4/5` (n=4) se funden al 80% y los dos salen
+  en 4/5. El n=1 aporta una quinta parte del peso, que es mucho mejor que
+  mandarlo todo a 5 como hacía el arrastre, pero sigue siendo poca muestra. Se
+  arregla solo con más corpus de `guerra` en los peldaños altos.
 - **El clasificador parte los FOMC idénticos entre el 2 y el 3 por la
   redacción.** Seis reuniones «la Fed mantiene los tipos» se reparten 2 en el
   peldaño 2 y 4 en el 3. Y las dos que cayeron en el 2 son justo las dos que
@@ -482,6 +480,58 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — la curva degenerada: el problema no era la monotonía, era cómo se imponía
+
+Con `v8`, la curva de `fed_tesoro` publicaba un **4 diga lo que diga el modelo**
+—incluido el peldaño `3/5`, cuyo lift medido era del **0%**— y la de `guerra`
+mandaba a 5 todo lo que estuviera por encima de un peldaño de **n=1**.
+
+**El diagnóstico.** La monotonía hace falta: sin ella un peldaño flaco invierte
+el orden y el sistema avisa más fuerte de lo pequeño que de lo grande. El fallo
+estaba en **cómo** se imponía. `forzarMonotonia` recorría de menor a mayor
+arrastrando el máximo visto, y lo hacía **sobre el peldaño ya calculado**, así
+que cualquier peldaño alto se volvía un **suelo** para todos los de encima sin
+importar con cuántos casos se había medido.
+
+**El arreglo: promediar en vez de arrastrar.** Se sustituye por regresión
+isotónica por bloques adyacentes (*pool adjacent violators*), **ponderada por
+número de casos** y aplicada a la **probabilidad**, no al peldaño. Donde dos
+peldaños contiguos se contradicen se **funden en un bloque** y comparten la media
+ponderada: el que tiene más casos manda, el de n=1 aporta lo que pesa.
+
+Aplicarla sobre la probabilidad hace innecesario un segundo paso de monotonía,
+porque `liftSobreBase` y `peldanoDesdeProbabilidad` son las dos crecientes: una
+entrada ordenada sale ordenada. `forzarMonotonia` se retira.
+
+**Que dos peldaños se fundan es información, no una pérdida**: dice que el
+modelo no los distingue. `ajustar.mts` los marca con un asterisco y lo explica
+en la salida, porque sin la marca la tabla parece una coincidencia.
+
+**La curva vigente**, `v8` sobre 44 hechos, línea base 43,3%:
+
+| Tema | LLM | n | P(mov) | Isotónica | Lift | → Final |
+|---|---|---|---|---|---|---|
+| guerra | 2/5 | 16 | 63% | 63% | 34% | 2/5 |
+| guerra | 3/5 | 1 | 100% | 80% * | 65% | 4/5 |
+| guerra | 4/5 | 4 | 75% | 80% * | 65% | 4/5 |
+| guerra | 5/5 | 1 | 100% | 100% | 100% | 5/5 |
+| fed_tesoro | 2/5 | 5 | 80% | 45% * | 4% | **1/5** |
+| fed_tesoro | 3/5 | 6 | 17% | 45% * | 4% | **1/5** |
+| fed_tesoro | 4/5 | 3 | 67% | 67% | 41% | **3/5** |
+| fed_tesoro | 5/5 | 6 | 83% | 83% | 71% | **4/5** |
+
+**`fed_tesoro` vuelve a corregir a la baja en los cuatro peldaños**, que es la
+dirección para la que existe todo esto. El bloque fundido del 2 y el 3 sale al
+45% frente a una línea base del 43,3%: indistinguible de un día cualquiera, y
+por eso baja a 1.
+
+Nueve tests nuevos para `isotonizarProbabilidad`, entre ellos el caso real de
+`fed_tesoro` y la comprobación de que el peldaño con más casos manda dentro del
+bloque. **979/979 tests**, `tsc` y ESLint limpios.
+
+**Lo que esto no arregla** es el tamaño del corpus: siguen 4 de 8 peldaños con
+menos de 5 casos, y `aplicarCurva` sigue sin estar cableada al motor.
 
 ### Sesión del 2026-09-03 — el dominio del prompt no terminaba donde decía
 
