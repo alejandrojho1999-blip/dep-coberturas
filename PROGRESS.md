@@ -7,14 +7,13 @@
 
 ## Estado actual
 
-**Último commit:** tesis de inversión con archivos adjuntos como fuente de
-verdad, rama `main`
+**Último commit:** la curva de calibración cableada al motor, rama `main`
 
 | Check | Resultado |
 |---|---|
 | `npm run lint` | **0 problemas** |
 | `npx tsc --noEmit` | exit 0 |
-| `npm run test:run` | **894/894** (67 ficheros) |
+| `npm run test:run` | **997/997** (71 ficheros) |
 | `npm run build` | exit 0 |
 | `node scripts/build-estrategias.mjs` | las 6 estrategias y la cartera cuadran con el expediente |
 
@@ -152,9 +151,20 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   cesta o si su umbral del 16% se queda corto para lo que se mueve solo. Los dos
   casos quedan explicados en la nota del corpus (2026-09-03) para que nadie los
   lea como reacción al hecho.
-- **`guerra` ya no tiene peldaño 3 y `fed_tesoro` casi tampoco** (n=1). El motor
-  publica sin corregir los peldaños que no aparecen en la curva, que es lo
-  correcto, pero conviene saber que ahí no hay red.
+- ~~**`aplicarCurva` no está cableada al motor**~~ — **cableada el 2026-09-03**.
+  Los dos ciclos corrigen la severidad antes de decidir el envío, el orden y el
+  mensaje; los peldaños con menos de 5 casos se dejan fuera al cargar la curva,
+  y `ALERTAS_CURVA=off` lo apaga sin desplegar. Ver la entrada de la sesión.
+- **El canal de `guerra` solo suena en el 5/5, y ese peldaño tiene n=2.** Es la
+  consecuencia directa de aplicar la curva: los 4 de `guerra` mueven el precio
+  como un 2 y dejan de sonar. Correcto por lo medido, pero deja el único aviso
+  vivo del tema colgando del peldaño peor medido de toda la curva. Ampliar
+  `guerra 5/5` pasa de deseable a necesario.
+- **Contar cuántas alertas se silencian de verdad.** Los peldaños que dejan de
+  sonar se saben; cuántos hechos al mes caen en ellos, no. Desde hoy
+  `alert_signals` guarda `severidadLlm` y `severidadCorregida` en el payload:
+  tras una semana se puede contar cuántas señales quedaron en `bajo-umbral` que
+  antes habrían sonado.
 - ~~**Revisar los umbrales**~~ — **los ocho revisados uno por uno el
   2026-09-03**. Se movieron dos: el VIX del 40% al 25% y el oro del 6% al 3,6%.
   Los seis restantes se confirmaron donde estaban, con una corrección por
@@ -489,6 +499,54 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — la curva deja de ser un informe y empieza a decidir
+
+**Lo que se cerró.** `aplicarCurva` llevaba desde que existe sin cablear: la
+curva se calculaba, se escribía en `severity_calibration` y sus únicos
+consumidores eran los tests. Medíamos que los «4» de `guerra` mueven el precio
+como un 2 y seguíamos sonando el teléfono por ellos. Ahora `cicloGuerra` y
+`cicloMacro` leen la curva una vez por ciclo y la severidad corregida decide
+todo lo que dependía de la severidad: el envío, el orden del despacho y el
+peldaño del mensaje.
+
+**Tres cosas hubo que resolver antes de poder cablearla.**
+
+1. **Los peldaños flacos no corrigen: se dejan fuera.** `cargarCurva` filtra por
+   `n_eventos >= 5` (`N_MINIMO_PARA_CORREGIR`). Con tres casos `P(movimiento)`
+   solo puede valer 0, 33, 67 o 100, así que el peldaño describe el sorteo. Como
+   `aplicarCurva` publica sin tocar lo que no encuentra, un peldaño mal medido
+   no corrige en vez de corregir mal. Es el mismo listón con el que `ajustar.mts`
+   llevaba meses avisando por pantalla.
+2. **Ese filtro abrió un agujero, y era el grave.** Al dejar fuera `guerra 3/5`
+   (n=3), el 4/5 —medido con ocho casos— bajaba a 2 y dejaba de sonar, mientras
+   el 3/5 se publicaba tal cual y **sí** sonaba: el sistema avisaba de lo pequeño
+   y callaba lo grande. Arreglado topando cada peldaño sin dato con el mínimo de
+   los superiores que sí están medidos.
+3. **Interruptor y degradado.** Si la tabla falla, curva vacía y el error al
+   resultado del ciclo: se pierde la corrección, no la alerta. Y
+   `ALERTAS_CURVA=off` lo apaga sin desplegar; cualquier otro valor la deja
+   encendida, para que un typo no apague la corrección en silencio.
+
+**Lo que cambia en el teléfono, con la curva vigente y el umbral en 3:**
+`guerra` solo suena en el 5/5 —el 3 y el 4 bajan a 2— y `fed_tesoro` suena en el
+4 y el 5. **Hay que saber leerlo:** el único aviso vivo de `guerra` queda
+sostenido por el peldaño de n=2, el peor medido de la curva. Es el hallazgo
+aplicado, pero es también la razón de tener `ALERTAS_CURVA=off` a mano y de que
+ampliar `guerra 5/5` pase de deseable a necesario.
+
+**La severidad del modelo no se pierde.** Va al payload de la señal como
+`severidadLlm` y `severidadCorregida`, porque sin ella no hay forma de auditar
+después si la curva ayudó o estorbó.
+
+| Check | Resultado |
+|---|---|
+| `npm run lint` | 0 problemas |
+| `npx tsc --noEmit` | exit 0 |
+| `npm run test:run` | **997/997** (71 ficheros) |
+
+Curva verificada contra la tabla real: las ocho filas coinciden con las del
+informe, así que la tabla del teléfono no es una simulación sobre papel.
 
 ### Sesión del 2026-09-03 — los peldaños altos de `guerra` y dos agujeros más del dominio
 

@@ -20,7 +20,9 @@ import { clasificarTitulares } from '@/lib/alertas/clasificador'
 import { FUENTES_GUERRA, FUENTES_MACRO, leerFuentes, type Titular } from '@/lib/alertas/rss'
 import { decidirEnvio } from '@/lib/alertas/dedupe'
 import { enviarNexus } from '@/lib/alertas/nexus'
+import { aplicarCurva, type PuntoCurva } from '@/lib/alertas/calibracion'
 import {
+  cargarCurva,
   enviadosUltimaHora,
   estadoDeEvento,
   guardarSnapshot,
@@ -158,6 +160,28 @@ async function despachar(params: {
   else resultado.omitidos++
 }
 
+/**
+ * Corrige el peldaño del modelo con la curva medida.
+ *
+ * El clasificador puntúa lo que *parece* que va a mover el precio; la curva
+ * dice lo que de verdad movió cada peldaño en el corpus histórico. Esta es la
+ * función que junta las dos cosas, y con ella el motor empezó a avisar por lo
+ * medido y no por lo que suena grave.
+ *
+ * Devuelve las dos severidades a propósito. La corregida es la que decide y la
+ * que se publica; la del modelo se guarda en el payload de la señal, porque sin
+ * ella no se puede auditar después si la curva ayudó o estorbó — y eso es
+ * justamente lo que habrá que mirar cuando el corpus crezca.
+ */
+export function corregirSeveridad(
+  severidadLlm: number,
+  tema: string,
+  curva: readonly PuntoCurva[],
+): { severidad: number; severidadLlm: number; corregida: boolean } {
+  const severidad = aplicarCurva(severidadLlm, tema, curva)
+  return { severidad, severidadLlm, corregida: severidad !== severidadLlm }
+}
+
 // ── Ciclo 1: escalada Rusia–OTAN ────────────────────────────────────────────
 
 export async function cicloGuerra(
@@ -176,9 +200,17 @@ export async function cicloGuerra(
   const { clasificados, errores } = await clasificarTitulares(nuevos, 'guerra', 12)
   resultado.errores.push(...errores)
 
+  // La curva se lee una vez por ciclo y no por titular: es la misma tabla para
+  // todos y un ciclo puede traer una docena de hechos.
+  const { curva, error: errorCurva } = await cargarCurva(admin)
+  if (errorCurva) resultado.errores.push(errorCurva)
+
+  // Se ordena por la severidad ya corregida, que es la que decide: ordenar por
+  // la del modelo pondría primero un hecho que la curva va a bajar.
   const relevantes = clasificados
     .filter((t) => t.clasificacion.relevante)
-    .sort((a, b) => b.clasificacion.severidad - a.clasificacion.severidad)
+    .map((t) => ({ ...t, calibrada: corregirSeveridad(t.clasificacion.severidad, 'guerra', curva) }))
+    .sort((a, b) => b.calibrada.severidad - a.calibrada.severidad)
 
   if (!relevantes.length) return resultado
 
@@ -189,13 +221,13 @@ export async function cicloGuerra(
   const mercadoAbierto = marketStatus(ahora).abierto
 
   for (const titular of relevantes) {
-    const { clasificacion } = titular
+    const { clasificacion, calibrada } = titular
     const estado = dryRun ? null : await estadoDeEvento(admin, clasificacion.eventoKey)
     const enviados = dryRun ? 0 : await enviadosUltimaHora(admin, ahora)
 
     const decision = decidirEnvio({
       eventoKey: clasificacion.eventoKey,
-      severidad: clasificacion.severidad,
+      severidad: calibrada.severidad,
       estado,
       enviadosUltimaHora: enviados,
       ahora,
@@ -204,6 +236,9 @@ export async function cicloGuerra(
     const silencioso = decision.motivo === 'bajo-umbral'
     if (!decision.enviar && !silencioso) { resultado.omitidos++; continue }
 
+    // El mensaje enseña el peldaño corregido: es el que el sistema sostiene.
+    const clasificacionFinal = { ...clasificacion, severidad: calibrada.severidad }
+
     const principal = niveles[0]
     await despachar({
       admin,
@@ -211,7 +246,7 @@ export async function cicloGuerra(
       silencioso,
       mensaje: mensajeGuerra({
         titular,
-        clasificacion,
+        clasificacion: clasificacionFinal,
         niveles,
         mercadoAbierto,
         faltantes,
@@ -219,7 +254,7 @@ export async function cicloGuerra(
       }),
       senal: {
         tipo: 'guerra',
-        severidad: clasificacion.severidad,
+        severidad: calibrada.severidad,
         eventoKey: clasificacion.eventoKey,
         titular: titular.titulo,
         url: titular.url,
@@ -236,6 +271,8 @@ export async function cicloGuerra(
         payload: {
           motivoEnvio: decision.motivo,
           motivoLlm: clasificacion.motivo,
+          severidadLlm: calibrada.severidadLlm,
+          severidadCorregida: calibrada.corregida,
           niveles: niveles.map((n) => ({ ticker: n.simbolo.ticker, ...n.nivel })),
           faltantes,
         },
@@ -268,21 +305,25 @@ export async function cicloMacro(
   const { clasificados, errores } = await clasificarTitulares(nuevos, 'fed_tesoro', 10)
   resultado.errores.push(...errores)
 
+  const { curva, error: errorCurva } = await cargarCurva(admin)
+  if (errorCurva) resultado.errores.push(errorCurva)
+
   const relevantes = clasificados
     .filter((t) => t.clasificacion.relevante)
-    .sort((a, b) => b.clasificacion.severidad - a.clasificacion.severidad)
+    .map((t) => ({ ...t, calibrada: corregirSeveridad(t.clasificacion.severidad, 'fed_tesoro', curva) }))
+    .sort((a, b) => b.calibrada.severidad - a.calibrada.severidad)
   if (!relevantes.length) return resultado
 
   const probabilidad = await probabilidadOpcional(resultado.errores)
 
   for (const titular of relevantes) {
-    const { clasificacion } = titular
+    const { clasificacion, calibrada } = titular
     const estado = dryRun ? null : await estadoDeEvento(admin, clasificacion.eventoKey)
     const enviados = dryRun ? 0 : await enviadosUltimaHora(admin, ahora)
 
     const decision = decidirEnvio({
       eventoKey: clasificacion.eventoKey,
-      severidad: clasificacion.severidad,
+      severidad: calibrada.severidad,
       estado,
       enviadosUltimaHora: enviados,
       ahora,
@@ -290,19 +331,21 @@ export async function cicloMacro(
     const silencioso = decision.motivo === 'bajo-umbral'
     if (!decision.enviar && !silencioso) { resultado.omitidos++; continue }
 
+    const clasificacionFinal = { ...clasificacion, severidad: calibrada.severidad }
+
     await despachar({
       admin,
       dryRun,
       silencioso,
       mensaje: mensajeMacro({
         titular,
-        clasificacion,
+        clasificacion: clasificacionFinal,
         probabilidad,
         enlace: await acortarUrl(titular.url),
       }),
       senal: {
         tipo: 'fed_tesoro',
-        severidad: clasificacion.severidad,
+        severidad: calibrada.severidad,
         eventoKey: clasificacion.eventoKey,
         titular: titular.titulo,
         url: titular.url,
@@ -313,6 +356,8 @@ export async function cicloMacro(
         payload: {
           motivoEnvio: decision.motivo,
           motivoLlm: clasificacion.motivo,
+          severidadLlm: calibrada.severidadLlm,
+          severidadCorregida: calibrada.corregida,
           probabilidad,
         },
       },

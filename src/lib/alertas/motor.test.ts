@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { horaEnEcuador, SALTO_PROB_RELEVANTE, tocaDigest } from '@/lib/alertas/motor'
+import { corregirSeveridad, horaEnEcuador, SALTO_PROB_RELEVANTE, tocaDigest } from '@/lib/alertas/motor'
 
 afterEach(() => vi.useRealTimers())
 
@@ -54,5 +54,44 @@ describe('tocaDigest', () => {
   it('sin foto previa no compara saltos', () => {
     expect(tocaDigest({ ahora: mediodia, ultimoTomadoAt: null, probSubidaActual: 90, probSubidaPrevia: null }).enviar)
       .toBe(false)
+  })
+})
+
+describe('corregirSeveridad', () => {
+  const curva = [
+    { tema: 'guerra', severidadLlm: 4, severidadFinal: 2 },
+    { tema: 'fed_tesoro', severidadLlm: 5, severidadFinal: 4 },
+  ]
+
+  it('baja el peldaño del modelo al que la curva midió', () => {
+    // El hallazgo central de la calibración: los "4" de guerra mueven el precio
+    // como un 2, así que dejan de sonar el teléfono.
+    expect(corregirSeveridad(4, 'guerra', curva))
+      .toEqual({ severidad: 2, severidadLlm: 4, corregida: true })
+  })
+
+  it('no toca un peldaño sin punto de curva', () => {
+    // guerra 3/5 y 5/5 tienen menos de N_MINIMO_PARA_CORREGIR casos, así que
+    // cargarCurva no los devuelve y aquí se publican tal cual.
+    expect(corregirSeveridad(5, 'guerra', curva))
+      .toEqual({ severidad: 5, severidadLlm: 5, corregida: false })
+  })
+
+  it('no cruza los temas', () => {
+    // El 5 de fed_tesoro baja a 4; el 5 de guerra no, y son curvas distintas.
+    expect(corregirSeveridad(5, 'fed_tesoro', curva).severidad).toBe(4)
+    expect(corregirSeveridad(5, 'guerra', curva).severidad).toBe(5)
+  })
+
+  it('con la curva vacía publica lo que dijo el modelo', () => {
+    // Es el degradado cuando falla la lectura de severity_calibration: se
+    // pierde la corrección, no la alerta.
+    expect(corregirSeveridad(4, 'guerra', []))
+      .toEqual({ severidad: 4, severidadLlm: 4, corregida: false })
+  })
+
+  it('marca corregida solo cuando el peldaño cambia', () => {
+    const igual = [{ tema: 'guerra', severidadLlm: 2, severidadFinal: 2 }]
+    expect(corregirSeveridad(2, 'guerra', igual).corregida).toBe(false)
   })
 })

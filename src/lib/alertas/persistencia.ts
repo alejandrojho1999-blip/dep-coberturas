@@ -8,6 +8,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { N_MINIMO_PARA_CORREGIR, type PuntoCurva } from '@/lib/alertas/calibracion'
 import type { EstadoEvento } from '@/lib/alertas/dedupe'
 import type { ProbabilidadTasas } from '@/lib/alertas/fedwatch'
 import type { MetricaDebasement } from '@/lib/alertas/debasement'
@@ -33,6 +34,51 @@ export interface SenalAGuardar {
   errorEnvio?: string | null
   canalEstado?: 'vivo' | 'caido' | 'desconocido' | null
   canalDetalle?: string | null
+}
+
+/**
+ * La curva de corrección de severidad, lista para `aplicarCurva`.
+ *
+ * Solo devuelve los puntos medidos con al menos `N_MINIMO_PARA_CORREGIR` casos.
+ * Los que no llegan se dejan fuera a propósito, y como `aplicarCurva` publica
+ * sin tocar todo peldaño que no encuentra, el efecto es el correcto: un peldaño
+ * mal medido no corrige en vez de corregir mal.
+ *
+ * **Un fallo al leerla no puede tumbar un ciclo de alertas.** Si la tabla no
+ * responde se devuelve la curva vacía, que es lo mismo que no corregir: el
+ * sistema sigue avisando con el peldaño del modelo, que es como funcionó hasta
+ * el 2026-09-03. Perder la corrección es un degradado aceptable; perder la
+ * alerta, no.
+ *
+ * **`ALERTAS_CURVA=off` la desactiva sin desplegar.** Esto decide qué avisos
+ * suenan y cuáles no, así que tiene que poder apagarse desde el entorno cuando
+ * son las tres de la mañana y algo va mal. Apagarla devuelve el sistema al
+ * comportamiento anterior: publica lo que dice el clasificador.
+ */
+export function curvaActiva(): boolean {
+  return process.env.ALERTAS_CURVA?.toLowerCase() !== 'off'
+}
+
+export async function cargarCurva(
+  admin: SupabaseClient,
+): Promise<{ curva: PuntoCurva[]; error: string | null }> {
+  if (!curvaActiva()) return { curva: [], error: null }
+
+  const { data, error } = await admin
+    .from('severity_calibration')
+    .select('tema, severidad_llm, severidad_final, n_eventos')
+    .gte('n_eventos', N_MINIMO_PARA_CORREGIR)
+
+  if (error) return { curva: [], error: `severity_calibration: ${error.message}` }
+
+  return {
+    curva: (data ?? []).map((fila) => ({
+      tema: fila.tema as string,
+      severidadLlm: Number(fila.severidad_llm),
+      severidadFinal: Number(fila.severidad_final),
+    })),
+    error: null,
+  }
 }
 
 export async function estadoDeEvento(

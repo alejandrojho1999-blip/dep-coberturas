@@ -348,20 +348,65 @@ export interface PuntoCurva {
 }
 
 /**
+ * Casos por debajo de los cuales un punto de curva no se aplica.
+ *
+ * Con menos de cinco eventos, `P(movimiento)` solo puede valer unos pocos
+ * valores —con tres casos, 0, 33, 67 o 100— así que el peldaño que sale describe
+ * el sorteo más que el fenómeno. Corregir con eso es peor que no corregir: mete
+ * ruido con cara de medición.
+ *
+ * El número no es mágico ni está optimizado; es el mismo listón con el que
+ * `ajustar.mts` lleva meses avisando por pantalla, y ponerlo aquí es hacer que
+ * el aviso tenga consecuencias en vez de quedarse en la consola de quien
+ * ejecuta el script.
+ *
+ * El filtro se aplica en `cargarCurva`, no aquí: los puntos flacos no llegan a
+ * la curva, y `aplicarCurva` los trata como lo que son, peldaños sin dato. A
+ * fecha de 2026-09-03 eso afecta a `guerra 3/5` (n=3), `guerra 5/5` (n=2) y
+ * `fed_tesoro 4/5` (n=2).
+ */
+export const N_MINIMO_PARA_CORREGIR = 5
+
+/**
  * Traduce el peldaño del modelo al peldaño que se publica.
  *
- * Sin punto de curva para ese tema y peldaño, devuelve el original **sin
- * tocarlo**. Es lo correcto: la curva se construye con un corpus pequeño y hay
- * combinaciones que no aparecen ni una vez. Inventar una corrección donde no hay
- * dato sería peor que no corregir.
+ * Dos reglas, y la segunda existe por un fallo que solo se vio al cablear esto
+ * al motor el 2026-09-03.
+ *
+ * **Sin punto de curva, se publica el original sin tocarlo.** Es lo correcto:
+ * hay combinaciones que el corpus no contiene, y los puntos medidos con menos
+ * de `N_MINIMO_PARA_CORREGIR` casos se dejan fuera al cargar la curva. Inventar
+ * una corrección donde no hay dato sería peor que no corregir.
+ *
+ * **Pero un peldaño sin dato no puede publicar más que uno superior que sí lo
+ * tiene.** Al filtrar los peldaños flacos aparecía esta curva en `guerra`:
+ * el 4/5 medido con ocho casos bajaba a 2 —y con el umbral de envío en 3 dejaba
+ * de sonar el teléfono— mientras el 3/5, sin dato suficiente, se publicaba tal
+ * cual y **sí** sonaba. O sea, el sistema avisaba de lo pequeño y callaba lo
+ * grande: exactamente lo que la monotonía existe para impedir, colándose por la
+ * puerta de atrás del filtro.
+ *
+ * Así que un peldaño sin corregir se topa con el mínimo de los peldaños
+ * superiores que sí están medidos. Si el 4 vale 2, el 3 no puede valer más de 2.
+ * En el otro sentido no hace falta tocar nada: `ajustar.mts` ya entrega la
+ * curva isotonizada, y un peldaño sin dato por encima de otros corregidos no
+ * rompe el orden.
  */
 export function aplicarCurva(
   severidadLlm: number,
   tema: string,
   curva: readonly PuntoCurva[],
 ): number {
-  const punto = curva.find((p) => p.tema === tema && p.severidadLlm === severidadLlm)
-  return punto?.severidadFinal ?? severidadLlm
+  const delTema = curva.filter((p) => p.tema === tema)
+
+  const punto = delTema.find((p) => p.severidadLlm === severidadLlm)
+  if (punto) return punto.severidadFinal
+
+  const techo = delTema
+    .filter((p) => p.severidadLlm > severidadLlm)
+    .reduce((minimo, p) => Math.min(minimo, p.severidadFinal), Number.POSITIVE_INFINITY)
+
+  return Math.min(severidadLlm, techo)
 }
 
 export interface RespuestaReplay {

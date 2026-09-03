@@ -371,6 +371,13 @@ menos de diez días de un evento del corpus: una fecha pegada a la invasión de
 Ucrania no es un día corriente, mide la misma sacudida. Sin esto la curva subía
 la severidad en vez de bajarla, que es lo contrario de lo que se buscaba.
 
+**6. Y la curva corrige antes del suelo** (`src/lib/alertas/motor.ts`,
+`persistencia.ts`). Desde el 2026-09-03 los dos ciclos leen
+`severity_calibration` una vez por ciclo y pasan la severidad del modelo por
+`aplicarCurva` antes de llamar a `decidirEnvio`. Solo entran los peldaños
+medidos con al menos `N_MINIMO_PARA_CORREGIR` = 5 casos, y `ALERTAS_CURVA=off`
+lo desactiva sin desplegar. Ver «La curva ya decide qué suena».
+
 ## Herramientas
 
 | Comando                          | Qué hace                                                          |
@@ -592,8 +599,10 @@ lift del 36%, que es un peldaño 2. Es exactamente lo que esta calibración exis
 para encontrar.
 
 **Lo que no arregla esto es el tamaño del corpus.** Siguen 3 de 8 peldaños con
-menos de 5 casos —`guerra 3/5` (n=3), `guerra 5/5` (n=2) y `fed_tesoro 4/5`
-(n=2)— y `aplicarCurva` sigue sin estar cableada al motor.
+menos de 5 casos: `guerra 3/5` (n=3), `guerra 5/5` (n=2) y `fed_tesoro 4/5`
+(n=2). La curva ya está cableada al motor, y esos tres peldaños se dejan fuera
+al cargarla —ver «La curva ya decide qué suena»—, así que el corpus pequeño no
+mete ruido en la corrección: la desactiva donde no hay dato.
 
 ## Los peldaños altos de `guerra`, y dos agujeros más del dominio
 
@@ -832,6 +841,71 @@ regla peor aprovecha. Si algún día se sustituye por algo que cuente **cuántos
 activos cruzan, o que puntúe la magnitud en vez de contar cruces, el dólar es el
 primero que hay que volver a mirar.
 
+## La curva ya decide qué suena
+
+Hasta el 2026-09-03 esta calibración era un informe: la curva se calculaba, se
+escribía en `severity_calibration` y ahí se quedaba. El único consumidor de
+`aplicarCurva` eran sus tests, y el motor seguía avisando por el peldaño que
+decía el clasificador. Medíamos que los «4» de `guerra` mueven el precio como un
+2 y seguíamos sonando el teléfono por ellos.
+
+Ahora `cicloGuerra` y `cicloMacro` leen la curva una vez por ciclo —es la misma
+tabla para todos los titulares, y un ciclo puede traer una docena— y corrigen la
+severidad antes de decidir. Corregido decide **todo** lo que dependía de la
+severidad: si se envía, en qué orden se despacha y qué peldaño enseña el
+mensaje. La severidad del modelo no se pierde, se guarda en el payload de la
+señal (`severidadLlm`, `severidadCorregida`), porque sin ella no hay forma de
+auditar después si la curva ayudó o estorbó.
+
+### Tres cosas que hubo que resolver para poder cablearla
+
+**Los peldaños flacos no corrigen, se dejan fuera.** `cargarCurva` filtra por
+`n_eventos >= 5`. Con tres casos, `P(movimiento)` solo puede valer 0, 33, 67 o
+100: el peldaño que sale describe el sorteo, no el fenómeno, y corregir con eso
+es meter ruido con cara de medición. El listón es el mismo con el que
+`ajustar.mts` llevaba meses avisando por pantalla; ponerlo en el camino de
+lectura es hacer que el aviso tenga consecuencias. Y como `aplicarCurva` publica
+sin tocar todo peldaño que no encuentra, el efecto es el correcto: **un peldaño
+mal medido no corrige, en vez de corregir mal**.
+
+**Y ese filtro abrió un agujero por la puerta de atrás.** Al dejar fuera
+`guerra 3/5` (n=3) quedaba esta curva: el 4/5, medido con ocho casos, bajaba a 2
+y dejaba de sonar; el 3/5, sin dato, se publicaba tal cual y **sí** sonaba. O
+sea, el sistema avisaba de lo pequeño y callaba lo grande — exactamente lo que
+la monotonía existe para impedir. Así que un peldaño sin corregir se topa con el
+mínimo de los peldaños superiores que sí están medidos: si el 4 vale 2, el 3 no
+puede valer más de 2. Hacia arriba no hace falta tocar nada, porque
+`ajustar.mts` ya entrega la curva isotonizada.
+
+**Un fallo de la tabla no puede tumbar un ciclo, y hay interruptor.** Si
+`severity_calibration` no responde, `cargarCurva` devuelve la curva vacía y el
+error se acumula en el resultado del ciclo: se pierde la corrección, no la
+alerta. Y `ALERTAS_CURVA=off` la apaga sin desplegar, porque esto decide qué
+avisos suenan a las tres de la mañana y tiene que poder devolverse al
+comportamiento anterior desde el entorno. Un valor cualquiera que no sea `off`
+la deja encendida: un typo no puede apagar la corrección en silencio.
+
+### Lo que esto cambia en el teléfono
+
+Con la curva vigente (`v12-dominio-vecinos`) y el umbral de envío en 3, esto es
+lo que se publica por cada peldaño que dice el modelo:
+
+| Modelo | `guerra` | ¿suena? | `fed_tesoro` | ¿suena? |
+| -----: | -------: | :-----: | -----------: | :-----: |
+| 1/5 | 1/5 | no | 1/5 | no |
+| 2/5 | 2/5 | no | 1/5 | no |
+| 3/5 | **2/5** (tope) | **no** | **1/5** | **no** |
+| 4/5 | **2/5** | **no** | 4/5 (tope) | sí |
+| 5/5 | 5/5 | sí | **4/5** | sí |
+
+**Hay que leer esta tabla sabiendo lo que dice: `guerra` solo suena en el 5/5.**
+No es un efecto lateral, es el hallazgo aplicado — los 4 de `guerra` mueven el
+precio el 63% de las veces contra una línea base del 43,3%, y eso es un 2. Pero
+el peldaño que sobrevive es justo el de n=2, así que el canal de guerra queda
+sostenido por el peldaño peor medido de la curva. **Es el primer sitio donde
+mirar cuando el corpus crezca**, y la razón principal para tener
+`ALERTAS_CURVA=off` a mano.
+
 ## Pendiente
 
 - **El corpus sigue siendo pequeño, aunque cada vez menos.** Van 3 de los 8
@@ -840,11 +914,21 @@ primero que hay que volver a mirar.
   `ajustar.mts` lo avisa solo. Los 5 de `guerra` son ruptura del marco y por
   definición escasean; no hay muchos más que añadir sin bajar el listón de lo
   que es un 5.
-- **Nada de esto cambia si no se cablea `aplicarCurva` al motor.** Hoy la curva
-  se calcula, se escribe en `severity_calibration` y ahí se queda: el único
-  consumidor de la función son sus tests. Es lo correcto mientras 3 peldaños
-  tengan menos de 5 casos, pero conviene tenerlo presente al leer los avances de
-  arriba.
+- ~~**Nada de esto cambia si no se cablea `aplicarCurva` al motor**~~ —
+  **cableada el 2026-09-03**. Los dos ciclos corrigen la severidad antes de
+  decidir, los peldaños con menos de 5 casos se dejan fuera al cargar la curva y
+  `ALERTAS_CURVA=off` lo apaga sin desplegar. Ver «La curva ya decide qué
+  suena». Lo que queda abierto de ahí:
+  - **El canal de `guerra` solo suena en el 5/5, y ese peldaño tiene n=2.** Es
+    el hallazgo aplicado —los 4 mueven el precio como un 2— pero deja el único
+    aviso vivo del tema colgando del peldaño peor medido. Con dos casos, un
+    tercero que no mueva el precio lo baja y el canal se queda mudo del todo.
+    Ampliar `guerra 5/5` pasa de ser deseable a ser lo que sostiene el canal.
+  - **Medir cuántas alertas se silencian de verdad.** La tabla dice qué peldaños
+    dejan de sonar; lo que no se sabe es cuántos hechos al mes caen en ellos.
+    Está en `alert_signals` con `severidadLlm` y `severidadCorregida` en el
+    payload desde hoy: tras una semana se puede contar cuántas señales se
+    guardaron con `bajo-umbral` que antes habrían sonado.
 - **El clasificador no es determinista, y ya hay cifra.** Entre `v9` y `v12`,
   con cuatro pasadas sobre el mismo corpus y cambios de prompt que no les
   afectaban, tres eventos entraron y salieron del dominio solos: el IPC de mayo

@@ -274,6 +274,50 @@ describe('aplicarCurva', () => {
   it('con la curva vacía no corrige nada', () => {
     expect(aplicarCurva(5, 'guerra', [])).toBe(5)
   })
+
+  it('un peldaño sin dato no publica más que uno superior que sí lo tiene', () => {
+    // El caso real del 2026-09-03: guerra 4/5 se midió con ocho casos y bajó a
+    // 2; guerra 3/5 solo tenía tres casos y quedó fuera de la curva. Sin este
+    // tope, el 3 sonaba (umbral de envío en 3) y el 4 no: el sistema avisaba de
+    // lo pequeño y callaba lo grande.
+    const conHueco: PuntoCurva[] = [
+      { tema: 'guerra', severidadLlm: 2, severidadFinal: 2 },
+      { tema: 'guerra', severidadLlm: 4, severidadFinal: 2 },
+    ]
+    expect(aplicarCurva(3, 'guerra', conHueco)).toBe(2)
+  })
+
+  it('el tope es el mínimo de los superiores, no el del vecino', () => {
+    const conHueco: PuntoCurva[] = [
+      { tema: 'guerra', severidadLlm: 4, severidadFinal: 4 },
+      { tema: 'guerra', severidadLlm: 5, severidadFinal: 2 },
+    ]
+    // Mirar solo al 4 dejaría el 3 en 3, por encima de lo que publica el 5.
+    expect(aplicarCurva(3, 'guerra', conHueco)).toBe(2)
+  })
+
+  it('el tope nunca sube un peldaño, solo lo limita', () => {
+    const conHueco: PuntoCurva[] = [{ tema: 'guerra', severidadLlm: 5, severidadFinal: 5 }]
+    expect(aplicarCurva(2, 'guerra', conHueco)).toBe(2)
+  })
+
+  it('un peldaño sin dato por encima de los medidos se queda como está', () => {
+    // Es el otro extremo de guerra: el 5/5 tiene n=2 y no corrige, y nada por
+    // encima puede limitarlo.
+    expect(aplicarCurva(5, 'guerra', [{ tema: 'guerra', severidadLlm: 2, severidadFinal: 1 }])).toBe(5)
+  })
+
+  it('la salida nunca baja al subir el peldaño del modelo', () => {
+    // La propiedad que todo esto tiene que cumplir, huecos incluidos.
+    const conHuecos: PuntoCurva[] = [
+      { tema: 'guerra', severidadLlm: 2, severidadFinal: 2 },
+      { tema: 'guerra', severidadLlm: 4, severidadFinal: 2 },
+    ]
+    const salida = [1, 2, 3, 4, 5].map((p) => aplicarCurva(p, 'guerra', conHuecos))
+    for (let i = 1; i < salida.length; i++) {
+      expect(salida[i]).toBeGreaterThanOrEqual(salida[i - 1])
+    }
+  })
 })
 
 describe('resumirReplay', () => {
