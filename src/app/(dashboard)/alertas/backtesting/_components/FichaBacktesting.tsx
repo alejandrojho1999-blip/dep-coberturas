@@ -193,7 +193,7 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
                       ? <span className="text-text-secondary">sí</span>
                       : <span className="text-text-muted">no cuenta</span>}
                   </Td>
-                  <Td alinear="right" mono>{pctPlano(p.umbral, 0)}</Td>
+                  <Td alinear="right" mono>{pctPlano(p.umbral, p.umbral < 0.05 ? 1 : 0)}</Td>
                   <Td alinear="right" mono>{pctPlano(p.p50)}</Td>
                   <Td alinear="right" mono>{pctPlano(p.p90)}</Td>
                   <Td alinear="right" mono>{pctPlano(p.max)}</Td>
@@ -227,11 +227,15 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
           cerca de cero cruza igual pase o no pase algo y, como basta con que <strong>uno</strong>{' '}
           cruce para dar por movido el precio, arrastra el veredicto sin aportar información. Aun
           así, <strong>esta columna no basta para retirar un activo</strong>: lo que decide es su
-          aportación al criterio completo. El oro separa poco por su cuenta y retirarlo no cambia
-          ni una fila, porque nunca cruza solo. El Nasdaq llegó a excluirse el 2026-09-03 por esta
-          vía y se readmitió el mismo día: su desventaja venía de un grupo de control mal
-          emparejado en el tiempo, no del activo. Los marcados «no cuenta» —ahora ninguno— se
-          siguen midiendo y enseñando, pero no deciden.
+          aportación al criterio completo. El dólar es el caso de libro: ordena hechos frente a
+          días normales mejor que ningún otro activo de la cesta y su aportación es exactamente
+          cero, porque su señal está en el centro de la distribución y esta regla solo sabe leer
+          colas. Y al revés, separar poco tampoco prueba que un activo sobre:{' '}
+          <strong>el oro estuvo restando</strong> hasta el 2026-09-03 con un umbral del 6% que era
+          demasiado alto, y al bajarlo al 3,6% pasó a ser el que más aporta de los ocho. El Nasdaq
+          llegó a excluirse ese mismo día por esta vía y se readmitió a las horas: su desventaja
+          venía de un grupo de control mal emparejado en el tiempo, no del activo. Los marcados
+          «no cuenta» —ahora ninguno— se siguen midiendo y enseñando, pero no deciden.
         </NotaPie>
       </Panel>
 
@@ -325,7 +329,7 @@ export function FichaBacktesting({ eventos }: { eventos: readonly EventoMedido[]
 
       <Panel
         titulo="Umbrales: cuándo se considera que un activo se movió"
-        descripcion="No son iguales porque los activos no lo son: un 3% en el oro es un día histórico y en Bitcoin es un martes cualquiera."
+        descripcion="No son iguales porque los activos no lo son: un 3% en el oro es un día notable y en Bitcoin es un martes cualquiera. Los ocho se revisaron uno por uno el 2026-09-03: el VIX bajó del 40% al 25%, el oro del 6% al 3,6%, y los seis restantes se confirmaron donde estaban."
       >
         <TablaScroll>
           <table className="w-full min-w-[28rem] border-collapse">

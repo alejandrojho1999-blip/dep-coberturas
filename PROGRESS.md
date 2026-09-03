@@ -149,10 +149,18 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 - **`guerra` ya no tiene peldaño 3 y `fed_tesoro` casi tampoco** (n=1). El motor
   publica sin corregir los peldaños que no aparecen en la curva, que es lo
   correcto, pero conviene saber que ahí no hay red.
-- **Revisar los umbrales cuando el corpus crezca.** Se eligieron comparando
-  siete criterios sobre los mismos 60 días de control y 27 eventos, así que
-  parte de su ventaja es sobreajuste; tres de los siete quedaron empatados
-  dentro del ruido. Está avisado en el comentario de `UMBRAL_MATERIAL`.
+- ~~**Revisar los umbrales**~~ — **los ocho revisados uno por uno el
+  2026-09-03**. Se movieron dos: el VIX del 40% al 25% y el oro del 6% al 3,6%.
+  Los seis restantes se confirmaron donde estaban, con una corrección por
+  búsqueda múltiple que fija el listón honesto en 27 puntos y no en cero. Lo que
+  queda no es volver a barrer, es ampliar el corpus.
+- **La curva ha dejado de bajar la severidad y ahora la sube.** Con el oro al
+  3,6% cruzan 24 de los 32 hechos en vez de 18, y todos los peldaños suben. No
+  es un fallo del arreglo: el umbral del 6% estaba tapando el sesgo de selección
+  del corpus, que solo contiene hechos importantes. `ajustar.mts` lo avisa y
+  `aplicarCurva` no está cableada al motor, así que no hay riesgo en producción.
+  **Lo que falta son hechos anodinos en el corpus**, en los mismos peldaños que
+  los graves.
 - ~~**Los cinco agujeros del prompt**~~ — **cerrados el 2026-09-02**, con la
   medición delante: descartados **10 → 1**, y los cinco casos recuperados con el
   peldaño correcto o cerca. Ver la entrada de la sesión en «Completado».
@@ -450,6 +458,77 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — el oro estaba midiendo con el listón de otro activo
+
+Los seis umbrales que quedaban por revisar: oro 6%, plata 10%, Bitcoin 16%, WTI
+12%, Nasdaq 6%, S&P 5%. **Solo se movió uno**, y el problema de fondo de esta
+sesión fue no dejarse llevar por los otros cinco.
+
+**El oro baja del 6% al 3,6%, y es el cambio más grande que ha tenido la tabla.**
+Al 6% solo cruzaban 4 de los 32 hechos y su aportación marginal era de **−2
+puntos**: la cesta separaba 16 puntos con el oro dentro y 18 sin él. No es que
+no aportara, es que restaba. Al 3,6% cruzan 12, la separación sube a **32
+puntos** y el oro pasa a ser **el activo que más aporta de los ocho**:
+
+| Activo | Aportación marginal |
+|---|---|
+| **Oro (3,6%)** | **+14 pts** |
+| VIX (25%) | +9 pts |
+| Plata, Nasdaq, S&P, dólar | 0 pts |
+| WTI, Bitcoin | −2 pts |
+
+**El 3,6% es el centro de la meseta**, mismo criterio que el 25% del VIX: entre
+el 3,4% y el 3,8% la separación se queda en 32 puntos durante cinco escalones de
+0,1%. El pico está en el 2,9–3,3% con 33 puntos, uno más, pero allí la línea
+base sube al 45–48% y se acerca a la saturación; en el 3,6% se queda en el 43%.
+El remuestreo da **+15 pts [4, 28]**, con el intervalo del 90% estrictamente
+positivo — más de lo que pudo enseñar el VIX.
+
+**Entran seis hechos y solo dos fechas de control.** Crimea (+4,5%), los cables
+del Báltico (+5,6%), el Balticconnector (+5,5%), el recorte de 50 pb de la Fed
+(+3,8%), la doctrina nuclear rusa (+3,8%) y la incursión sobre Estonia (+3,9%).
+**Crimea era el caso que el informe citaba como el fallo más incómodo del
+sistema** —movió su mercado y el veredicto decía que no—. Ninguna severidad
+cambia: las fija el criterio del prompt.
+
+**Los otros cinco no se tocaron, y la razón es metodológica.** Barrer seis
+activos sobre once valores son 66 pruebas sobre el mismo corpus, que es el mismo
+error que se cometió al elegir estos umbrales en bloque. Se barajó la etiqueta
+hecho/control 600 veces repitiendo el barrido entero: por puro azar la mejor
+separación alcanzable es de 13 puntos de mediana y **27 en el percentil 95**.
+Ese es el listón, no el cero.
+
+| Activo | Mejor separación real | p-valor |
+|---|---|---|
+| **Oro** | **33 pts** | **0,000** |
+| VIX (a posteriori) | 25 pts | 0,037 |
+| Plata | 19 pts | 0,092 |
+| WTI | 18 pts | 0,127 |
+| Bitcoin | 18 pts | 0,128 |
+| Nasdaq | 16 pts | 0,142 |
+| S&P 500 | 16 pts | 0,183 |
+
+Solo el oro pasa. El VIX, medido con la misma vara a posteriori, aguanta
+(p=0,037): su cambio no fue artefacto de la búsqueda.
+
+**El efecto aguas abajo es incómodo y hay que mirarlo de frente: la curva ha
+dejado de bajar la severidad y ahora la sube.** Con 24 hechos cruzando en vez de
+18, la línea base sube al 43,3% y todos los lifts con ella; `guerra 2/5` pasa de
+corregirse a 1/5 a corregirse a 3/5. **No es un fallo del arreglo, es un
+problema que el arreglo destapa**: el umbral del 6% estaba compensando por
+accidente el sesgo de selección del corpus, que solo contiene hechos que fueron
+importantes. Medir bien quita la venda. La solución no es volver a subir el
+umbral, son hechos anodinos en el corpus. Sin riesgo en producción:
+`ajustar.mts` avisa en voz alta y `aplicarCurva` no está cableada al motor.
+
+Seis notas del corpus se corrigieron en `eventos.ts` porque el cambio las dejó
+mintiendo —las seis decían «ningún activo por encima de su umbral» o «cero
+transmisión al precio»—. Actualizados también el docstring de `normalidad.mts`
+(su ejemplo era justo el oro), la ficha de backtesting y el informe, con el
+formato de un decimal para que el 3,6% no se lea como un 4%.
+
+Verde: **975/975 tests**, `tsc` y ESLint limpios.
 
 ### Sesión del 2026-09-03 — el dólar se queda en el 3%, y el motivo no era el que parecía
 

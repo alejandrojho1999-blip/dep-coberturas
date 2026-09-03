@@ -117,7 +117,9 @@ export const EVENTOS: readonly EventoHistorico[] = [
     severidad: 2, verificado: true,
     nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: es un cambio declarado de '
       + 'doctrina, no un despliegue. El 4 exige amenaza nuclear CON acto detrás, y aquí no lo '
-      + 'hay. Oro +3,8% y VIX +20,6% a cinco sesiones, sin un solo activo por encima de su umbral.',
+      + 'hay. Oro +3,8% y VIX +20,6% a cinco sesiones. Con los umbrales de 2026-09-03 (VIX al '
+      + '25%, oro al 3,6%) los dos cruzan; con los viejos no cruzaba ninguno. La severidad no '
+      + 'cambia: la fija el criterio del prompt, no el veredicto de precio.',
   },
   {
     fecha: '2025-09-10', tramo: 'principal', tema: 'guerra', clase: 'incursion-otan',
@@ -135,7 +137,9 @@ export const EVENTOS: readonly EventoHistorico[] = [
     severidad: 2, verificado: true,
     nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo: violación deliberada, sin '
       + 'víctimas, sin daño y sin respuesta material. Segunda del mes, y el mercado ya la '
-      + 'descuenta: oro +3,9% y VIX +13,0%, ningún activo por encima de su umbral.',
+      + 'descuenta: oro +3,9% y VIX +13,0%. Con el umbral del oro al 3,6% (2026-09-03) el oro '
+      + 'cruza por tres décimas; con el 6% viejo no cruzaba nada. Sigue siendo un 2 porque no '
+      + 'hubo víctimas, daño ni respuesta material.',
   },
 
   // ── Tramo principal · Fed y Tesoro ────────────────────────────────────────
@@ -186,7 +190,8 @@ export const EVENTOS: readonly EventoHistorico[] = [
     fecha: '2024-09-18', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
     titulo: 'Primer recorte del ciclo: la Fed baja 50 pb',
     severidad: 4, verificado: true,
-    nota: 'El tamaño sí sorprendió: el consenso estaba dividido entre 25 y 50.',
+    nota: 'El tamaño sí sorprendió: el consenso estaba dividido entre 25 y 50. Cuenta como '
+      + 'movimiento desde el 2026-09-03, cuando el umbral del oro bajó al 3,6%: oro +3,8%.',
   },
   {
     fecha: '2024-12-18', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
@@ -200,7 +205,10 @@ export const EVENTOS: readonly EventoHistorico[] = [
     fecha: '2014-03-18', tramo: 'control_2014', tema: 'guerra', clase: 'invasion',
     titulo: 'Rusia se anexiona Crimea',
     severidad: 4, verificado: true,
-    nota: 'Anexión territorial en Europa. Referencia de cuánto movía esto antes de 2022.',
+    nota: 'Anexión territorial en Europa. Referencia de cuánto movía esto antes de 2022. '
+      + 'Estuvo saliendo como «no movió» —el informe lo citaba como el fallo más incómodo del '
+      + 'sistema— hasta que el umbral del oro bajó al 3,6% el 2026-09-03: el oro hizo +4,5% y '
+      + 'ahora cruza. Era el caso que mejor avisaba de que el listón del oro estaba mal puesto.',
   },
   {
     fecha: '2014-07-17', tramo: 'control_2014', tema: 'guerra', clase: 'victimas-otan',
@@ -282,14 +290,19 @@ export const EVENTOS: readonly EventoHistorico[] = [
     nota: 'Baja de 3 a 2 el 2026-09-02 con el criterio nuevo, y es el caso que obligó a '
       + 'afinarlo: hubo corte real de gas y duró meses, pero un enlace bilateral no tiene '
       + 'tamaño de mercado. Es lo que lo separa del Nord Stream, que sigue en 4. La respuesta '
-      + 'a la pregunta que motivó incluirlo —si la repetición agota el efecto— es que no hubo '
-      + 'efecto que agotar.',
+      + 'a la pregunta que motivó incluirlo —si la repetición agota el efecto— se respondió '
+      + 'durante un año que no hubo efecto que agotar. Con el umbral del oro al 3,6% '
+      + '(2026-09-03) resulta que sí lo hubo: oro +5,5%, por encima del listón. Lo que no hubo '
+      + 'fue respuesta material, que es lo que fija el 2.',
   },
   {
     fecha: '2024-11-18', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
     titulo: 'Cortados dos cables submarinos de datos en el Báltico, entre Finlandia y Alemania y entre Suecia y Lituania',
     severidad: 2, verificado: true,
-    nota: 'Cuatro países OTAN afectados a la vez. Cobertura enorme y cero transmisión al precio.',
+    nota: 'Cuatro países OTAN afectados a la vez, con cobertura enorme. Se dio por «cero '
+      + 'transmisión al precio» hasta que el umbral del oro bajó al 3,6% (2026-09-03): el oro '
+      + 'se movió un +5,6% y sí cruza. Es el mayor de los seis hechos que recuperó ese cambio. '
+      + 'La severidad sigue en 2: sin víctimas y sin respuesta material.',
   },
   {
     fecha: '2024-12-25', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',

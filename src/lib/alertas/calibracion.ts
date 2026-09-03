@@ -56,10 +56,47 @@
  * 90% es [-3, 16] y toca el cero. Lo que sí está fuera de duda es que el 40%
  * era peso muerto.
  *
+ * **Los otros cinco umbrales se revisaron el mismo día y ninguno se movió.**
+ * Buscar el mejor umbral de seis activos sobre una rejilla de once valores son
+ * 66 pruebas sobre el mismo corpus, y eso encuentra mejoras aunque no haya nada
+ * que encontrar. Para saber cuánto regala la búsqueda se barajó la etiqueta
+ * hecho/control y se repitió el barrido entero 600 veces: por puro azar, la
+ * mejor separación alcanzable es de 13 puntos de mediana y llega a 27 en el
+ * percentil 95. Ese, y no el cero, es el listón. Solo el oro lo pasa
+ * holgadamente (33 puntos reales, p=0,000). El resto se queda dentro del ruido:
+ * plata p=0,092, Bitcoin p=0,128, WTI p=0,127, Nasdaq p=0,142, S&P p=0,183. El
+ * VIX, medido con la misma vara a posteriori, da p=0,037 y aguanta.
+ *
+ * Quien quiera volver a barrer estos umbrales: hágalo con esta corrección
+ * puesta. Sin ella, cualquiera de los cinco parecerá mejorable.
+ *
  * Aviso para quien los vuelva a tocar: la cifra se eligió comparando siete
  * criterios sobre los mismos 60 días de control y 27 eventos, así que parte de
  * su ventaja es sobreajuste. Tres de los siete quedaron empatados dentro del
  * ruido. Con más corpus, esto se revisa.
+ *
+ * **El oro baja del 6% al 3,6% el 2026-09-03, y es el cambio más grande que ha
+ * tenido esta tabla.** Al 6% el oro no solo no aportaba: *restaba*. La
+ * separación del criterio completo era de 16 puntos con él y de 18 sin él,
+ * porque a ese listón solo cruzaban 4 de los 32 hechos y las pocas fechas de
+ * control que lo acompañaban pesaban más. Al 3,6% cruzan 12, la separación sube
+ * a **32 puntos** y el oro pasa a ser **el activo más valioso de la cesta**
+ * (+14 puntos de aportación marginal, por delante del VIX con +9).
+ *
+ * El 3,6% es el centro del tramo llano más largo del barrido: entre el 3,4% y
+ * el 3,8%, en pasos del 0,1%, la separación se queda clavada en 32 puntos
+ * durante cinco escalones seguidos. El pico absoluto está en el 2,9–3,3% con 33
+ * puntos, un solo punto más, pero allí la línea base sube al 45–48% y se acerca
+ * a la saturación que estos umbrales existen para evitar; en el 3,6% se queda en
+ * el 43%. El remuestreo da **+15 puntos [4, 28]**, con el intervalo del 90%
+ * estrictamente positivo, que es más de lo que pudo enseñar el VIX.
+ *
+ * Lo que entra al bajar el listón son seis hechos y solo dos fechas de control.
+ * Los seis son creíbles uno por uno: la anexión de Crimea (+4,5%), los cables
+ * del Báltico (+5,6%), el Balticconnector (+5,5%), el recorte de 50 pb de la
+ * Fed (+3,8%), la doctrina nuclear rusa (+3,8%) y la incursión sobre Estonia
+ * (+3,9%). Crimea es la comprobación que más tranquiliza: era el caso que el
+ * informe citaba como «movió su mercado y el sistema dice que no».
  *
  * **El dólar se revisó el 2026-09-03 y se queda en el 3%, por un motivo que no
  * es el que parecía.** El aviso decía que estaba inerte: percentil 100, cero
@@ -90,7 +127,8 @@
  * mirar: es el que más información tiene y el que esta regla peor aprovecha.
  */
 export const UMBRAL_MATERIAL: Record<string, number> = {
-  'GC=F': 0.06,
+  // 6% -> 3,6% el 2026-09-03. Ver la nota de arriba.
+  'GC=F': 0.036,
   'SI=F': 0.10,
   'BTC-USD': 0.16,
   'CL=F': 0.12,

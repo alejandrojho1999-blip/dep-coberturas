@@ -19,10 +19,18 @@
  *
  * ⚠️ **La separación no basta para decidir quitar un activo.** Como la regla es
  * «basta que uno cruce», lo que decide es la aportación marginal: cuánto cambia
- * el criterio COMPLETO al retirarlo. El oro separa poco por su cuenta y aun así
- * quitarlo no cambia ni una fila, porque nunca cruza solo. Para medirlo hay que
- * comparar la separación de la cesta con y sin el activo, y remuestrear para
- * ver si la diferencia aguanta.
+ * el criterio COMPLETO al retirarlo. El dólar es el caso de libro: es el activo
+ * que mejor ORDENA hechos frente a días normales de toda la cesta (AUC 0,666,
+ * por delante del VIX) y su aportación marginal es exactamente cero, porque su
+ * señal está en el centro de la distribución y esta regla solo sabe leer colas.
+ * Para medirlo hay que comparar la separación de la cesta con y sin el activo,
+ * y remuestrear para ver si la diferencia aguanta.
+ *
+ * ⚠️ **Y al revés: separar poco tampoco es prueba de que sobre.** El oro estuvo
+ * hasta el 2026-09-03 con un umbral del 6% que lo dejaba en +9 puntos de
+ * separación y en −2 de aportación marginal, o sea restando. Bajarlo al 3,6% lo
+ * convirtió en el activo más valioso de la cesta (+14 pts). Antes de retirar
+ * nada, barre su umbral.
  *
  * ⚠️ **Y antes que nada, comprobar que el denominador es comparable.** El
  * 2026-09-03 se excluyó el Nasdaq por este camino y hubo que readmitirlo el
@@ -105,7 +113,7 @@ async function main(): Promise<void> {
     const etiqueta = ((ETIQUETA_TICKER[p.ticker] ?? p.ticker) + (p.vota ? '' : ' *')).padEnd(9)
     const tasa = (cruces: number, n: number) => (n ? `${cruces}/${n}` : '—').padStart(7)
     console.log(
-      `  ${etiqueta} ${pct(p.umbral, 0).padStart(6)}`
+      `  ${etiqueta} ${pct(p.umbral, p.umbral < 0.05 ? 1 : 0).padStart(6)}`
       + ` ${pct(p.p50).padStart(8)}`
       + ` ${pct(p.p90).padStart(7)}`
       + ` ${pct(p.max).padStart(7)}`
@@ -125,8 +133,10 @@ async function main(): Promise<void> {
   }
   console.log('«separación» = cuánto más cruza el umbral con noticia que sin ella. Dice si el')
   console.log('activo distingue, pero NO basta para decidir quitarlo: bajo la regla «basta que')
-  console.log('uno cruce» lo que decide es la aportación marginal. El oro separa poco (+9 pts)')
-  console.log('y aun así quitarlo no cambia ni una fila, porque nunca cruza solo.')
+  console.log('uno cruce» lo que decide es la aportación marginal. El dólar separa poco (+6 pts)')
+  console.log('y aun así quitarlo no cambia ni una fila, porque nunca cruza solo. Y al revés: el')
+  console.log('oro separaba +9 con el umbral viejo del 6% y pasó a ser el que más aporta al')
+  console.log('bajarlo al 3,6%. Antes de retirar un activo, barre su umbral.')
   console.log('«umbral/mediana»:')
   console.log('  ' + perfil
     .map((p) => `${ETIQUETA_TICKER[p.ticker] ?? p.ticker} ${p.vecesLaMediana == null ? '—' : `×${p.vecesLaMediana.toFixed(1)}`}`)

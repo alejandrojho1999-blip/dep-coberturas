@@ -125,19 +125,20 @@ corriente del umbral de un evento. Sobre 60 fechas de control **emparejadas por
 | ------ | -----: | -------------: | --: | --: | ----------------: | ----------------: | ---------: |
 | WTI     | 12% | 4,9% |  9,8% |  22,9% |  4/60 |  8/32 | **+18 pts** |
 | VIX     | 25% | 8,8% | 31,4% | 102,9% | 10/60 | 11/32 | **+18 pts** |
+| **Oro** | **3,6%** | 2,0% |  5,6% |  17,9% | 11/60 | 12/32 | **+19 pts** |
 | Bitcoin | 16% | 6,2% | 18,2% |  20,8% |  7/47 |  7/25 | +13 pts |
 | S&P 500 |  5% | 2,4% |  5,3% |   9,5% |  8/60 |  8/32 | +12 pts |
 | Nasdaq  |  6% | 2,9% |  7,1% |  12,1% |  8/60 |  8/32 | +12 pts |
 | Dólar   |  3% | 1,0% |  1,7% |   2,5% |  0/60 |  2/32 | +6 pts |
-| Oro     |  6% | 2,0% |  5,6% |  17,9% |  4/60 |  4/32 | +6 pts |
 | Plata   | 10% | 3,1% |  7,8% |  23,9% |  4/60 |  4/32 | +6 pts |
 
 «Separación» es cuánto más cruza el umbral con noticia que sin ella. Se compara
 en tasa y no en cuenta porque los grupos no tienen el mismo tamaño.
 
-Los que mejor separan son el **WTI** y el **VIX**, este último desde que su
-umbral bajó al 25% (ver abajo). El oro, que es el ancla de casi todos los
-precedentes del prompt, se queda en +6 puntos.
+Los que mejor separan son el **oro**, el **WTI** y el **VIX**, los tres desde
+que se les revisó el umbral (ver abajo). El oro, que es el ancla de casi todos
+los precedentes del prompt, estuvo en +6 puntos hasta el 2026-09-03 con un
+umbral del 6% que era sencillamente demasiado alto.
 
 El VIX llega a un máximo del **102,9%** en una fecha de control sin nada detrás
 —el 18 de enero de 2022, con el desplome que abrió aquel año—. No es un error de
@@ -259,31 +260,44 @@ El mecanismo para excluir un activo sigue implementado y probado, con la lista
 vacía: se sigue midiendo y enseñando todo, y la ficha tiene una columna «Vota»
 para que cualquier exclusión futura se vea en vez de quedar escondida.
 
-**Lo que se sabe hoy de cada activo** (control emparejado y VIX al 25%): ninguna
-retirada mejora el criterio de forma que aguante el remuestreo. Quitar el VIX lo
-empeora en **7 puntos** —es el que más aporta desde que se le arregló el umbral—;
-quitar el Nasdaq, el S&P o el dólar no cambia nada; y las mejoras aparentes de
-quitar el oro, la plata, el WTI o Bitcoin (+2 puntos) tienen intervalos que
-incluyen el cero. Con 60 fechas y 32 hechos no hay muestra para retirar nada.
+**Lo que se sabe hoy de cada activo** (control emparejado, VIX al 25% y oro al
+3,6%): ninguna retirada mejora el criterio de forma que aguante el remuestreo.
+Quitar el **oro** lo empeora en **14 puntos** —es el que más aporta desde que se
+le arregló el umbral— y quitar el **VIX**, en 9. La plata, el Nasdaq, el S&P y
+el dólar no cambian nada; las mejoras aparentes de quitar el WTI o Bitcoin (+2
+puntos) tienen intervalos que incluyen el cero. Con 60 fechas y 32 hechos no hay
+muestra para retirar nada.
 
 ### La curva vigente
 
-Con `v6-corpus-reetiquetado`, los ocho activos y el control emparejado por
-época y el VIX al 25%, línea base del **40%**:
+Con `v6-corpus-reetiquetado`, los ocho activos, el control emparejado por época,
+el VIX al 25% y el oro al 3,6%, línea base del **43,3%**:
 
 | Tema | Peldaño LLM | n | P(mov) | Lift | → Final |
 | ---- | ----------- | -: | -----: | ---: | ------: |
-| guerra | 2/5 | 11 |  36% |   0% | **1/5** |
-| guerra | 4/5 |  3 |  67% |  44% | 3/5 |
+| guerra | 2/5 | 11 |  73% |  52% | **3/5** |
+| guerra | 4/5 |  3 |  67% |  41% | 3/5 |
 | guerra | 5/5 |  1 | 100% | 100% | 5/5 |
-| fed_tesoro | 2/5 | 3 |  67% |  44% | 3/5 |
-| fed_tesoro | 3/5 | 1 |   0% |   0% | 3/5 |
-| fed_tesoro | 4/5 | 4 |  50% |  17% | 3/5 |
+| fed_tesoro | 2/5 | 3 |  67% |  41% | 3/5 |
+| fed_tesoro | 3/5 | 1 | 100% | 100% | **5/5** |
+| fed_tesoro | 4/5 | 4 |  50% |  12% | **5/5** |
 | fed_tesoro | 5/5 | 5 | 100% | 100% | 5/5 |
 
-Los peldaños finales han salido **idénticos** en las tres versiones del criterio
-—control mal emparejado, control emparejado, y VIX al 25%—. Los lifts cambian y
-las conclusiones no, que es la comprobación que importa.
+**Ojo: esta curva ya no baja la severidad, la sube, y el script lo dice en voz
+alta.** Hasta el arreglo del oro, `guerra 2/5` se corregía a la baja (a 1/5) y
+`fed_tesoro 4/5` bajaba a 3/5. Con el oro al 3,6% cruzan 24 de los 32 hechos en
+vez de 18, el lift sube en todos los peldaños y la corrección se da la vuelta.
+
+Esto **no es un efecto secundario del arreglo, es un problema que el arreglo
+destapa**. El umbral del 6% estaba compensando por accidente el sesgo de
+selección del corpus: como solo contiene hechos que fueron importantes, casi
+todos mueven el precio, y hacía falta un listón artificialmente alto para que
+eso no se notara. Medir bien el movimiento quita la venda. Lo que falta no es
+subir otra vez el umbral del oro, sino **hechos anodinos en el corpus**, en los
+mismos peldaños que los graves.
+
+Mientras tanto no hay riesgo en producción: `aplicarCurva` no está cableada al
+motor todavía, y el script se niega a bendecir la curva con un aviso explícito.
 
 La curva se fuerza monótona: un peldaño más alto del LLM nunca puede acabar
 dando uno final más bajo. Los peldaños que no aparecen se publican sin corregir,
@@ -365,6 +379,90 @@ Dos gotchas que cuestan tiempo si no se saben:
 - **Editar `eventos.ts` no basta.** `cargar.mts` sube la severidad del JSON que
   dejó `medir.mts`, así que hay que volver a medir antes de cargar o se sube la
   etiqueta vieja sin que nada falle.
+
+## El oro estaba midiendo con el listón de otro activo
+
+El umbral del oro era del **6%**, y a ese listón solo cruzaban **4 de los 32
+hechos** del corpus. La aportación marginal salía en **−2 puntos**: la cesta
+separaba 16 puntos con el oro dentro y 18 sin él. El oro no es que no aportara,
+es que **restaba**.
+
+**Baja al 3,6% el 2026-09-03.** Cruzan 12 de 32, la separación del criterio sube
+de 16 a **32 puntos** y el oro pasa a ser **el activo que más aporta de toda la
+cesta**:
+
+| Activo | Aportación marginal |
+| ------ | ------------------: |
+| **Oro (3,6%)** | **+14 pts** |
+| VIX (25%) | +9 pts |
+| Plata, Nasdaq, S&P, dólar | 0 pts |
+| WTI, Bitcoin | −2 pts |
+
+**Por qué el 3,6% y no el pico.** El barrido fino en pasos del 0,1% da su máximo
+en el 2,9–3,3% con 33 puntos, un solo punto más que el 3,6%. Pero ahí la línea
+base sube al 45–48%, acercándose a la saturación que estos umbrales existen para
+evitar; en el 3,6% se queda en el 43%. Y el tramo entre el **3,4% y el 3,8%** da
+32 puntos en cinco escalones seguidos: es la meseta más larga del barrido, que es
+la señal de que el valor no está pegado al ruido de la muestra. Se coge su
+centro, el mismo criterio con el que se eligió el 25% del VIX.
+
+El remuestreo da **+15 puntos [4, 28]** frente al 6%, con el intervalo del 90%
+**estrictamente positivo** — más de lo que pudo enseñar el VIX, cuyo intervalo
+tocaba el cero.
+
+**Lo que entra son seis hechos y solo dos fechas de control:**
+
+| Fecha | Oro | Sev | Hecho |
+| ----- | --: | --: | ----- |
+| 2014-03-18 | +4,5% | 4 | Rusia se anexiona Crimea |
+| 2024-11-18 | +5,6% | 2 | Cortados dos cables submarinos en el Báltico |
+| 2023-10-08 | +5,5% | 2 | Balticconnector dañado |
+| 2025-09-19 | +3,9% | 2 | Tres MiG-31 sobre Estonia; artículo 4 |
+| 2024-11-19 | +3,8% | 2 | Rusia rebaja su doctrina nuclear |
+| 2024-09-18 | +3,8% | 4 | Primer recorte del ciclo: la Fed baja 50 pb |
+
+**Crimea es la comprobación que más tranquiliza**: era el caso que este mismo
+informe citaba como el fallo más incómodo del sistema —movió su mercado y el
+veredicto decía que no—. Ya cruza. Ninguna severidad cambia: las fija el
+criterio del prompt, que pide respuesta material, no el veredicto de precio.
+
+## Los otros cinco: por qué no se tocó ninguno
+
+Buscar el mejor umbral de seis activos sobre una rejilla de once valores son
+**66 pruebas sobre el mismo corpus de 32 hechos**. Eso encuentra mejoras aunque
+no haya nada que encontrar, y es exactamente el error que ya se cometió una vez
+al elegir estos umbrales en bloque.
+
+Para medir cuánto regala la búsqueda se **barajó la etiqueta hecho/control** 600
+veces y se repitió el barrido entero sobre cada barajada. Bajo la hipótesis nula
+—hechos y días normales intercambiables— la mejor separación alcanzable es de
+**13 puntos de mediana y 27 en el percentil 95**. Ese, y no el cero, es el listón.
+
+| Activo | Mejor separación real | p-valor |
+| ------ | --------------------: | ------: |
+| **Oro** | **33 pts** | **0,000** |
+| VIX (medido a posteriori) | 25 pts | 0,037 |
+| Plata | 19 pts | 0,092 |
+| WTI | 18 pts | 0,127 |
+| Bitcoin | 18 pts | 0,128 |
+| Nasdaq | 16 pts | 0,142 |
+| S&P 500 | 16 pts | 0,183 |
+
+Solo el oro pasa el listón con holgura. Los cinco restantes se quedan dentro del
+ruido: sus mejores candidatos son indistinguibles de lo que produce barajar las
+etiquetas. **Se quedan como están.**
+
+Dos comprobaciones que conviene tener a mano:
+
+- **El VIX, medido con la misma vara a posteriori, aguanta** (p=0,037). El
+  cambio del 25% no fue un artefacto de la búsqueda.
+- **El criterio actual sin barrer nada da 16 puntos con p=0,102.** Es decir: el
+  corpus en bloque apenas se distingue de un día cualquiera, que es lo que ya
+  decía el apartado del denominador. Lo que sostiene la curva es el patrón por
+  peldaño, no la separación agregada.
+
+Quien vuelva a barrer estos umbrales: hágalo con esta corrección puesta. Sin
+ella, cualquiera de los cinco parecerá mejorable.
 
 ## El dólar y el límite de la regla del OR
 
@@ -455,12 +553,19 @@ primero que hay que volver a mirar.
   - ~~**El umbral del dólar**~~ — **revisado el 2026-09-03 y confirmado en el
     3%**, por un motivo que no era el que parecía. Ver la sección «El dólar y el
     límite de la regla del OR».
-  - **Faltan el gas europeo y el trigo**, que es por lo que Nord Stream y Crimea
-    salen como «no movió» pese a haber movido su mercado.
-- **Revisar los umbrales que quedan.** Se eligieron comparando siete criterios
-  sobre los mismos 60 días de control y 27 eventos, así que parte de su ventaja
-  es sobreajuste; tres de los siete quedaron empatados dentro del ruido. Los del
-  VIX y el dólar ya se revisaron uno por uno; quedan los seis restantes.
+  - ~~**Los seis umbrales restantes**~~ — **revisados el 2026-09-03**. Solo se
+    movió el **oro**, del 6% al 3,6%. La plata, Bitcoin, el WTI, el Nasdaq y el
+    S&P se quedan como estaban: sus mejores candidatos caen dentro de lo que la
+    propia búsqueda regala por azar. Ver «Los otros cinco: por qué no se tocó
+    ninguno».
+  - **Falta el gas europeo**, que es por lo que Nord Stream sale como «no movió»
+    pese a haber movido su mercado.
+- ~~**Revisar los umbrales**~~ — **los ocho revisados uno por uno el
+  2026-09-03**. Se eligieron en bloque comparando siete criterios sobre los
+  mismos 60 días de control y 27 eventos, y esa era su debilidad. Ahora cada uno
+  tiene su barrido y su prueba de significación. Lo que queda no es revisarlos
+  otra vez, es **ampliar el corpus**: con 32 hechos, el listón que impone la
+  corrección por búsqueda múltiple deja fuera casi cualquier ajuste.
 - **El error medio ya no sirve para juzgar un cambio de prompt.** Cayó a 0,14
   con `v6`, pero las etiquetas del corpus se movieron hacia donde apuntaba el
   modelo, así que parte de esa mejora es tautológica. La evidencia independiente
