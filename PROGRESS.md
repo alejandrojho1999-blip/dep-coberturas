@@ -71,12 +71,17 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   (principal 59%, control_2014 40%, control_shocks 60%). Ver la entrada de la
   sesión.
 - **La curva sigue sin poder aplicarse, pero ya solo por una razón: el tamaño de
-  la muestra.** 6 de los 8 peldaños tienen menos de 5 casos, y con eso la
-  proporción solo puede valer unos pocos valores: la curva describe el sorteo
-  más que el fenómeno. `ajustar.mts` lo avisa. El aviso de saturación ya no
-  salta.
-  **Lo que hace falta ahora es corpus**: más eventos curados, sobre todo en los
-  peldaños 2, 3 y 4 de ambos temas. Con 32 hechos sigue sin poder cerrarse.
+  la muestra.** 4 de los 7 peldaños tienen menos de 5 casos (eran 5 de 7), y con
+  eso la proporción solo puede valer unos pocos valores. `ajustar.mts` lo avisa.
+  **El aviso de saturación ya no salta**, por primera vez desde que existe la
+  curva. **Lo que hace falta sigue siendo corpus**: con 44 hechos aún no se
+  cierra. Los peldaños flacos son `guerra 4/5` (n=3), `guerra 5/5` (n=1),
+  `fed_tesoro 2/5` (n=4) y `fed_tesoro 4/5` (n=3).
+- **Ampliar el corpus con hechos importantes da menos de lo que parece, pero
+  con hechos anodinos da mucho.** La ampliación del 2026-09-03 (32 → 44) bajó los
+  peldaños flacos de 5 a 4 y, sobre todo, hizo significativo el criterio entero
+  (p=0,102 → p=0,028). El motivo es que el clasificador reparte los hechos
+  rutinarios por los peldaños intermedios, que son justo los que estaban vacíos.
 - **Ampliar el corpus da menos de lo que parece, y conviene saber por qué.** El
   2026-09-02 se pasó de 27 a 32 eventos y los peldaños flacos siguieron siendo
   6 de 8: el clasificador concentra sus respuestas en el 3 y el 5, así que
@@ -155,13 +160,17 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   Los seis restantes se confirmaron donde estaban, con una corrección por
   búsqueda múltiple que fija el listón honesto en 27 puntos y no en cero. Lo que
   queda no es volver a barrer, es ampliar el corpus.
-- **La curva ha dejado de bajar la severidad y ahora la sube.** Con el oro al
-  3,6% cruzan 24 de los 32 hechos en vez de 18, y todos los peldaños suben. No
-  es un fallo del arreglo: el umbral del 6% estaba tapando el sesgo de selección
-  del corpus, que solo contiene hechos importantes. `ajustar.mts` lo avisa y
-  `aplicarCurva` no está cableada al motor, así que no hay riesgo en producción.
-  **Lo que falta son hechos anodinos en el corpus**, en los mismos peldaños que
-  los graves.
+- ~~**La curva ha dejado de bajar la severidad y ahora la sube**~~ — **resuelto
+  el 2026-09-03** ampliando el corpus con doce hechos anodinos. El aviso de
+  saturación dejó de saltar y `fed_tesoro 5/5` se corrige a la baja por primera
+  vez. Ver la entrada de la sesión en «Completado».
+- **El prompt descarta ataques en suelo ruso, pero no siempre.** De los seis
+  hechos que saca de su dominio, cuatro son ataques en territorio ruso —Crimea,
+  Kursk, el puente de Kerch, los drones del Kremlin— y sin embargo **Bélgorod,
+  que es lo mismo, lo juzga con un 2/5**. No es una regla, es una
+  inconsistencia: en producción un ataque dentro de Rusia entrará o no en el
+  canal según cómo esté redactado el titular. Es pendiente del prompt, no del
+  corpus.
 - ~~**Los cinco agujeros del prompt**~~ — **cerrados el 2026-09-02**, con la
   medición delante: descartados **10 → 1**, y los cinco casos recuperados con el
   peldaño correcto o cerca. Ver la entrada de la sesión en «Completado».
@@ -459,6 +468,62 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — el corpus deja de estar hecho solo de hechos importantes
+
+El pendiente que dejó el arreglo del oro: la curva había pasado a **subir** la
+severidad porque el corpus solo contenía sucesos que fueron importantes. El
+umbral del 6% tapaba ese sesgo por accidente; medir bien quitó la venda.
+
+**Doce hechos anodinos añadidos. El corpus pasa de 32 a 44.**
+
+El criterio de selección es la parte delicada. **No** se eligieron por no haber
+movido el precio —eso sería hacer trampa, porque el desenlace es lo que se
+mide—, sino por su **perfil antes del desenlace**: sucesos que un clasificador
+puntúa alto. Cinco de `guerra` (puente de Kerch, Przewodów, drones del Kremlin,
+Bélgorod, restos de dron en Rumanía) y siete de `fed_tesoro` (seis FOMC de
+trámite y el IPC de julio de 2024). Todas las fechas verificadas contra fuente
+—Federal Reserve, BLS, CNN, Al Jazeera, NBC, Kyiv Independent— antes de
+escribirlas.
+
+**Przewodów es el ejemplar de la colección**: dos muertos en suelo aliado,
+reunión de urgencia del G7, artículo 4 sobre la mesa. Un titular de peldaño 5
+que en horas resultó ser un S-300 de la defensa aérea ucraniana. El modelo le da
+2/5 y el precio tampoco se enteró.
+
+**Resultados:**
+- **El aviso de saturación ha dejado de saltar**, por primera vez desde que
+  existe la curva.
+- **`fed_tesoro 3/5` aparece por primera vez, con n=7** (los seis FOMC y el
+  IPC). Su P(mov) es del **29%**, por debajo de la línea base del 43,3%: una
+  reunión rutinaria de la Fed mueve el precio **menos que un día cualquiera**.
+- **Un peldaño 5 se corrige a la baja por primera vez**: `fed_tesoro 5/5` → 4/5.
+- Peldaños flacos: de 5 de 7 a **4 de 7**.
+
+**El resultado que más cuenta, y es contraintuitivo.** Todas las separaciones
+individuales **bajan** (WTI +18 → +14, VIX +18 → +11, oro +19 → +9) y sin
+embargo el criterio completo **mejora**: el test de permutación pasa de
+**p=0,102 a p=0,028**. Con 32 hechos seleccionados el corpus no se distinguía
+del ruido; con 44 honestos, sí. Un corpus sesgado infla las cifras individuales
+y hunde la prueba de conjunto.
+
+**El 3,6% del oro queda confirmado fuera de muestra.** Se eligió con los 32
+viejos; medido contra los 44 —doce de los cuales no existían cuando se decidió—
+sigue ganando al 6% por **+10 puntos [2, 20]**, mejorando en el 98% de los
+remuestreos, con el tramo llano todavía entre el 3,4% y el 3,8%.
+
+**Dos hallazgos laterales:**
+- **El prompt descarta ataques en suelo ruso, pero no siempre.** Cuatro de los
+  seis descartados lo son —Crimea, Kursk, Kerch, Kremlin— y Bélgorod, que es lo
+  mismo, se juzga con un 2/5. Anotado como pendiente del prompt.
+- **El error medio sube de 0,14 a 0,29, y era de esperar.** El 0,14 de `v6` era
+  tautológico: las etiquetas se habían movido hacia el modelo. Los doce nuevos
+  no pasaron por eso, así que 0,29 es la primera medida honesta.
+
+Un error propio corregido de paso: los drones del Kremlin quedaron etiquetados
+como `incursion-otan` un rato, y el suelo es ruso, no aliado. Pasan a `invasion`.
+
+Verde: **975/975 tests**, `tsc` y ESLint limpios.
 
 ### Sesión del 2026-09-03 — el oro estaba midiendo con el listón de otro activo
 

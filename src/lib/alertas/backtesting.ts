@@ -251,7 +251,7 @@ export interface PerfilActivo {
    *
    * Es la única columna que dice si el activo sirve. Se compara en tasa y no en
    * cuenta porque los dos grupos tienen tamaños distintos: 60 fechas de control
-   * frente a 32 hechos. Un activo con separación cercana a cero cruza igual
+   * frente a los hechos del corpus. Un activo con separación cercana a cero cruza igual
    * pase o no pase algo, así que solo añade ruido al veredicto.
    */
   separacion: number | null

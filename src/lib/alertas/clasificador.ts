@@ -248,7 +248,7 @@ export function normalizar(bruto: RespuestaLlm | null, tipo: TipoAlerta): Clasif
  *   es la hora real y no hay que pasarlo. Existe para la recalibración: el
  *   prompt descarta por diseño todo lo anterior a 48 horas, así que reejecutarlo
  *   sobre el corpus histórico con la hora de hoy daría `relevante: false` en los
- *   27 eventos y no mediría nada. Pasando la fecha del suceso, el modelo juzga
+ *   el corpus entero y no mediría nada. Pasando la fecha del suceso, el modelo juzga
  *   el titular como lo habría juzgado el día que ocurrió.
  */
 export async function clasificarTitular(

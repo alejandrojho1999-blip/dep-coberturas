@@ -1,7 +1,7 @@
 /**
  * El grupo de control del corpus: qué hace el precio en un día cualquiera.
  *
- * Sin esto la calibración no se puede cerrar. Los 27 eventos del corpus se
+ * Sin esto la calibración no se puede cerrar. Los eventos del corpus se
  * eligieron por haber sido importantes, así que casi todos movieron el mercado
  * y P(movimiento) sale altísima en todos los peldaños. Falta el denominador: si
  * en una fecha al azar la probabilidad de que algún activo supere su umbral es

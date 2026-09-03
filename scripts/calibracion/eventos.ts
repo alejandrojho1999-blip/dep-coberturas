@@ -326,6 +326,115 @@ export const EVENTOS: readonly EventoHistorico[] = [
     severidad: 3, verificado: true,
     nota: 'La última agencia en quitar el AAA, que mantenía desde 1917. Tercera repetición del mismo suceso: la serie dice si el efecto se agota.',
   },
+
+  // ── Ampliación del 2026-09-03 · hechos anodinos ───────────────────────────
+  // El corpus tenía un sesgo de selección que el arreglo del umbral del oro
+  // destapó: solo contenía hechos que FUERON importantes, así que casi todos
+  // movían el precio y la curva pasó a subir la severidad en vez de bajarla.
+  // Estos doce se eligieron por lo contrario a los anteriores: son sucesos que
+  // un clasificador puntúa alto —muertos en suelo OTAN, drones sobre el
+  // Kremlin, decisiones del FOMC— y que el mercado se tomó como un martes
+  // cualquiera. No son eventos de relleno: cada uno abrió telediarios.
+  //
+  // Ojo con leerlos al revés: NO son eventos elegidos porque no movieran el
+  // precio. Eso sería hacer trampa, porque el desenlace es justo lo que se está
+  // midiendo. Se eligieron por su perfil ANTES del desenlace —alta cobertura,
+  // aire de escalada, decisión de tasas programada— y lo que hicieran después
+  // lo dice la medición, no esta lista.
+  //
+  // Todas las fechas comprobadas contra fuente (Federal Reserve, BLS, CNN,
+  // Al Jazeera, NBC, Wikipedia, Kyiv Independent) el 2026-09-03.
+  {
+    fecha: '2022-10-08', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
+    titulo: 'Explosión en el puente de Kerch, el enlace de Rusia con Crimea',
+    severidad: 3, verificado: true,
+    nota: 'Infraestructura estratégica volada un día después del cumpleaños de Putin, que lo '
+      + 'llamó terrorismo. La respuesta material llegó dos días más tarde y dentro de la '
+      + 'ventana: la campaña de misiles del 10 de octubre. Es lo que lo separa de un 2.',
+  },
+  {
+    fecha: '2022-11-15', tramo: 'principal', tema: 'guerra', clase: 'victimas-otan',
+    titulo: 'Un misil cae en Przewodów, Polonia, y mata a dos personas; Polonia sopesa el artículo 4',
+    severidad: 2, verificado: true,
+    nota: 'La noche que más cerca estuvo la guerra de tocar a la OTAN: dos muertos en suelo '
+      + 'aliado, reunión de urgencia del G7 y el artículo 4 sobre la mesa. En horas se supo que '
+      + 'era un S-300 de la defensa aérea ucraniana y no hubo respuesta material ninguna. Es el '
+      + 'caso más puro de titular de peldaño 5 con desenlace de peldaño 2.',
+  },
+  {
+    fecha: '2023-05-03', tramo: 'principal', tema: 'guerra', clase: 'invasion',
+    titulo: 'Dos drones estallan sobre el Kremlin; Moscú lo llama intento de magnicidio',
+    severidad: 2, verificado: true,
+    nota: 'El Kremlin acusó a Ucrania de intentar matar a Putin y prometió represalias. Putin '
+      + 'no estaba en el edificio, no hubo heridos y la autoría sigue en disputa. Ninguna '
+      + 'respuesta material siguió a la amenaza. Clase `invasion` (ataque entre Estados) y no '
+      + '`incursion-otan`: el suelo es ruso, no aliado. Estuvo mal etiquetado unas horas el '
+      + '2026-09-03.',
+  },
+  {
+    fecha: '2023-05-22', tramo: 'principal', tema: 'guerra', clase: 'invasion',
+    titulo: 'Milicias armadas desde Ucrania entran en la provincia rusa de Bélgorod',
+    severidad: 2, verificado: true,
+    nota: 'La mayor incursión en territorio ruso desde el inicio de la guerra: varios pueblos '
+      + 'tomados durante un día. Rusia dijo haber matado a más de 70 atacantes y ahí acabó. '
+      + 'Precedente directo de Kursk, que catorce meses después tampoco movió nada.',
+  },
+  {
+    fecha: '2023-09-06', tramo: 'principal', tema: 'guerra', clase: 'incursion-otan',
+    titulo: 'Rumanía confirma restos de dron ruso en su territorio, en Tulcea',
+    severidad: 2, verificado: true,
+    nota: 'Primera vez que un país OTAN confirma material ruso caído en su suelo por la guerra. '
+      + 'La OTAN dijo no tener indicios de ataque intencionado y no hubo respuesta. Se repitió '
+      + 'varias veces ese mismo mes, que es lo que lo hace útil como clase.',
+  },
+  {
+    fecha: '2023-09-20', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
+    titulo: 'La Fed mantiene los tipos en el 5,25-5,50%',
+    severidad: 2, verificado: true,
+    nota: 'Pausa esperada y sin sorpresa en el comunicado. Es el primero de los seis FOMC de '
+      + 'trámite que entran en el corpus: la pregunta que responden como clase no es cuánto '
+      + 'movió esta reunión, sino cuánto mueve una reunión rutinaria en general.',
+  },
+  {
+    fecha: '2023-11-01', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
+    titulo: 'La Fed mantiene los tipos por segunda reunión consecutiva',
+    severidad: 2, verificado: true,
+    nota: 'Segunda pausa seguida, ya plenamente descontada por el mercado antes de la reunión.',
+  },
+  {
+    fecha: '2024-01-31', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
+    titulo: 'La Fed mantiene los tipos y descarta un recorte en marzo',
+    severidad: 2, verificado: true,
+    nota: 'Powell descartó explícitamente marzo, que era lo único que el mercado esperaba oír. '
+      + 'Aun así, decisión sin sorpresa en el instrumento.',
+  },
+  {
+    fecha: '2024-03-20', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
+    titulo: 'La Fed mantiene los tipos y su diagrama de puntos sigue apuntando a tres recortes',
+    severidad: 2, verificado: true,
+    nota: 'La proyección se mantuvo pese a dos datos de inflación peores de lo previsto. '
+      + 'Reunión con proyecciones, que es la variante que más suele mover, y aun así rutinaria.',
+  },
+  {
+    fecha: '2024-05-01', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
+    titulo: 'La Fed mantiene los tipos y ralentiza la reducción del balance',
+    severidad: 2, verificado: true,
+    nota: 'Anuncio técnico sobre el balance, esperado y bien telegrafiado con antelación.',
+  },
+  {
+    fecha: '2024-06-12', tramo: 'principal', tema: 'fed_tesoro', clase: 'fomc-decision',
+    titulo: 'La Fed mantiene los tipos el mismo día que se publica el IPC de mayo',
+    severidad: 2, verificado: true,
+    nota: 'Dos catalizadores programados en la misma sesión, que es el caso donde más cabría '
+      + 'esperar movimiento. Entra por eso: si tampoco mueve, dice bastante.',
+  },
+  {
+    fecha: '2024-08-14', tramo: 'principal', tema: 'fed_tesoro', clase: 'dato-macro',
+    titulo: 'El IPC de julio baja al 2,9% interanual, el primer dato por debajo del 3% desde 2021',
+    severidad: 2, verificado: true,
+    nota: 'Titular redondo —mínimo de tres años— con la subyacente en el 3,2%, exactamente lo '
+      + 'previsto. Segundo `dato-macro` del corpus, que hasta ahora tenía uno solo.',
+  },
 ] as const
 
 export function eventosDe(tramo: Tramo): EventoHistorico[] {

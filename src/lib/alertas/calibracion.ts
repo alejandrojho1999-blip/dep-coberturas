@@ -98,6 +98,13 @@
  * (+3,9%). Crimea es la comprobación que más tranquiliza: era el caso que el
  * informe citaba como «movió su mercado y el sistema dice que no».
  *
+ * **Confirmación fuera de muestra del 3,6%, ese mismo día.** El umbral se
+ * eligió con 32 hechos; horas después el corpus creció a 44 con doce hechos
+ * anodinos que no existían cuando se tomó la decisión. Medido sobre ellos, el
+ * 3,6% sigue ganando al 6% por **+10 puntos [2, 20]**, mejorando en el 98% de
+ * los remuestreos, y el tramo llano sigue estando entre el 3,4% y el 3,8%. No
+ * era un artefacto del corpus con el que se ajustó.
+ *
  * **El dólar se revisó el 2026-09-03 y se queda en el 3%, por un motivo que no
  * es el que parecía.** El aviso decía que estaba inerte: percentil 100, cero
  * cruces en las 60 fechas de control y solo 2 de los 32 hechos, aportación
@@ -264,7 +271,7 @@ export function liftSobreBase(p: number, base: number): number {
 /**
  * Impone que la curva no baje al subir el peldaño del LLM.
  *
- * Recorre de menor a mayor arrastrando el máximo visto. Con 27 eventos hay
+ * Recorre de menor a mayor arrastrando el máximo visto. Con este corpus hay
  * peldaños con dos o tres casos, y ahí manda el ruido: esto es lo que impide que
  * un peldaño flaco invierta el orden y el sistema acabe avisando más fuerte de
  * lo pequeño que de lo grande.
@@ -291,7 +298,7 @@ export interface PuntoCurva {
  * Traduce el peldaño del modelo al peldaño que se publica.
  *
  * Sin punto de curva para ese tema y peldaño, devuelve el original **sin
- * tocarlo**. Es lo correcto: la curva se construyó con 27 eventos y hay
+ * tocarlo**. Es lo correcto: la curva se construye con un corpus pequeño y hay
  * combinaciones que no aparecen ni una vez. Inventar una corrección donde no hay
  * dato sería peor que no corregir.
  */

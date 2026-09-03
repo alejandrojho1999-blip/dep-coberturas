@@ -270,34 +270,36 @@ muestra para retirar nada.
 
 ### La curva vigente
 
-Con `v6-corpus-reetiquetado`, los ocho activos, el control emparejado por época,
-el VIX al 25% y el oro al 3,6%, línea base del **43,3%**:
+Con `v7-corpus-anodino`, 44 hechos, los ocho activos, el control emparejado por
+época, el VIX al 25% y el oro al 3,6%, línea base del **43,3%**:
 
 | Tema | Peldaño LLM | n | P(mov) | Lift | → Final |
 | ---- | ----------- | -: | -----: | ---: | ------: |
-| guerra | 2/5 | 11 |  73% |  52% | **3/5** |
-| guerra | 4/5 |  3 |  67% |  41% | 3/5 |
+| guerra | 2/5 | 14 |  64% |  37% | 2/5 |
+| guerra | 4/5 |  3 |  67% |  41% | **3/5** |
 | guerra | 5/5 |  1 | 100% | 100% | 5/5 |
-| fed_tesoro | 2/5 | 3 |  67% |  41% | 3/5 |
-| fed_tesoro | 3/5 | 1 | 100% | 100% | **5/5** |
-| fed_tesoro | 4/5 | 4 |  50% |  12% | **5/5** |
-| fed_tesoro | 5/5 | 5 | 100% | 100% | 5/5 |
+| fed_tesoro | 2/5 |  4 |  75% |  56% | 3/5 |
+| fed_tesoro | 3/5 |  7 |  29% |   0% | 3/5 |
+| fed_tesoro | 4/5 |  3 |  67% |  41% | **3/5** |
+| fed_tesoro | 5/5 |  6 |  83% |  71% | **4/5** |
 
-**Ojo: esta curva ya no baja la severidad, la sube, y el script lo dice en voz
-alta.** Hasta el arreglo del oro, `guerra 2/5` se corregía a la baja (a 1/5) y
-`fed_tesoro 4/5` bajaba a 3/5. Con el oro al 3,6% cruzan 24 de los 32 hechos en
-vez de 18, el lift sube en todos los peldaños y la corrección se da la vuelta.
+**El aviso de saturación ha dejado de saltar.** Es la primera vez desde que
+existe la curva. Entre el arreglo del oro y la ampliación del corpus hubo un
+turno en el que la curva subía la severidad en casi todos los peldaños; con los
+doce hechos anodinos dentro, vuelve a corregir a la baja donde debe y a dejar
+quieto lo demás.
 
-Esto **no es un efecto secundario del arreglo, es un problema que el arreglo
-destapa**. El umbral del 6% estaba compensando por accidente el sesgo de
-selección del corpus: como solo contiene hechos que fueron importantes, casi
-todos mueven el precio, y hacía falta un listón artificialmente alto para que
-eso no se notara. Medir bien el movimiento quita la venda. Lo que falta no es
-subir otra vez el umbral del oro, sino **hechos anodinos en el corpus**, en los
-mismos peldaños que los graves.
+**La fila que más dice es `fed_tesoro 3/5`**, que no existía antes y ahora tiene
+n=7: son los seis FOMC de trámite y el IPC en línea. Su P(mov) es del **29%**,
+por debajo de la línea base del 43,3%. Es decir, **una reunión rutinaria de la
+Fed mueve el precio menos que un día cualquiera**. El lift sale a 0 y el peldaño
+se queda en 3/5 en vez de subir.
 
-Mientras tanto no hay riesgo en producción: `aplicarCurva` no está cableada al
-motor todavía, y el script se niega a bendecir la curva con un aviso explícito.
+Y por primera vez **un peldaño 5 se corrige a la baja**: `fed_tesoro 5/5` pasa a
+4/5, con n=6.
+
+Sigue sin poder aplicarse en producción: 4 de los 7 peldaños tienen menos de 5
+casos, y `aplicarCurva` no está cableada al motor.
 
 La curva se fuerza monótona: un peldaño más alto del LLM nunca puede acabar
 dando uno final más bajo. Los peldaños que no aparecen se publican sin corregir,
@@ -379,6 +381,90 @@ Dos gotchas que cuestan tiempo si no se saben:
 - **Editar `eventos.ts` no basta.** `cargar.mts` sube la severidad del JSON que
   dejó `medir.mts`, así que hay que volver a medir antes de cargar o se sube la
   etiqueta vieja sin que nada falle.
+
+## El corpus deja de estar hecho solo de hechos importantes
+
+El arreglo del oro destapó un sesgo que llevaba ahí desde el principio: **el
+corpus solo contenía sucesos que fueron importantes**. Con un listón alto eso no
+se notaba, pero al medir bien el movimiento salió a la luz — casi todos los
+hechos movían el precio, y la curva pasó a *subir* la severidad en vez de
+bajarla.
+
+**Se añadieron doce hechos anodinos el 2026-09-03.** El corpus pasa de 32 a
+**44**.
+
+El criterio de selección es lo importante, y es fácil de hacer mal. **No** se
+eligieron por no haber movido el precio: eso sería hacer trampa, porque el
+desenlace es justo lo que se mide. Se eligieron por su **perfil antes del
+desenlace** — sucesos que un clasificador puntúa alto: muertos en suelo OTAN,
+drones sobre el Kremlin, decisiones programadas del FOMC. Lo que hicieran
+después lo dijo la medición.
+
+| Fecha | Hecho | El modelo da |
+| ----- | ----- | -----------: |
+| 2022-10-08 | Explosión en el puente de Kerch | descartado |
+| 2022-11-15 | Misil en Przewodów, dos muertos en Polonia | 2/5 |
+| 2023-05-03 | Drones sobre el Kremlin | descartado |
+| 2023-05-22 | Incursión armada en Bélgorod | 2/5 |
+| 2023-09-06 | Restos de dron ruso en Rumanía | 2/5 |
+| 2023-09-20 | La Fed mantiene tipos | 2/5 |
+| 2023-11-01 | La Fed mantiene tipos | 2/5 |
+| 2024-01-31 | La Fed mantiene y descarta marzo | 3/5 |
+| 2024-03-20 | La Fed mantiene, tres recortes en el dot plot | 3/5 |
+| 2024-05-01 | La Fed mantiene y ralentiza el balance | 3/5 |
+| 2024-06-12 | La Fed mantiene, mismo día que el IPC | 3/5 |
+| 2024-08-14 | IPC de julio al 2,9%, mínimo de tres años | 3/5 |
+
+**Przewodów es el ejemplar de la colección.** Dos muertos en suelo aliado,
+reunión de urgencia del G7, el artículo 4 sobre la mesa: un titular de peldaño
+5. En horas se supo que era un S-300 de la defensa aérea ucraniana. El modelo le
+da 2/5 y el precio tampoco se enteró.
+
+### Lo que cambia al medirlo
+
+**Todas las separaciones bajan, y eso es la señal de que el corpus era el
+problema**, no el instrumento:
+
+| Activo | Separación con 32 | con 44 |
+| ------ | ----------------: | -----: |
+| WTI | +18 pts | +14 pts |
+| VIX | +18 pts | +11 pts |
+| Oro | +19 pts | +9 pts |
+| Nasdaq | +12 pts | +7 pts |
+| S&P 500 | +12 pts | +5 pts |
+
+**Y sin embargo el criterio completo mejora.** Con el test de permutación —
+barajar la etiqueta hecho/control y ver qué separación sale por azar— el
+criterio pasa de **p=0,102 a p=0,028**. Con 32 hechos seleccionados no se
+distinguía del ruido; con 44 honestos, sí. Es el resultado que más cuenta de
+toda la ampliación: **un corpus sesgado infla las cifras individuales y hunde la
+prueba de conjunto.**
+
+### El 3,6% del oro, confirmado fuera de muestra
+
+El umbral se eligió con los 32 hechos viejos. Medido contra el corpus de 44,
+donde doce hechos no existían cuando se tomó la decisión, sigue ganando al 6%
+por **+10 puntos [2, 20]**, mejorando en el **98%** de los remuestreos, y el
+tramo llano sigue entre el 3,4% y el 3,8%. No era un artefacto.
+
+### Un hallazgo lateral: el prompt descarta ataques en suelo ruso, pero no siempre
+
+De los seis hechos que el prompt saca de su dominio, cuatro son ataques **en
+territorio ruso**: Crimea, Kursk, el puente de Kerch y los drones del Kremlin. Y
+sin embargo **Bélgorod, que es exactamente lo mismo, lo juzga con un 2/5**.
+
+No es una regla, es una inconsistencia. El criterio de dominio dice «ataque
+atribuido a un Estado contra ciudadanos o territorio de la OTAN», y bajo esa
+lectura los cinco deberían descartarse igual. En producción esto significa que
+un ataque dentro de Rusia entra o no en el canal según cómo esté redactado el
+titular. Queda anotado como pendiente del prompt, no del corpus.
+
+### El error medio sube de 0,14 a 0,29, y era de esperar
+
+`v6` daba 0,14 porque las etiquetas del corpus se habían movido hacia donde
+apuntaba el modelo: era una cifra tautológica, y este informe ya lo advertía.
+Los doce hechos nuevos no pasaron por ese proceso, así que **0,29 es la primera
+medida honesta** de la distancia entre el modelo y el analista.
 
 ## El oro estaba midiendo con el listón de otro activo
 

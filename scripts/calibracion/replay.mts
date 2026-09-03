@@ -13,7 +13,8 @@
  * Cada reejecución se etiqueta con `prompt_version`, para poder comparar dos
  * revisiones del prompt sin borrar la anterior.
  *
- * Cuesta llamadas al LLM: 27 eventos, una llamada cada uno. No es un cron.
+ * Cuesta llamadas al LLM: una por evento del corpus, 44 a fecha de 2026-09-03.
+ * No es un cron.
  *
  * Uso:
  *   npm run calibracion:replay                    # etiqueta con la fecha de hoy
