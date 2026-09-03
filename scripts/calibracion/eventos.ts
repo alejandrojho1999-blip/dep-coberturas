@@ -51,6 +51,7 @@ export type ClaseEvento =
   | 'victimas-otan'         // daño o muertes en suelo OTAN
   | 'articulo-4'            // consultas formales de la Alianza
   | 'sabotaje'              // infraestructura crítica
+  | 'corte-suministro'      // corte o embargo deliberado de energía, sin daño físico
   | 'amenaza-nuclear'       // retórica o ejercicio nuclear
   | 'declaracion'           // dicho, no hecho
   | 'inestabilidad-interna' // motín, purga, crisis de mando
@@ -434,6 +435,100 @@ export const EVENTOS: readonly EventoHistorico[] = [
     severidad: 2, verificado: true,
     nota: 'Titular redondo —mínimo de tres años— con la subyacente en el 3,2%, exactamente lo '
       + 'previsto. Segundo `dato-macro` del corpus, que hasta ahora tenía uno solo.',
+  },
+
+  // ── Ampliación del 2026-09-03 · peldaños altos de `guerra` ────────────────
+  // La curva tenía `guerra 3/5` con n=1 y `5/5` con n=1, y con la regresión
+  // isotónica eso significa que un solo evento fija el bloque de dos peldaños.
+  // Estos ocho apuntan a la banda 3-5: amenaza nuclear con acto detrás, cambio
+  // de control territorial y cortes de suministro con tamaño de mercado, que es
+  // el peldaño 3 tal y como lo define el prompt y el que nunca se había podido
+  // llenar.
+  //
+  // ⚠️ Dos de ellos solapan su ventana de 5 sesiones con un evento que ya
+  // estaba en el corpus, y se dice aquí porque no son observaciones
+  // independientes: 2022-02-27 cae dentro de la ventana de la invasión
+  // (2022-02-24) y 2022-09-30 dentro de la del Nord Stream (2022-09-26). Se
+  // incluyen igual porque son las anclas canónicas de sus peldaños, pero cuenta
+  // como muestra prestada, no nueva. Se descartaron por esta misma razón el
+  // reconocimiento del Donbás (2022-02-21) y el misil Oreshnik (2024-11-21),
+  // que eran el mismo ciclo de noticias que un evento ya presente.
+  //
+  // Todas las fechas comprobadas contra fuente (Al Jazeera, CNN, Washington
+  // Post, NATO/SHAPE, Moscow Times, Enerdata, Consilium UE, History) el
+  // 2026-09-03.
+  {
+    fecha: '2022-02-27', tramo: 'principal', tema: 'guerra', clase: 'amenaza-nuclear',
+    titulo: 'Putin pone las fuerzas de disuasión nuclear en «régimen especial de servicio de combate»',
+    severidad: 4, verificado: true,
+    nota: 'El ancla canónica de «amenaza nuclear CON acto detrás»: no es retórica, es una orden '
+      + 'de cambio de alerta que Shoigú confirmó ejecutada al día siguiente. Ojo con la '
+      + 'medición: su ventana solapa con la de la invasión del 24 de febrero, así que su '
+      + 'movimiento es en buena parte el de aquella.',
+  },
+  {
+    fecha: '2022-04-27', tramo: 'principal', tema: 'guerra', clase: 'corte-suministro',
+    titulo: 'Gazprom corta el gas a Polonia y Bulgaria por negarse a pagar en rublos',
+    severidad: 3, verificado: true,
+    nota: 'La primera vez que Rusia usa el suministro como arma contra Estados de la UE. Es un '
+      + 'corte real y con tamaño de mercado, que es lo que el peldaño 3 pide y casi nunca '
+      + 'encuentra: dos países enteros, no un interconector bilateral.',
+  },
+  {
+    fecha: '2022-09-02', tramo: 'principal', tema: 'guerra', clase: 'corte-suministro',
+    titulo: 'Gazprom cierra el Nord Stream 1 indefinidamente alegando una avería en la turbina',
+    severidad: 4, verificado: true,
+    nota: 'El mayor corte de volumen de toda la guerra: la arteria principal de gas ruso a '
+      + 'Europa, cerrada sin fecha. Por la regla del propio prompt —lo que separa un peldaño '
+      + 'de otro en el suministro es cuánta energía deja de circular— esto es el techo, y por '
+      + 'eso es un 4 mientras los cables del Báltico son un 2. Sucedió tres semanas antes del '
+      + 'sabotaje que lo destruyó físicamente.',
+  },
+  {
+    fecha: '2022-09-30', tramo: 'principal', tema: 'guerra', clase: 'invasion',
+    titulo: 'Putin proclama la anexión de Donetsk, Lugansk, Jersón y Zaporiyia',
+    severidad: 4, verificado: true,
+    nota: 'Cambio de control territorial declarado sobre cuatro provincias, que es el mismo '
+      + 'tipo de hecho que la anexión de Crimea y el único que llega al 4 en suelo reclamado. '
+      + 'Su ventana solapa con la del sabotaje del Nord Stream del 26 de septiembre.',
+  },
+  {
+    fecha: '2022-12-05', tramo: 'principal', tema: 'guerra', clase: 'corte-suministro',
+    titulo: 'Entra en vigor el embargo de la UE al crudo ruso por mar y el tope de precio del G7 en 60 dólares',
+    severidad: 3, verificado: true,
+    nota: 'Intervención sobre el mayor exportador de crudo del mundo, con fecha conocida de '
+      + 'antemano. Entra al corpus precisamente por eso: es el caso que dice si un corte de '
+      + 'suministro anunciado con meses de margen mueve el precio el día que llega, o si el '
+      + 'mercado lo agotó antes.',
+  },
+  {
+    fecha: '2023-03-25', tramo: 'principal', tema: 'guerra', clase: 'amenaza-nuclear',
+    titulo: 'Putin anuncia el despliegue de armas nucleares tácticas en Bielorrusia',
+    severidad: 3, verificado: true,
+    nota: 'Está entre los dos peldaños que el prompt define: es más que una doctrina declarada '
+      + '—un 2— porque trae calendario y obra (instrucción de tripulaciones el 3 de abril, '
+      + 'almacén para el 1 de julio) y menos que un cambio de alerta ya ejecutado —un 4—. Se '
+      + 'etiqueta 3 a propósito, para tener un caso en el hueco.',
+  },
+  {
+    fecha: '2023-06-06', tramo: 'principal', tema: 'guerra', clase: 'sabotaje',
+    titulo: 'Vuela la presa de Kajovka y el bajo Dniéper se inunda',
+    severidad: 2, verificado: true,
+    nota: 'Destrucción de infraestructura crítica con desastre humanitario y ambiental de '
+      + 'primer orden, y aun así un 2 por la regla del volumen: lo que se pierde es agua y '
+      + 'terreno, no energía ni tráfico que coticen. Es el contraste que hace falta frente al '
+      + 'Nord Stream, para que la clase `sabotaje` no se lea como «cuanto más espectacular, '
+      + 'más peldaño».',
+  },
+  {
+    fecha: '2008-08-08', tramo: 'control_shocks', tema: 'guerra', clase: 'invasion',
+    titulo: 'Rusia invade Georgia tras la entrada georgiana en Tsjinvali',
+    severidad: 4, verificado: true,
+    nota: 'Guerra abierta entre Estados con Rusia dentro, catorce años antes de Ucrania. Es el '
+      + 'único precedente de invasión rusa que hay fuera del tramo principal y sirve para '
+      + 'preguntar si un 5 lo es por el hecho o por el régimen: ocurrió en pleno agosto de '
+      + '2008, con el crudo desplomándose desde su máximo de julio y el sistema financiero ya '
+      + 'crujiendo, así que el ruido de fondo era enorme.',
   },
 ] as const
 

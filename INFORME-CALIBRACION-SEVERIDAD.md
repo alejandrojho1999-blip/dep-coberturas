@@ -119,26 +119,32 @@ criterio estaba saturado —si casi cualquier semana cuenta como movimiento,
 
 `calibracion:normalidad` es lo que permite ver a qué distancia queda una sesión
 corriente del umbral de un evento. Sobre 60 fechas de control **emparejadas por
-época** y 32 hechos:
+época** y los 52 hechos del corpus:
 
 | Activo | Umbral | Mediana normal | p90 | Máx | Cruza sin noticia | Cruza con noticia | Separación |
 | ------ | -----: | -------------: | --: | --: | ----------------: | ----------------: | ---------: |
-| WTI     | 12% | 4,9% |  9,8% |  22,9% |  4/60 |  8/32 | **+18 pts** |
-| VIX     | 25% | 8,8% | 31,4% | 102,9% | 10/60 | 11/32 | **+18 pts** |
-| **Oro** | **3,6%** | 2,0% |  5,6% |  17,9% | 11/60 | 12/32 | **+19 pts** |
-| Bitcoin | 16% | 6,2% | 18,2% |  20,8% |  7/47 |  7/25 | +13 pts |
-| S&P 500 |  5% | 2,4% |  5,3% |   9,5% |  8/60 |  8/32 | +12 pts |
-| Nasdaq  |  6% | 2,9% |  7,1% |  12,1% |  8/60 |  8/32 | +12 pts |
-| Dólar   |  3% | 1,0% |  1,7% |   2,5% |  0/60 |  2/32 | +6 pts |
-| Plata   | 10% | 3,1% |  7,8% |  23,9% |  4/60 |  4/32 | +6 pts |
+| WTI     |   12% | 4,9% |  9,8% |  22,9% |  4/60 | 11/52 | **+14 pts** |
+| Oro     | 3,6% | 2,0% |  5,6% |  17,9% | 11/60 | 15/52 | **+11 pts** |
+| VIX     |   25% | 8,8% | 31,4% | 102,9% | 10/60 | 13/52 | +8 pts |
+| Plata   |   10% | 3,1% |  7,8% |  23,9% |  4/60 |  7/52 | +7 pts |
+| Dólar   |    3% | 1,0% |  1,7% |   2,5% |  0/60 |  3/52 | +6 pts |
+| Nasdaq  |    6% | 2,9% |  7,1% |  12,1% |  8/60 |  9/52 | +4 pts |
+| S&P 500 |    5% | 2,4% |  5,3% |   9,5% |  8/60 |  8/52 | +2 pts |
+| Bitcoin |   16% | 6,2% | 18,2% |  20,8% |  7/47 |  7/44 | +1 pts |
 
 «Separación» es cuánto más cruza el umbral con noticia que sin ella. Se compara
 en tasa y no en cuenta porque los grupos no tienen el mismo tamaño.
 
-Los que mejor separan son el **oro**, el **WTI** y el **VIX**, los tres desde
-que se les revisó el umbral (ver abajo). El oro, que es el ancla de casi todos
-los precedentes del prompt, estuvo en +6 puntos hasta el 2026-09-03 con un
-umbral del 6% que era sencillamente demasiado alto.
+Los que mejor separan son el **WTI** y el **oro**, este último desde que se le
+revisó el umbral (ver abajo): estuvo en +6 puntos hasta el 2026-09-03 con un 6%
+que era sencillamente demasiado alto.
+
+**Estas cifras han bajado a medida que el corpus se hacía honesto**, y conviene
+leerlo bien. Con 32 hechos seleccionados el oro daba +19 y el VIX +18; con los
+52 de hoy dan +11 y +8. No es que los activos hayan empeorado: es que el corpus
+viejo solo contenía sucesos que fueron importantes e inflaba todas las
+separaciones. La prueba de conjunto va en dirección contraria —el test de
+permutación pasó de p=0,102 a p=0,041—, que es el resultado que cuenta.
 
 El VIX llega a un máximo del **102,9%** en una fecha de control sin nada detrás
 —el 18 de enero de 2022, con el desplome que abrió aquel año—. No es un error de
@@ -270,10 +276,10 @@ muestra para retirar nada.
 
 ### La curva vigente
 
-> Esta era la curva de `v7`, calculada con el arrastre al máximo que se retiró
-> ese mismo día. La vigente es `v8-dominio-suelo-ruso` con regresión isotónica:
-> ver «La curva degenerada: el problema no era la monotonía, era cómo se
-> imponía».
+> Esta era la curva de `v7`, calculada con 44 hechos y con el arrastre al máximo
+> que se retiró ese mismo día. La vigente es `v12-dominio-vecinos` sobre 52
+> hechos, con regresión isotónica: ver «La curva vigente» dentro de «La curva
+> degenerada: el problema no era la monotonía, era cómo se imponía».
 
 Con `v7-corpus-anodino`, 44 hechos, los ocho activos, el control emparejado por
 época, el VIX al 25% y el oro al 3,6%, línea base del **43,3%**:
@@ -503,6 +509,10 @@ unas veces sí y otras no.
 
 ### El resultado
 
+> Cifras de `v8`, sobre los 44 hechos de entonces. El prompt siguió cambiando
+> ese mismo día hasta `v12`; ver «Los peldaños altos de `guerra`, y dos agujeros
+> más del dominio».
+
 | | `v7` | `v8-dominio-suelo-ruso` |
 | --- | ---: | ---: |
 | descartados | 6 | **2** |
@@ -558,32 +568,115 @@ marca con un asterisco por eso.
 
 ### La curva vigente
 
-`v8-dominio-suelo-ruso`, 44 hechos, línea base del **43,3%**:
+`v12-dominio-vecinos`, 52 hechos, línea base del **43,3%**:
 
 | Tema | LLM | n | P(mov) | Isotónica | Lift | → Final |
 | ---- | --- | -: | -----: | --------: | ---: | ------: |
-| guerra | 2/5 | 16 |  63% |  63% |  34% | 2/5 |
-| guerra | 3/5 |  1 | 100% | 80% \* |  65% | 4/5 |
-| guerra | 4/5 |  4 |  75% | 80% \* |  65% | 4/5 |
-| guerra | 5/5 |  1 | 100% | 100% | 100% | 5/5 |
-| fed_tesoro | 2/5 |  5 |  80% | 45% \* |   4% | **1/5** |
-| fed_tesoro | 3/5 |  6 |  17% | 45% \* |   4% | **1/5** |
-| fed_tesoro | 4/5 |  3 |  67% |  67% |  41% | **3/5** |
-| fed_tesoro | 5/5 |  6 |  83% |  83% |  71% | **4/5** |
+| guerra | 2/5 | 16 |  56% |  56% |  23% | 2/5 |
+| guerra | 3/5 |  3 |  67% | 64% \* |  36% | **2/5** |
+| guerra | 4/5 |  8 |  63% | 64% \* |  36% | **2/5** |
+| guerra | 5/5 |  2 | 100% | 100% | 100% | 5/5 |
+| fed_tesoro | 2/5 |  5 |  60% | 45% \* |   4% | **1/5** |
+| fed_tesoro | 3/5 |  6 |  33% | 45% \* |   4% | **1/5** |
+| fed_tesoro | 4/5 |  2 |  50% |  50% |  12% | **1/5** |
+| fed_tesoro | 5/5 |  7 |  86% |  86% |  75% | **4/5** |
 
 \* peldaños fundidos.
 
-**`fed_tesoro` vuelve a corregir a la baja en los cuatro peldaños**, que es la
-dirección para la que existe todo esto. El bloque fundido del 2 y el 3 sale al
-45% frente a una línea base del 43,3%: indistinguible de un día cualquiera, y
-por eso baja a 1. El 4 baja a 3 y el 5 a 4.
+**Corrige a la baja en siete de los ocho peldaños**, que es la dirección para la
+que existe todo esto. El único que se queda donde está es `guerra 5/5`, con n=2.
 
-En `guerra` el bloque fundido del 3 y el 4 lo sostiene un peldaño de **n=1**, que
-aporta una quinta parte del peso. Es mucho mejor que antes —cuando ese mismo
-n=1 mandaba a 5 los tres peldaños de encima— pero sigue siendo poca muestra.
+**El hallazgo que más pesa es `guerra 4/5` → 2/5, y ahora con n=8.** Los «4» del
+modelo mueven el precio el 63% de las veces contra una línea base del 43,3%:
+lift del 36%, que es un peldaño 2. Es exactamente lo que esta calibración existe
+para encontrar.
 
-**Lo que no arregla esto es el tamaño del corpus.** Siguen 4 de 8 peldaños con
-menos de 5 casos y `aplicarCurva` sigue sin estar cableada al motor.
+**Lo que no arregla esto es el tamaño del corpus.** Siguen 3 de 8 peldaños con
+menos de 5 casos —`guerra 3/5` (n=3), `guerra 5/5` (n=2) y `fed_tesoro 4/5`
+(n=2)— y `aplicarCurva` sigue sin estar cableada al motor.
+
+## Los peldaños altos de `guerra`, y dos agujeros más del dominio
+
+La regresión isotónica dejó a la vista que `guerra 3/5` y `5/5` tenían **n=1**
+cada uno: un solo evento fijaba el bloque de dos peldaños.
+
+**Ocho hechos añadidos apuntando a la banda 3-5. El corpus pasa de 44 a 52.**
+
+| Fecha | Hecho | Curada |
+| ----- | ----- | -----: |
+| 2022-02-27 | Fuerzas de disuasión nuclear en «régimen especial» | 4 |
+| 2022-04-27 | Gazprom corta el gas a Polonia y Bulgaria | 3 |
+| 2022-09-02 | Cierre indefinido del Nord Stream 1 | 4 |
+| 2022-09-30 | Anexión de Donetsk, Lugansk, Jersón y Zaporiyia | 4 |
+| 2022-12-05 | Embargo de la UE al crudo ruso y tope del G7 | 3 |
+| 2023-03-25 | Nucleares tácticas a Bielorrusia | 3 |
+| 2023-06-06 | Voladura de la presa de Kajovka | 2 |
+| 2008-08-08 | Rusia invade Georgia | 4 |
+
+Con una clase nueva, **`corte-suministro`**: corte o embargo deliberado de
+energía sin daño físico. Tres de los ocho no encajaban en `sabotaje`, y
+agruparlos permite preguntar lo útil — cuánto mueve un corte de suministro en
+general, y no cuánto movió este.
+
+| Peldaño | antes | ahora |
+| ------- | ----: | ----: |
+| `guerra 3/5` | n=1 | **n=3** |
+| `guerra 4/5` | n=4 | **n=8** |
+| `guerra 5/5` | n=1 | **n=2** |
+| peldaños flacos | 4 de 8 | **3 de 8** |
+
+### El primer agujero era una contradicción interna del prompt
+
+El peldaño 3 se define literalmente como «corte de suministro que un operador
+note en el precio de la energía». Y **ningún criterio de dominio admitía un
+corte de suministro**: la escala describía un caso que el filtro rechazaba. Los
+tres cortes entraron al corpus descartados.
+
+Se añadió el criterio que faltaba —corte o embargo deliberado de suministro
+energético entre las partes, aunque no haya daño físico ninguno— y los tres
+pasaron a juzgarse, dos de ellos con el peldaño curado exacto.
+
+### El segundo era el filtro implícito de territorio, otra vez
+
+La voladura de la presa de Kajovka encaja en «sabotaje de infraestructura
+crítica atribuido a un Estado», que no lleva restricción geográfica, y se
+descartaba igual — el mismo fallo que el puente de Kerch antes de arreglar el
+suelo ruso, ahora con la zona de guerra. El criterio dice ya «esté donde esté:
+en la OTAN, en Rusia o en la zona de guerra».
+
+### Ensanchar tuvo su coste, y hubo que medirlo dos veces
+
+Al generalizar a «el dominio sigue al conflicto, no al mapa», el modelo empezó a
+colar **la invasión de Irak con un 5**. Al cerrarlo con «la otra parte ha de ser
+la OTAN, un país miembro o Ucrania», se quedó fuera **la guerra
+ruso-georgiana**. La redacción final admite a los vecinos europeos de Rusia y
+nombra a Irak y al 11-S como los descartes a acertar.
+
+Quedan tres versiones (`v10`, `v11`, `v12`) que documentan el ida y vuelta. Es
+la lección práctica de este apartado: **cada palabra que se ensancha en el
+criterio de dominio hay que medirla en las dos direcciones**, porque el modelo
+generaliza más de lo que uno cree.
+
+### Lo que hay que saber al leer estos números
+
+**Dos de los ocho no son observaciones independientes.** 2022-02-27 cae dentro
+de la ventana de 5 sesiones de la invasión del 24 de febrero, y 2022-09-30
+dentro de la del sabotaje del Nord Stream del 26 de septiembre. Se incluyeron
+por ser las anclas canónicas de sus peldaños, pero cuentan como muestra
+prestada, y así está escrito en el corpus. Por esa razón se descartaron el
+reconocimiento del Donbás (2022-02-21) y el misil Oreshnik (2024-11-21), que
+eran el mismo ciclo de noticias que un evento ya presente.
+
+**El clasificador no es determinista, y ahora hay cifra.** Entre `v9` y `v12`,
+con cuatro pasadas sobre el mismo corpus y cambios de prompt que no les
+afectaban, **tres eventos entraron y salieron del dominio solos**: el IPC de
+mayo de 2022, la reunión de la Fed del 12 de junio de 2024 y el corte de los
+cables del Báltico. Con `temperature: 0.1` y 52 titulares, es un ~6% de filas
+que cambian por muestreo. Una diferencia de una fila entre dos versiones no
+significa nada.
+
+**El criterio sigue siendo significativo** con 52 hechos: el test de permutación
+da **p=0,041**, frente a 0,028 con 44 y 0,102 con 32.
 
 ## El oro estaba midiendo con el listón de otro activo
 
@@ -741,12 +834,24 @@ primero que hay que volver a mirar.
 
 ## Pendiente
 
-- **El corpus sigue siendo pequeño.** Cinco de los siete peldaños de la curva
-  tienen menos de 5 casos, y con esa muestra la proporción solo puede valer unos
-  pocos valores: describe el sorteo más que el fenómeno. `ajustar.mts` lo avisa
-  solo. Ampliar da menos de lo que parece: el clasificador concentra sus
-  respuestas en el 2 y el 5, así que para llenar los huecos hacen falta hechos
-  que **el modelo** puntúe ahí, no que lo merezcan.
+- **El corpus sigue siendo pequeño, aunque cada vez menos.** Van 3 de los 8
+  peldaños con menos de 5 casos, cuando en la mañana del 2026-09-03 eran 5 de 7:
+  quedan `guerra 3/5` (n=3), `guerra 5/5` (n=2) y `fed_tesoro 4/5` (n=2).
+  `ajustar.mts` lo avisa solo. Los 5 de `guerra` son ruptura del marco y por
+  definición escasean; no hay muchos más que añadir sin bajar el listón de lo
+  que es un 5.
+- **Nada de esto cambia si no se cablea `aplicarCurva` al motor.** Hoy la curva
+  se calcula, se escribe en `severity_calibration` y ahí se queda: el único
+  consumidor de la función son sus tests. Es lo correcto mientras 3 peldaños
+  tengan menos de 5 casos, pero conviene tenerlo presente al leer los avances de
+  arriba.
+- **El clasificador no es determinista, y ya hay cifra.** Entre `v9` y `v12`,
+  con cuatro pasadas sobre el mismo corpus y cambios de prompt que no les
+  afectaban, tres eventos entraron y salieron del dominio solos: el IPC de mayo
+  de 2022, la reunión de la Fed del 12 de junio de 2024 y el corte de los cables
+  del Báltico. Con `temperature: 0.1` y 52 titulares, es un ~6% de filas que
+  cambian por muestreo. Una diferencia de una fila entre dos versiones no
+  significa nada.
 - ~~**La cobertura asimétrica de Bitcoin**~~ — **corregida el 2026-09-03**
   emparejando el control por época: pasa de 40%/78% a 78%/78%.
 - ~~**Revisar la cesta de activos**~~ — **revisada el 2026-09-03**: con el
@@ -763,14 +868,17 @@ primero que hay que volver a mirar.
     S&P se quedan como estaban: sus mejores candidatos caen dentro de lo que la
     propia búsqueda regala por azar. Ver «Los otros cinco: por qué no se tocó
     ninguno».
-  - **Falta el gas europeo**, que es por lo que Nord Stream sale como «no movió»
-    pese a haber movido su mercado.
+  - **Falta el gas europeo**, y ahora hay tres casos que lo piden en vez de uno:
+    el sabotaje del Nord Stream, su cierre indefinido tres semanas antes y el
+    corte de Gazprom a Polonia y Bulgaria. Los tres mueven el mercado del gas
+    europeo, que no se mide, así que el veredicto de precio los juzga con
+    instrumentos que no apuntan a donde pasó la cosa.
 - ~~**Revisar los umbrales**~~ — **los ocho revisados uno por uno el
   2026-09-03**. Se eligieron en bloque comparando siete criterios sobre los
   mismos 60 días de control y 27 eventos, y esa era su debilidad. Ahora cada uno
   tiene su barrido y su prueba de significación. Lo que queda no es revisarlos
-  otra vez, es **ampliar el corpus**: con 32 hechos, el listón que impone la
-  corrección por búsqueda múltiple deja fuera casi cualquier ajuste.
+  otra vez, es **ampliar el corpus**: incluso con 52 hechos, el listón que
+  impone la corrección por búsqueda múltiple deja fuera casi cualquier ajuste.
 - **El error medio ya no sirve para juzgar un cambio de prompt.** Cayó a 0,14
   con `v6`, pero las etiquetas del corpus se movieron hacia donde apuntaba el
   modelo, así que parte de esa mejora es tautológica. La evidencia independiente

@@ -46,7 +46,13 @@ Criterios de "relevante" (true solo si se cumple alguno):
 - Amenaza o ejercicio nuclear ruso, o cambio de nivel de alerta.
 - Riesgo nuclear civil: combate, ataque, incendio o pérdida de control en una central o
   instalación nuclear dentro de la zona de guerra.
-- Sabotaje de infraestructura crítica atribuido a un Estado (cables, gasoductos, red eléctrica).
+- Sabotaje o destrucción de infraestructura crítica atribuido a un Estado (cables, gasoductos,
+  red eléctrica, presas), esté donde esté: en la OTAN, en Rusia o en la zona de guerra.
+- Corte o embargo deliberado de suministro energético entre las partes, aunque no haya daño
+  físico ninguno: cierre de un gasoducto, condición de pago que interrumpe el flujo, embargo
+  o tope de precio. Es el hecho que el peldaño 3 describe —«corte de suministro que un
+  operador note en el precio de la energía»— y sin este criterio el dominio rechazaba
+  justamente los casos que la escala dice puntuar.
 - Ruptura o firma de un alto el fuego, o ultimátum formal entre las partes.
 - Escalada mayor EN TERRITORIO RUSO atribuida a un Estado o a fuerzas respaldadas por uno,
   cuando cruza una de estas cuatro barras: control de terreno (incursión o anexión),
@@ -54,15 +60,31 @@ Criterios de "relevante" (true solo si se cumple alguno):
   instalación nuclear. Los ataques rutinarios dentro de Rusia —drones sobre refinerías o
   depósitos, un día cualquiera de la guerra— NO entran: son el ruido de fondo del conflicto.
 
-EL DOMINIO NO TERMINA EN LA FRONTERA DE LA OTAN, Y ESTE ES UN FALLO MEDIDO. El dominio es
-el CONFLICTO entre Rusia y la OTAN, y un conflicto escala por los dos lados de la línea.
-Que un hecho ocurra en suelo ruso no lo saca del dominio: lo que decide es si cambia la
-probabilidad de una respuesta militar. La anexión de Crimea, la incursión de Kursk, la
-voladura del puente de Kerch y los drones sobre el Kremlin son TODOS "relevante": true.
-Se comprobó el 2026-09-03 que se descartaban por error, y que Bélgorod —el mismo tipo de
-hecho— sí se juzgaba: la incoherencia estaba en el clasificador, no en el criterio.
+EL DOMINIO SIGUE AL CONFLICTO, NO AL MAPA, Y ESTE ES UN FALLO MEDIDO DOS VECES. Un
+conflicto escala por los dos lados de la línea. Que un hecho ocurra en suelo ruso o dentro
+de la zona de guerra no lo saca del dominio: lo que decide es si cambia la probabilidad de
+una respuesta militar o corta algo que cotiza. La anexión de Crimea, la incursión de Kursk,
+la voladura del puente de Kerch, los drones sobre el Kremlin y la voladura de la presa de
+Kajovka son TODOS "relevante": true. Se comprobó el 2026-09-03 que se descartaban por
+error, y que Bélgorod —el mismo tipo de hecho— sí se juzgaba: la incoherencia estaba en el
+clasificador, no en el criterio.
+TAMPOCO TERMINA EN LO MILITAR. Un corte de gas o un embargo de crudo no tienen pólvora y
+son de los pocos hechos de esta lista que mueven un precio de verdad. Gazprom cortando el
+gas a Polonia y Bulgaria, el cierre indefinido del Nord Stream 1 y la entrada en vigor del
+embargo europeo al crudo ruso son "relevante": true.
+PERO EL CONFLICTO ES UNO CONCRETO. Nada de lo anterior amplía el dominio a otras guerras:
+para entrar, Rusia —o fuerzas que actúen por ella— tiene que ser parte, y la otra parte ha
+de ser la OTAN, un país miembro, Ucrania o un vecino europeo de Rusia (Georgia, Moldavia,
+los bálticos). Un ataque ruso a un vecino europeo entra aunque ese país no sea aliado: es
+el precedente de lo que puede pasarle a uno que sí lo es, y la guerra ruso-georgiana de
+2008 es el caso a acertar. Lo que queda FUERA es un conflicto en el que Rusia no es parte,
+por grande que sea y aunque encaje en la palabra «invasión»: la invasión de Irak de 2003 y
+los atentados del 11-S son los dos ejemplos que hay que saber descartar. Se comprobó el
+2026-09-03 que al ensanchar este apartado el modelo colaba Irak con un 5, y que al cerrarlo
+de más se dejaba fuera Georgia.
 Ojo con el otro extremo: meter en el dominio el goteo diario de drones sobre refinerías
-rusas lo inunda. La barra son las cuatro de la lista de arriba.
+rusas lo inunda, igual que la enésima ronda de sanciones a diez personas. La barra son las
+cuatro de la lista de arriba, y en el suministro, el tamaño de mercado.
 
 Es FALSE: análisis, opinión, encuestas, declaraciones rutinarias, recapitulaciones,
 aniversarios, deportes, cultura, y cualquier suceso anterior a las últimas 48 horas.
@@ -87,9 +109,13 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   cortado. Lo que separa un peldaño de otro en el sabotaje NO es la audacia del acto ni el
   país afectado, sino cuánta energía o cuánto tráfico deja de circular. Un cable de datos o
   un interconector eléctrico entre dos países no mueve el precio de nada.
-  En suelo ruso solo un tipo de hecho llega al 4: el cambio de control territorial. Anexión
-  de Crimea (18-03-2014, oro -4,5% y ese signo importa poco: lo que cuenta es que cruzó el
-  umbral). Es ruptura del marco, no un incidente más.
+  En suelo ruso o reclamado solo un tipo de hecho llega al 4: el cambio de control
+  territorial. Anexión de Crimea (18-03-2014, oro -4,5% y ese signo importa poco: lo que
+  cuenta es que cruzó el umbral) y proclamación de la anexión de las cuatro provincias
+  (30-09-2022, oro +3,2%). Es ruptura del marco, no un incidente más.
+  Y en el suministro llega al 4 el corte de mayor volumen: cierre indefinido del Nord
+  Stream 1 (02-09-2022, oro +1,2%, S&P +2,5%). Lo que decide sigue siendo cuánta energía
+  deja de circular, no quién lo hizo ni con qué aspavientos.
 - 3 · Incidente con la OTAN al que le sigue una respuesta material CON TAMAÑO DE MERCADO:
   intervención armada de la Alianza, corte de suministro que un operador note en el precio
   de la energía, o cierre de un espacio aéreo o de una ruta comercial de uso general. Es un
@@ -100,6 +126,11 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   corte sea real y dure meses. En suelo ruso la regla es la misma: el puente de Kerch
   (08-10-2022, oro -3,5%, VIX +10,1%) es un 3 porque la campaña de misiles del 10 de octubre
   fue la respuesta material, no porque volar un puente sea espectacular.
+  Aquí caen también los cortes de suministro de tamaño nacional que no llegan al volumen del
+  Nord Stream: Gazprom cortando el gas a Polonia y Bulgaria (27-04-2022, oro -1,7%) y la
+  entrada en vigor del embargo europeo al crudo ruso con el tope del G7 (05-12-2022, VIX
+  +22,1%, S&P -3,4%). Dos países enteros o el mayor exportador de crudo del mundo sí tienen
+  tamaño de mercado; un interconector entre dos países, no.
 - 2 · Incidente militar directo con la OTAN, aislado y sin respuesta material. ESTE ES EL
   PELDAÑO QUE MÁS SE FALLA, Y EL QUE MÁS CASOS RECIBE. Una violación del espacio aéreo, un
   derribo, un sabotaje de infraestructura o un cambio declarado de doctrina son un 2 cuando
@@ -113,6 +144,10 @@ Precedentes medidos (retorno del oro y máximo del VIX a 5 sesiones desde el cie
   Los tres artículos 4 de la lista están aquí: invocarlo no sube el peldaño.
   Como grupo mueven el precio MENOS que una fecha al azar, así que puntuarlos por encima
   del 2 no es prudencia, es ruido.
+  Y es 2 la voladura de la presa de Kajovka (06-06-2023, oro -0,1%, VIX -8,3%), pese a
+  inundar el bajo Dniéper: lo que se pierde es agua y terreno, no energía ni tráfico que
+  coticen. Sirve de contraste con el Nord Stream para que "sabotaje" no se lea como «cuanto
+  más espectacular, más peldaño».
   También son 2 los sucesos graves sin transmisión al precio: motín de Wagner y marcha sobre
   Moscú (24-06-2023): oro +0,1%, VIX +9,4%, S&P +2,3%. Envenenamiento de Skripal con Novichok
   en suelo británico (04-03-2018): agente químico de un Estado y expulsión masiva de

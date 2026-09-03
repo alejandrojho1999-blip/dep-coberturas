@@ -172,11 +172,20 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   **corregido el 2026-09-03** sustituyéndolo por regresión isotónica ponderada
   por casos (`isotonizarProbabilidad`). `fed_tesoro` vuelve a corregir a la baja
   en los cuatro peldaños. Ver la entrada de la sesión en «Completado».
-- **El bloque fundido de `guerra` lo sostiene un peldaño de n=1.** Con la
-  isotónica, `guerra 3/5` (n=1) y `4/5` (n=4) se funden al 80% y los dos salen
-  en 4/5. El n=1 aporta una quinta parte del peso, que es mucho mejor que
-  mandarlo todo a 5 como hacía el arrastre, pero sigue siendo poca muestra. Se
-  arregla solo con más corpus de `guerra` en los peldaños altos.
+- ~~**El bloque fundido de `guerra` lo sostiene un peldaño de n=1**~~ —
+  **ampliado el 2026-09-03**: `guerra 3/5` pasa de n=1 a n=3, `4/5` de n=4 a
+  n=8 y `5/5` de n=1 a n=2. Ver la entrada de la sesión en «Completado».
+- **`guerra 5/5` sigue con n=2 y `fed_tesoro 4/5` con n=2.** Son los dos
+  peldaños que quedan por debajo del mínimo, más `guerra 3/5` con n=3. Los 5 de
+  `guerra` son ruptura del marco y por definición escasean; no hay muchos más
+  que añadir sin bajar el listón de lo que es un 5.
+- **El clasificador no es determinista, y ahora hay cifra.** Entre `v9` y `v12`,
+  con cuatro pasadas sobre el mismo corpus y cambios de prompt que no les
+  afectaban, **tres eventos entraron y salieron del dominio solos**: el IPC de
+  mayo de 2022, la reunión de la Fed del 12 de junio de 2024 y el corte de los
+  cables del Báltico. Con `temperature: 0.1` y 52 titulares, eso es un ~6% de
+  filas que cambian por muestreo. Cualquier diferencia de una fila entre dos
+  versiones hay que leerla con eso delante.
 - **El clasificador parte los FOMC idénticos entre el 2 y el 3 por la
   redacción.** Seis reuniones «la Fed mantiene los tipos» se reparten 2 en el
   peldaño 2 y 4 en el 3. Y las dos que cayeron en el 2 son justo las dos que
@@ -480,6 +489,75 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — los peldaños altos de `guerra` y dos agujeros más del dominio
+
+El pendiente que dejó la regresión isotónica: `guerra 3/5` tenía n=1 y `5/5`
+n=1, así que un solo evento fijaba el bloque de dos peldaños.
+
+**Ocho hechos añadidos, apuntados a la banda 3-5. El corpus pasa de 44 a 52.**
+Amenaza nuclear con acto detrás (fuerzas de disuasión en régimen especial
+2022-02-27, nucleares tácticas a Bielorrusia 2023-03-25), cambio de control
+territorial (anexión de las cuatro provincias 2022-09-30, invasión de Georgia
+2008-08-08), cortes de suministro con tamaño de mercado (Gazprom a Polonia y
+Bulgaria 2022-04-27, cierre indefinido del Nord Stream 1 2022-09-02, embargo
+europeo al crudo 2022-12-05) y un contraste (voladura de la presa de Kajovka
+2023-06-06). Todas las fechas verificadas contra fuente.
+
+**Clase nueva: `corte-suministro`**, corte o embargo deliberado de energía sin
+daño físico. Tres de los ocho no encajaban en `sabotaje` y agruparlos permite
+preguntar lo útil: cuánto mueve un corte de suministro, en general.
+
+**Resultado sobre la curva:**
+
+| Peldaño | antes | ahora |
+|---|---|---|
+| `guerra 3/5` | n=1 | **n=3** |
+| `guerra 4/5` | n=4 | **n=8** |
+| `guerra 5/5` | n=1 | **n=2** |
+| peldaños flacos | 4 de 8 | **3 de 8** |
+
+**Y con n=8, `guerra 4/5` se corrige a 2/5.** Los «4» del modelo mueven el
+precio el 63% de las veces contra una línea base del 43,3%: lift del 36%, que es
+un peldaño 2. Es exactamente el hallazgo para el que existe toda esta
+calibración, y ahora descansa sobre ocho casos en vez de cuatro.
+
+### Dos agujeros más del dominio, encontrados por el camino
+
+**El primero era una contradicción interna del prompt.** El peldaño 3 se define
+literalmente como «corte de suministro que un operador note en el precio de la
+energía», y **ningún criterio de dominio admitía un corte de suministro**: la
+escala describía un caso que el filtro rechazaba. Los tres cortes entraron
+descartados. Se añadió el criterio que faltaba.
+
+**El segundo era el filtro implícito de territorio, otra vez.** La voladura de
+la presa de Kajovka encaja en «sabotaje de infraestructura crítica atribuido a
+un Estado», que no lleva restricción geográfica, y se descartaba igual — como
+pasó con el puente de Kerch antes de arreglar el suelo ruso. Ahora el criterio
+dice «esté donde esté: en la OTAN, en Rusia o en la zona de guerra».
+
+**Y ensanchar tuvo su propio coste, que hubo que medir dos veces.** Al
+generalizar a «el dominio sigue al conflicto, no al mapa», el modelo empezó a
+colar **la invasión de Irak con un 5**. Al cerrarlo con «la otra parte ha de ser
+la OTAN, un país miembro o Ucrania», se dejó fuera **la guerra ruso-georgiana**.
+La redacción final admite a los vecinos europeos de Rusia y nombra a Irak y al
+11-S como los descartes a acertar. Quedan tres versiones del prompt (`v10`,
+`v11`, `v12`) que documentan el ida y vuelta.
+
+### Lo que hay que saber al leer estos números
+
+**Dos de los ocho no son observaciones independientes**, y se dice en el
+corpus: 2022-02-27 cae dentro de la ventana de 5 sesiones de la invasión y
+2022-09-30 dentro de la del sabotaje del Nord Stream. Se incluyeron porque son
+las anclas canónicas de sus peldaños, pero cuentan como muestra prestada. Por
+esa misma razón se descartaron el reconocimiento del Donbás (2022-02-21) y el
+misil Oreshnik (2024-11-21), que eran el mismo ciclo de noticias que un evento
+ya presente.
+
+**El criterio sigue siendo significativo** con 52 hechos: el test de permutación
+da **p=0,041** (era 0,028 con 44 y 0,102 con 32).
+
+Verde: **979/979 tests**, `tsc`, ESLint y build limpios.
 
 ### Sesión del 2026-09-03 — la curva degenerada: el problema no era la monotonía, era cómo se imponía
 
