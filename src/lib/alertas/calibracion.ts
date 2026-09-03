@@ -61,10 +61,33 @@
  * su ventaja es sobreajuste. Tres de los siete quedaron empatados dentro del
  * ruido. Con más corpus, esto se revisa.
  *
- * Queda uno pendiente: **el dólar está en el percentil 100**, o sea que no cruza
- * ni una de las 60 fechas de control, y solo 2 de los 32 hechos. Es inerte más
- * que ruidoso —quitarlo no cambia nada— pero su umbral del 3% pide la misma
- * revisión que acaba de tener el VIX.
+ * **El dólar se revisó el 2026-09-03 y se queda en el 3%, por un motivo que no
+ * es el que parecía.** El aviso decía que estaba inerte: percentil 100, cero
+ * cruces en las 60 fechas de control y solo 2 de los 32 hechos, aportación
+ * marginal de 0 puntos. Todo cierto. Lo que no era cierto es la conclusión que
+ * se le presuponía —que el dólar no distingue—: ordenando hechos contra días
+ * normales es **el activo que mejor separa de toda la cesta**, con un AUC de
+ * 0,666 [0,560, 0,769], por encima del VIX (0,639) y del S&P (0,610).
+ *
+ * El problema no es el nivel del umbral, es que la señal del dólar no vive en
+ * la cola. Su mediana en un hecho curado es del 1,29% y en un día de control del
+ * 0,99%: la diferencia está en el centro de la distribución, no en el extremo.
+ * Y esta regla es un OR —basta que uno cruce—, que solo sabe explotar activos
+ * cuya señal esté en la cola. Bajar el umbral hasta donde el dólar tiene algo
+ * que decir mete más días de control que hechos: al 2% añade 3 controles y 0
+ * curados; al 1,5%, 6 controles y 2 curados; al 1%, 17 y 9. El único punto que
+ * sale positivo es el 1,25% (10 y 7, +5 pts), y no aguanta el examen: la línea
+ * base sube al 57% —peor saturación que el 53% que descartó al VIX en el
+ * 12,5%—, su intervalo del 90% es [-9, 20] y el barrido fino en pasos del 0,05%
+ * no enseña meseta ninguna sino una sierra (23, 20, 20, 25, 18 puntos entre el
+ * 1,05% y el 1,25%). Es ruido de la muestra.
+ *
+ * Así que el 3% se queda: es un umbral que no hace nada, pero cualquier
+ * alternativa hace daño. Lo que hay que apuntar para el futuro es que **el
+ * dólar es el caso que enseña el límite de la regla del OR**. Si alguna vez se
+ * sustituye por algo que cuente cuántos activos cruzan, o que puntúe la
+ * magnitud en vez de contar cruces, el dólar es el primero que hay que volver a
+ * mirar: es el que más información tiene y el que esta regla peor aprovecha.
  */
 export const UMBRAL_MATERIAL: Record<string, number> = {
   'GC=F': 0.06,
@@ -75,6 +98,7 @@ export const UMBRAL_MATERIAL: Record<string, number> = {
   'ES=F': 0.05,
   // 40% -> 25% el 2026-09-03. Ver la nota de arriba.
   '^VIX': 0.25,
+  // Revisado y confirmado en el 3% el 2026-09-03. Ver la nota de arriba.
   'DX-Y.NYB': 0.03,
 }
 

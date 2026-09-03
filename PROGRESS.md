@@ -114,11 +114,17 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   baja del 40% al 25% tras barrer los valores del 5% al 60%. Al 40% era peso
   muerto (aportaba +1 punto de separación); al 25% aporta +7 y pasa a ser el
   activo más valioso de la cesta. Ver la entrada de la sesión en «Completado».
-- **El umbral del dólar (`DX-Y.NYB`, 3%) pide la misma revisión que el VIX.**
-  Está en el **percentil 100** del día normal: no cruza ni una de las 60 fechas
-  de control y solo 2 de los 32 hechos del corpus. No es ruidoso, es inerte —el
-  leave-one-out confirma que quitarlo no cambia ni una fila—, pero un umbral que
-  no cruza nunca no está midiendo nada.
+- ~~**El umbral del dólar (`DX-Y.NYB`, 3%)**~~ — **revisado el 2026-09-03 y
+  confirmado en el 3%**. El diagnóstico de «inerte» era correcto y la conclusión
+  que se le presuponía era falsa: el dólar es el activo que **mejor** separa de
+  la cesta (AUC 0,666), pero su señal está en el centro de la distribución y no
+  en la cola, que es lo único que la regla del OR sabe aprovechar. Ver la
+  entrada de la sesión en «Completado».
+- **La regla del OR tiene un techo, y el dólar lo enseña.** «Basta que un activo
+  cruce» solo puede explotar activos cuya señal esté en el extremo. El dólar
+  ordena mejor que ninguno y aporta cero. Si alguna vez se cambia la regla por
+  una que cuente **cuántos** cruzan, o que puntúe magnitud en vez de contar
+  cruces, el dólar es el primero que hay que volver a mirar.
 - **La línea base es del 36,7%, no del 20%, y eso reabre la pregunta de los
   umbrales.** El valor anterior estaba medido contra la década equivocada. Con
   el denominador correcto la separación agregada del corpus cae de 22 a **10
@@ -444,6 +450,50 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-03 — el dólar se queda en el 3%, y el motivo no era el que parecía
+
+El pendiente que dejó la revisión del VIX: el dólar estaba en el **percentil
+100** del día normal —cero cruces en las 60 fechas de control, 2 de 32 hechos,
+aportación marginal de 0 puntos— y parecía otro umbral mal puesto.
+
+**El umbral está alto, pero bajarlo empeora las cosas.** Y lo que apareció al
+mirarlo de cerca invierte el diagnóstico: el dólar no es un activo mudo. Sin
+umbral ninguno, comparando magnitudes de hechos contra días de control, **es el
+que mejor separa de toda la cesta**, con un **AUC de 0,666** [0,560, 0,769] por
+delante del VIX (0,639), el S&P (0,610), el oro (0,604), la plata (0,603), el
+WTI (0,597), Bitcoin (0,586) y el Nasdaq (0,583).
+
+**Por qué no aporta nada pese a eso: su señal no vive en la cola.** La mediana
+del dólar en un hecho curado es del 1,29% y en un día de control del 0,99% —la
+diferencia está en el centro de la distribución—, y la regla es un OR que solo
+sabe aprovechar extremos. Bajar el umbral arrastra al control con él:
+
+| Umbral | Curados que añade | Controles que añade | Neto |
+|---|---|---|---|
+| 3,00% (actual) | 0/32 | 0/60 | 0 pts |
+| 2,00% | 0/32 | 3/60 | −5 pts |
+| 1,50% | 2/32 | 6/60 | −4 pts |
+| 1,25% | 7/32 | 10/60 | +5 pts |
+| 1,00% | 9/32 | 17/60 | −0 pts |
+
+**El único punto positivo, el 1,25%, falla por los dos mismos criterios con los
+que se había elegido el 25% del VIX horas antes:** satura la línea base, que
+sube al **57%** (peor que el 53% que descartó al VIX en el 12,5%), y no tiene
+meseta —el barrido fino en pasos del 0,05% entre el 1,05% y el 1,25% da 23, 20,
+20, 25 y 18 puntos, una sierra—, con intervalo del 90% en **[−9, 20]**.
+
+**Decisión: se queda en el 3%.** Un umbral que no hace nada es mejor que uno que
+mete ruido. Queda documentado en `UMBRAL_MATERIAL` y en el informe para que el
+próximo que vea el percentil 100 no repita el barrido.
+
+**Lo que deja abierto no es un umbral, es la regla.** El dólar es el caso que
+enseña el techo del OR: el activo con más información de la cesta es el que esta
+regla peor aprovecha. Anotado como pendiente para cuando se plantee contar
+cuántos activos cruzan en vez de si cruza alguno.
+
+Sin cambios de código: solo `UMBRAL_MATERIAL` documentado, el informe y estas
+notas. Verde: **975/975 tests**, `tsc` y ESLint limpios.
 
 ### Sesión del 2026-09-03 — el VIX baja del 40% al 25% y deja de ser peso muerto
 

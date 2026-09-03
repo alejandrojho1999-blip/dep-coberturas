@@ -366,6 +366,76 @@ Dos gotchas que cuestan tiempo si no se saben:
   dejó `medir.mts`, así que hay que volver a medir antes de cargar o se sube la
   etiqueta vieja sin que nada falle.
 
+## El dólar y el límite de la regla del OR
+
+El perfil del día normal dejó al dólar señalado: **percentil 100**, cero cruces
+en las 60 fechas de control, solo 2 de los 32 hechos, y una aportación marginal
+de **0 puntos** al criterio completo. La lectura obvia era que el umbral del 3%
+estaba demasiado alto, igual que el del VIX.
+
+**El umbral está alto, pero bajarlo empeora las cosas, y la razón enseña algo
+sobre la regla más que sobre el dólar.**
+
+Lo primero que apareció al mirarlo de cerca es que el dólar no es un activo
+mudo. Ordenando los 32 hechos contra las 60 fechas de control —sin umbral
+ninguno, solo comparando magnitudes— **es el que mejor separa de toda la
+cesta**:
+
+| Activo | AUC | Cobertura |
+| ------ | --: | --------- |
+| **Dólar** | **0,666** | 32/32 y 60/60 |
+| VIX | 0,639 | 32/32 y 60/60 |
+| S&P 500 | 0,610 | 32/32 y 60/60 |
+| Oro | 0,604 | 32/32 y 60/60 |
+| Plata | 0,603 | 32/32 y 60/60 |
+| WTI | 0,597 | 32/32 y 60/60 |
+| Bitcoin | 0,586 | 25/32 y 47/60 |
+| Nasdaq | 0,583 | 32/32 y 60/60 |
+
+El AUC es la probabilidad de que un hecho del corpus mueva el activo más que una
+fecha de control cogida al azar. 0,50 sería indistinguible; el dólar da **0,666,
+con intervalo del 90% en [0,560, 0,769]**, que no toca el 0,50.
+
+**Entonces, ¿por qué no aporta nada?** Porque su señal no está en la cola. La
+mediana del dólar en un hecho curado es del **1,29%** y en un día de control del
+**0,99%**: la diferencia está en el centro de la distribución. Y la regla es un
+OR —basta que un activo cruce—, que solo sabe aprovechar activos cuya señal esté
+en el extremo. Bajar el umbral hasta donde el dólar tiene algo que decir arrastra
+al control con él:
+
+| Umbral | Curados que añade | Controles que añade | Neto |
+| -----: | ----------------: | ------------------: | ---: |
+| 3,00% (actual) | 0/32 | 0/60 | 0 pts |
+| 2,00% | 0/32 | 3/60 | −5 pts |
+| 1,50% | 2/32 | 6/60 | −4 pts |
+| 1,25% | 7/32 | 10/60 | +5 pts |
+| 1,00% | 9/32 | 17/60 | −0 pts |
+
+«Añade» son las filas que el dólar activa y que ningún otro activo de la cesta
+activaba ya. En todos los niveles menos uno, el dólar mete más días normales que
+hechos.
+
+**El único punto positivo, el 1,25%, no aguanta el examen** —y falla justo por
+los dos criterios con los que se eligió el umbral del VIX horas antes:
+
+- **Satura la línea base.** Al 1,25% sube al **57%**, peor que el 53% que
+  descartó al VIX en el 12,5%. Con un día cualquiera moviéndose más de la mitad
+  de las veces, «pasó algo» deja de distinguir.
+- **No hay meseta.** El barrido fino en pasos del 0,05% entre el 1,05% y el
+  1,25% da 23, 20, 20, 25 y 18 puntos: una sierra, no un tramo estable. Su
+  intervalo del 90% es **[−9, 20]** y contiene el cero holgadamente.
+
+**Decisión: el dólar se queda en el 3%.** Es un umbral que no hace nada, pero
+todas las alternativas hacen daño, y un umbral inofensivo es mejor que uno que
+mete ruido. Se documenta en `UMBRAL_MATERIAL` para que el próximo que vea el
+percentil 100 no repita el barrido.
+
+**Lo que sí queda apuntado** es que el dólar es el caso que enseña el techo de
+la regla del OR: es el activo con más información de la cesta y el que esta
+regla peor aprovecha. Si algún día se sustituye por algo que cuente **cuántos**
+activos cruzan, o que puntúe la magnitud en vez de contar cruces, el dólar es el
+primero que hay que volver a mirar.
+
 ## Pendiente
 
 - **El corpus sigue siendo pequeño.** Cinco de los siete peldaños de la curva
@@ -382,15 +452,15 @@ Dos gotchas que cuestan tiempo si no se saben:
   - ~~**El umbral del VIX**~~ — **corregido el 2026-09-03**: del 40% al 25%. Se
     comprobó de paso que `extremo` mide mejor que `retorno` en todo el barrido,
     así que la forma de medir no era el problema.
-  - **El umbral del dólar.** Está en el percentil 100: no cruza ni una de las 60
-    fechas de control, y solo 2 de los 32 hechos. Es inerte más que ruidoso
-    —quitarlo no cambia nada— pero pide la misma revisión que tuvo el VIX.
+  - ~~**El umbral del dólar**~~ — **revisado el 2026-09-03 y confirmado en el
+    3%**, por un motivo que no era el que parecía. Ver la sección «El dólar y el
+    límite de la regla del OR».
   - **Faltan el gas europeo y el trigo**, que es por lo que Nord Stream y Crimea
     salen como «no movió» pese a haber movido su mercado.
 - **Revisar los umbrales que quedan.** Se eligieron comparando siete criterios
   sobre los mismos 60 días de control y 27 eventos, así que parte de su ventaja
-  es sobreajuste; tres de los siete quedaron empatados dentro del ruido. El del
-  VIX ya se revisó; el del dólar es el siguiente candidato.
+  es sobreajuste; tres de los siete quedaron empatados dentro del ruido. Los del
+  VIX y el dólar ya se revisaron uno por uno; quedan los seis restantes.
 - **El error medio ya no sirve para juzgar un cambio de prompt.** Cayó a 0,14
   con `v6`, pero las etiquetas del corpus se movieron hacia donde apuntaba el
   modelo, así que parte de esa mejora es tautológica. La evidencia independiente
