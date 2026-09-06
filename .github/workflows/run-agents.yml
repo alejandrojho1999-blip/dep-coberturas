@@ -1,0 +1,76 @@
+name: Ejecución diaria de los agentes Peter y Small
+
+# Hasta ahora la cascada de Lynch solo existía en el navegador: si nadie abría
+# /agentes y pulsaba el botón, no se evaluaba nada. Este workflow llama al
+# endpoint equivalente una vez al día.
+#
+# Una vez al día y no más, a propósito. Los fundamentales de Lynch se publican
+# por trimestres, así que una segunda pasada evaluaría los mismos números y solo
+# movería el ruido del precio; y el paso 4 es el único que gasta tokens. El
+# dedupe de `agent_recommendations` protege igualmente contra duplicar una
+# posición viva, de modo que repetir es inofensivo, solo inútil.
+#
+# La hora va en UTC y el mercado en Nueva York. 16:00 UTC cae dentro de la
+# ventana operable (10:00-15:45 ET) en las dos estaciones: 12:00 ET en verano,
+# 11:00 ET en invierno. Aun así el propio endpoint descarta lo que caiga fuera
+# de sesión y responde `ejecutado: false` sin tocar nada.
+#
+# GitHub no garantiza la puntualidad de `schedule` y en horas de carga retrasa o
+# descarta ejecuciones. Para esta tarea da igual: perder un día no rompe nada,
+# y `workflow_dispatch` permite lanzarla a mano.
+
+on:
+  schedule:
+    # Una vez al día, de lunes a viernes.
+    - cron: '0 16 * * 1-5'
+  workflow_dispatch:
+
+# Dos cascadas a la vez escribirían en la misma tabla y podrían duplicar una
+# recomendación entre la comprobación de dedupe y el insert.
+concurrency:
+  group: run-agents
+  cancel-in-progress: false
+
+jobs:
+  ejecutar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Comprobar configuración
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$APP_URL" ]; then
+            echo "Falta el secreto CRON_SECRET o la variable APP_URL"
+            exit 1
+          fi
+
+      # Se llaman por separado, y no con una sola petición sin `?agente=`, por
+      # dos razones: cada curl es más corto que la suma de los dos screeners, y
+      # un fallo de Peter no debe impedir que Small se ejecute.
+      - name: Agente Peter
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          # --fail-with-body devuelve el cuerpo del error y sale con código != 0,
+          # para que un 401 o un 500 pongan el job en rojo en vez de pasar
+          # desapercibidos. Sin --retry: el paso 4 gasta tokens y una repetición
+          # automática los gastaría dos veces sobre los mismos candidatos.
+          curl --silent --show-error --fail-with-body \
+               --max-time 900 \
+               -H "Authorization: Bearer $CRON_SECRET" \
+               "$APP_URL/api/cron/run-agents?agente=peter"
+
+      - name: Agente Small
+        # Se ejecuta aunque Peter haya fallado: son dos carteras independientes.
+        if: always()
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          curl --silent --show-error --fail-with-body \
+               --max-time 900 \
+               -H "Authorization: Bearer $CRON_SECRET" \
+               "$APP_URL/api/cron/run-agents?agente=small"
