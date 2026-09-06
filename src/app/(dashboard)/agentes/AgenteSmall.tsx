@@ -616,7 +616,7 @@ export default function AgenteSmall({ puedeEjecutar = false }: { puedeEjecutar?:
               })}
             </div>
             <Link
-              href="/recomendaciones"
+              href="/recomendaciones#rec-small"
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
               style={{ background: 'rgba(245, 165, 36,0.15)', color: 'var(--color-warning)', border: '1px solid rgba(245, 165, 36,0.3)' }}
             >

@@ -155,7 +155,8 @@ async function despachar(params: {
   await tocarEvento(admin, senal.eventoKey, senal.severidad, estadoPrevio)
 
   // Solo cuenta como enviado lo que el puente aceptó **y** salió por un canal
-  // vivo. Un mensaje encolado con la sesión caída no ha llegado a nadie.
+  // vivo. Un mensaje aceptado con la sesión caída no ha llegado a nadie, y como
+  // el puente no encola ni reintenta, tampoco llegará después.
   if (envio.aceptado && envio.canal !== 'caido') resultado.enviados++
   else resultado.omitidos++
 }

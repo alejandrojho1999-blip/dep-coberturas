@@ -304,13 +304,14 @@ async function main(): Promise<number> {
       'prueba',
     )
     // Se distinguen los tres desenlaces porque los tres se ven distintos en el
-    // teléfono: llega, no llega, o llegará cuando WhatsApp vuelva.
+    // teléfono: llega, lo rechaza el puente, o el puente lo acepta y lo tira
+    // porque la sesión está caída.
     if (!envio.aceptado) {
       log(`el puente rechazó el mensaje: ${envio.error}`)
       return 1
     }
     if (envio.canal === 'caido') {
-      log(`encolado, PERO NO ENTREGADO: ${envio.canalDetalle}`)
+      log(`ACEPTADO POR EL PUENTE, PERO NO ENTREGADO Y SIN REINTENTO: ${envio.canalDetalle}`)
       log('reconecta la sesión: openclaw channels login --channel whatsapp --account nexus')
       return 1
     }

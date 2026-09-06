@@ -61,7 +61,7 @@ export default function LoginPage() {
           <p className="mt-3 font-brand text-sm font-extrabold tracking-[0.18em] text-text-primary uppercase">
             Find your Freedom
           </p>
-          <p className="mt-1 text-sm text-text-secondary">Agentes y Estrategias Cuantitativas</p>
+          <p className="mt-1 text-sm text-text-secondary">Emporium Quant Desk</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

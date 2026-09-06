@@ -24,7 +24,7 @@ const bodyMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SynerGy — Plataforma Quant",
+  title: "Emporium Quant Desk",
   description:
     "Tecnología propietaria de análisis y gobernanza financiera: agentes, estrategias y portafolios algorítmicos para preservar el capital y maximizar retornos ajustados al riesgo",
 };

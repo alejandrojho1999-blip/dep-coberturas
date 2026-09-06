@@ -671,7 +671,7 @@ export default function AgenteTheta({ puedeEjecutar = false }: { puedeEjecutar?:
                 )
               })}
             </div>
-            <Link href="/recomendaciones"
+            <Link href="/recomendaciones#rec-theta"
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
               style={{ background: 'rgba(224, 164, 88,0.15)', color: '#e0a458', border: '1px solid rgba(224, 164, 88,0.3)' }}
             >

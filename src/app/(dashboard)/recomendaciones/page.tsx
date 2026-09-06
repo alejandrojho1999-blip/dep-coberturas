@@ -371,6 +371,23 @@ export default function RecomendacionesPage() {
 
   useEffect(() => { fetchAgentRecs() }, [fetchAgentRecs])
 
+  // Llegar desde AGENTES con `#rec-peter` y aterrizar en esa tabla, no arriba.
+  // El scroll nativo del navegador no sirve: la tarjeta ya está montada al
+  // primer render, pero se llena después de `fetchAgentRecs`, así que su altura
+  // (y la de todas las de encima) cambia y el destino se mueve. Se espera a que
+  // los datos estén y se salta una sola vez, para no secuestrar el scroll del
+  // usuario en cada refetch posterior.
+  const anclaAplicadaRef = useRef(false)
+  useEffect(() => {
+    if (agentRecsLoading || anclaAplicadaRef.current) return
+    const id = window.location.hash.slice(1)
+    if (!id) return
+    const destino = document.getElementById(id)
+    if (!destino) return
+    anclaAplicadaRef.current = true
+    destino.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [agentRecsLoading])
+
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
@@ -927,7 +944,7 @@ export default function RecomendacionesPage() {
         </div>
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Recomendaciones</h1>
-          <p className="text-sm text-text-secondary">SynerGy — Panel de Recomendaciones</p>
+          <p className="text-sm text-text-secondary">Emporium Quant Desk — Panel de Recomendaciones</p>
         </div>
       </div>
 
@@ -1564,7 +1581,7 @@ export default function RecomendacionesPage() {
           const peterRecs = agentRecs.filter(r => r.category === 'PETER_LYNCH')
           const dudosas = peterRecs.filter(hasFabricatedEntryPrice).length
           return (
-            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+            <div id="rec-peter" className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
                 <div className="flex items-center gap-2">
                   <Cpu size={14} style={{ color: 'var(--color-text-primary)' }} />
@@ -1734,7 +1751,7 @@ export default function RecomendacionesPage() {
         {(() => {
           const smallRecs = agentRecs.filter(r => r.category === 'SMALL_CAPS')
           return (
-            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+            <div id="rec-small" className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
                 <div className="flex items-center gap-2">
                   <Cpu size={14} style={{ color: 'var(--color-text-primary)' }} />
@@ -1880,7 +1897,7 @@ export default function RecomendacionesPage() {
         {(() => {
           const gammaRecs = agentRecs.filter(r => r.category === 'OPTIONS_GAMMA')
           return (
-            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+            <div id="rec-gamma" className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
                 <div className="flex items-center gap-2">
                   <Cpu size={14} style={{ color: '#8b8ff0' }} />
@@ -2051,7 +2068,7 @@ export default function RecomendacionesPage() {
         {(() => {
           const thetaRecs = agentRecs.filter(r => r.category === 'OPTIONS_THETA')
           return (
-            <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+            <div id="rec-theta" className="scroll-mt-24 rounded-xl border border-border-subtle bg-surface overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
                 <div className="flex items-center gap-2">
                   <Cpu size={14} style={{ color: '#e0a458' }} />

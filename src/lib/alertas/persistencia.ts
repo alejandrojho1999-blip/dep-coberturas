@@ -105,8 +105,9 @@ export async function estadoDeEvento(
  * Cuántos mensajes aceptó el puente en la última hora.
  *
  * Cuenta los aceptados, no los entregados: es el tope de ruido que se le mete
- * al teléfono, y un mensaje encolado con la sesión caída acabará llegando
- * cuando WhatsApp vuelva.
+ * al teléfono. Un mensaje aceptado con la sesión caída no llega nunca —el
+ * puente no encola ni reintenta—, así que este tope peca de conservador
+ * durante una caída, que es el lado correcto por el que equivocarse.
  */
 export async function enviadosUltimaHora(
   admin: SupabaseClient,

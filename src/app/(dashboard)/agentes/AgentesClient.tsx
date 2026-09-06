@@ -34,7 +34,7 @@ export default function AgentesClient(
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="font-brand text-lg font-extrabold text-text-primary">Agentes</h1>
-          <p className="text-sm text-text-secondary">SynerGy — Agentes IA para Acciones y Opciones</p>
+          <p className="text-sm text-text-secondary">Emporium Quant Desk — Agentes IA para Acciones y Opciones</p>
         </div>
         {/* El backtest vive en su propia pantalla: son cuatro variantes con sus
             contrastes, y meterlo en una pestaña de agente invitaría a leer el

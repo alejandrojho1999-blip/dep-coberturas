@@ -34,6 +34,42 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 
 ## Pendiente
 
+### Ejecución programada de los agentes
+
+- **`CRON_SECRET` y `CRON_USER_ID` están vacíos en `.env.local`.** No es nuevo
+  —los crons de `review-exits` y `archive-chains` ya dependían de ellos— pero
+  ahora hay un tercero. Sin `CRON_SECRET` el endpoint responde 503 y no ejecuta
+  nada. Hay que confirmar que ambos tienen valor en el entorno de Render, y que
+  en GitHub existen el secreto `CRON_SECRET` y la variable `APP_URL`.
+- **Comprobar la primera pasada real.** El lunes a las 16:00 UTC. Hasta
+  entonces solo se ha verificado la autenticación y la guarda de mercado
+  cerrado; la cascada completa contra Yahoo y OpenRouter no se ha ejecutado.
+- **Vigilar la duración.** El screener recorre ~440 tickers en lotes de 25 antes
+  de que empiece nada más. `maxDuration = 300` es una pista de Vercel y en
+  Render no corta, pero el `--max-time 900` del workflow sí. Si un día se agota,
+  el paso siguiente es cachear el screener entre las dos llamadas.
+
+### Alerta temprana
+
+- **La cuenta `nexus` de WhatsApp necesita revincularse a mano.** Lleva
+  desvinculada desde el 2026-09-05 (`not linked, stopped, disconnected`). El
+  gateway está sano —la cuenta `stefy` sigue conectada—, así que es solo la
+  sesión. Requiere escanear un QR, no se puede automatizar:
+  `openclaw channels login --channel whatsapp --account nexus`. Después,
+  `openclaw channels status` debe mostrar `linked, running, connected` y
+  `npm run alertas -- prueba` debe entregar de verdad.
+- **El puente no tiene cola ni reintento, y responde `202` antes de saber si el
+  envío salió.** `/root/openclaw-webhook/server.js` (fuera del repo) contesta
+  `202 queued` y solo entonces llama a `execFile`; un fallo se queda en su log.
+  Mientras siga así, cada caída de sesión se traga los mensajes de esas horas.
+  Arreglo pendiente: contestar después de conocer el resultado, y persistir una
+  cola con reintento que alguien drene.
+- **Vigilar el suelo de severidad en 2.** La curva de calibración corrige la
+  severidad *antes* del corte (`motor.ts:212`), así que puede empujar una alerta
+  por debajo del suelo y silenciarla. Con el suelo en 2 el margen es más
+  estrecho que con 3. La escotilla `ALERTAS_CURVA=off` desactiva la corrección
+  sin redeploy.
+
 ### Tesis de inversión
 
 > La migración 026 **ya está aplicada**, verificada el 2026-09-02 contra la API
@@ -499,6 +535,93 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-06 (2) — los agentes dejan de depender de que alguien pulse
+
+**El problema.** La cascada de Peter y Small solo existía dentro de
+`AgentePeter.tsx` y `AgenteSmall.tsx`. Si nadie abría `/agentes` y pulsaba el
+botón, no se evaluaba nada: ni candidatos nuevos, ni señales de venta sobre las
+posiciones vivas. No había ninguna ruta que un planificador pudiera llamar.
+
+**Lo que se hizo.** Tres extracciones y un endpoint, siguiendo el patrón que ya
+usaba `runExitReview` para Gamma y Theta:
+
+- `lib/agentes/historicos.ts` — la descarga de cierres de Yahoo, que estaba
+  duplicada en las rutas de forecast y momentum. Ahora las dos rutas son cuatro
+  líneas y llaman aquí.
+- `lib/agentes/analisis.ts` — el paso 4 entero (prompt, precedencia del precio
+  objetivo, saneado del stop). La ruta `analyze` queda como envoltorio de
+  autenticación. `AnalisisError` conserva el código HTTP para que un 400 de dato
+  inválido no se aplane con un 500 del proveedor.
+- `lib/agentes/cascada.ts` — la orquestación de los cinco pasos sin React ni
+  sesión, escribiendo con el cliente de servicio y filtrando por `user_id`.
+- `api/cron/run-agents` — endpoint con `authorizeCron`, guarda de mercado
+  abierto y `?agente=peter|small`.
+- `.github/workflows/run-agents.yml` — `0 16 * * 1-5` UTC, un paso por agente.
+
+**Decisiones.** Una vez al día: los fundamentales de Lynch son trimestrales, así
+que una segunda pasada solo movería el ruido del precio, y el paso 4 es el único
+que cuesta dinero. A las 16:00 UTC porque cae dentro de la ventana operable
+(10:00-15:45 ET) tanto en verano como en invierno. Los dos agentes se llaman en
+pasos separados del workflow para que un fallo de Peter no impida el de Small, y
+sin `--retry`: reintentar gastaría tokens dos veces sobre los mismos candidatos.
+El botón manual se conserva intacto.
+
+**Pruebas.** 15 casos nuevos en `cascada.test.ts`, con Yahoo, OpenRouter y
+Supabase simulados. Fijan el corte de score que separa a los dos agentes, la
+regla de venta (2 de 3, con la señal sin datos contando como aprobada para que
+un corte de Yahoo no liquide la cartera), el dedupe, y —la más importante— que
+el paso 4 no se llama cuando nadie sobrevive al forecast o al momentum: es la
+garantía de coste de toda la cascada. Suite completa 1012/1012.
+
+**Verificado en vivo** contra el build de producción: 401 sin secreto y con
+secreto incorrecto, 400 con un agente no reconocido, y `ejecutado: false ·
+fin-de-semana` con el secreto correcto, sin tocar la base. La cascada completa
+no se ha ejecutado todavía de verdad porque el mercado está cerrado; la primera
+pasada real será el lunes a las 16:00 UTC.
+
+### Sesión del 2026-09-06 — la marca, el ancla y el 202 que mentía
+
+**Rebrand a «Emporium Quant Desk».** El descriptor «Agentes y Estrategias
+Cuantitativas» desaparece de `/login` (`login/page.tsx:64`) y del TopBar
+(`TopBar.tsx:46`). Se unificaron además el título del navegador
+(`layout.tsx:27`) y los subtítulos de sección de Agentes y Recomendaciones. Los
+eslóganes de marca —«Find your Freedom», «When SynerGy Happens»— no se tocan:
+son identidad, no descripción de producto.
+
+**Anclas en Recomendaciones.** «Ver en RECOMENDACIONES» aterrizaba al principio
+de una página de 2 100 líneas y obligaba a buscar a mano la tabla del agente.
+Ahora las cuatro tarjetas llevan `id` (`rec-peter`, `rec-small`, `rec-gamma`,
+`rec-theta`) con `scroll-mt-24`, y cada botón enlaza a su hash. El scroll nativo
+del navegador no bastaba: la tarjeta ya está montada al primer render pero se
+llena después de `fetchAgentRecs`, así que su altura cambia y el destino se
+mueve. Un `useEffect` espera a `agentRecsLoading === false` y salta una sola vez,
+guardado por un `useRef`, para no secuestrar el scroll en refetches posteriores.
+
+**El «encolado» era mentira, y se dejó de decir.** El comentario de
+`nexus.ts:42-44` afirmaba que «el puente encola y OpenClaw reintenta cuando
+vuelve». Falso: el puente responde `202 queued` **antes** de invocar a OpenClaw
+y luego dispara sin mirar; si falla, solo queda una línea en su log. No hay
+cola, ni reintento, ni drenador en ninguna parte. Todo lo emitido durante una
+caída se pierde. Se corrigieron el comentario, el texto del error
+(`nexus.ts:96`), el chip de la UI (`AlertasClient.tsx:249`, ahora «no entregado ·
+WhatsApp caído») y el supuesto gemelo en `persistencia.ts` y `motor.ts`. Es un
+cambio de veracidad del registro, no de comportamiento.
+
+**Suelo de severidad de 3 a 2.** `ALERTAS_SEVERIDAD_MINIMA=2` en `.env.local`.
+Las señales sev 2 ya se intentan enviar; siguen protegiendo del ruido el
+cooldown de 45 min y el tope de 6 mensajes/hora.
+
+**Documentación de la cascada.** Nuevo `docs/CASCADA-AGENTES.md`: los 6 criterios
+de Lynch con sus dos juegos de umbrales, los pasos 2-4, y la respuesta a lo que
+se preguntaba de viva voz —Peter y Small **no tienen cron**, corren solo al
+pulsar el botón porque su orquestación vive en componentes cliente, y de los
+cinco pasos **solo el 4 gasta tokens** (una llamada a OpenRouter por candidato
+superviviente); los pasos 1-3 son deterministas y solo cuestan cuota de Yahoo.
+
+**Verificación.** `tsc --noEmit` y `eslint` limpios, 997/997 tests en verde,
+`next build` correcto, `npm run alertas -- diagnostico` con todo en verde, y el
+suelo nuevo confirmado leyendo `severidadMinimaEnvio()` con el entorno real.
 
 ### Sesión del 2026-09-03 — la curva deja de ser un informe y empieza a decidir
 

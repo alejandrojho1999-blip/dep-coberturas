@@ -651,7 +651,7 @@ export default function AgenteGamma({ puedeEjecutar = false }: { puedeEjecutar?:
                 )
               })}
             </div>
-            <Link href="/recomendaciones"
+            <Link href="/recomendaciones#rec-gamma"
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all hover:brightness-90"
               style={{ background: 'rgba(139, 143, 240,0.15)', color: '#8b8ff0', border: '1px solid rgba(139, 143, 240,0.3)' }}
             >

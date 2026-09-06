@@ -21,8 +21,9 @@ import { estadoCanal, type EstadoCanal } from '@/lib/alertas/canal'
 export interface ResultadoEnvio {
   /**
    * El puente aceptó el mensaje. NO significa que llegara al teléfono: el
-   * puente responde `202 queued` y envía después. Lo más cerca que se está de
-   * saber si llegará es `canal`, consultado justo antes.
+   * puente responde `202 queued` y solo después intenta enviar, sin reintentar
+   * si falla. Lo más cerca que se está de saber si llegará es `canal`,
+   * consultado justo antes.
    */
   aceptado: boolean
   error: string | null
@@ -39,9 +40,16 @@ export function nexusConfigurado(): boolean {
 /**
  * Envía un mensaje por el puente de Nexus.
  *
- * Antes comprueba la sesión de WhatsApp. Si está caída **se envía igual** —el
- * puente encola y OpenClaw reintenta cuando vuelve— pero el resultado lo dice,
- * para que la fila del registro no afirme una entrega que no ocurrió.
+ * Antes comprueba la sesión de WhatsApp. Si está caída **se intenta igual**,
+ * porque el estado del canal se lee justo antes y puede haber vuelto entre la
+ * consulta y el POST; pero el resultado lo dice, para que la fila del registro
+ * no afirme una entrega que no ocurrió.
+ *
+ * OJO: el puente NO encola. Responde `202 queued` antes de invocar a OpenClaw y
+ * luego dispara sin mirar; si el envío falla solo queda una línea en su log. No
+ * hay cola, ni reintento, ni drenador en ninguna parte, así que un mensaje
+ * emitido con la sesión caída se pierde para siempre. El `202` es una promesa
+ * que el puente no cumple.
  */
 export async function enviarNexus(
   mensaje: string,
@@ -88,12 +96,12 @@ export async function enviarNexus(
       }
     }
 
-    // El puente encoló el mensaje. Si la sesión de WhatsApp estaba caída, eso
+    // El puente aceptó el mensaje. Si la sesión de WhatsApp estaba caída, eso
     // se registra como el fallo que es, aunque el puente respondiera 202.
     return {
       aceptado: true,
       error: canal.estado === 'caido'
-        ? `encolado en el puente, pero la sesión de WhatsApp está caída: ${canal.detalle}`
+        ? `no entregado: el puente aceptó el mensaje, pero la sesión de WhatsApp está caída y no hay reintento: ${canal.detalle}`
         : null,
       canal: canal.estado,
       canalDetalle: canal.detalle,

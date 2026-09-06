@@ -43,7 +43,7 @@ export function TopBar({ userName, onMobileMenuOpen }: TopBarProps) {
           </span>
           <span className="hidden h-3 w-px bg-border lg:block" />
           <span className="hidden whitespace-nowrap text-[10px] tracking-wide text-text-muted uppercase lg:block">
-            Agentes y Estrategias Cuantitativas
+            Emporium Quant Desk
           </span>
         </div>
 

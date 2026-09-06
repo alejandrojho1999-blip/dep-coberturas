@@ -240,13 +240,14 @@ export function AlertasClient({ proximoEventoIso, proximoEventoEtiqueta }: {
  *
  * Tres desenlaces distintos, y hace falta distinguirlos: el puente acepta el
  * mensaje (202) antes de intentar enviarlo, así que «aceptado» con la sesión de
- * WhatsApp caída significa que no llegó a ningún teléfono.
+ * WhatsApp caída significa que no llegó a ningún teléfono, y como el puente no
+ * encola ni reintenta, tampoco llegará cuando la sesión vuelva.
  */
 function ChipEntrega({ senal }: { senal: SenalFila }) {
   if (!senal.aceptado_at) return <Chip tono="aviso">no enviado</Chip>
 
   if (senal.canal_estado === 'caido') {
-    return <Chip tono="aviso">encolado · WhatsApp caído</Chip>
+    return <Chip tono="aviso">no entregado · WhatsApp caído</Chip>
   }
 
   if (senal.canal_estado === 'desconocido' || senal.canal_estado == null) {
