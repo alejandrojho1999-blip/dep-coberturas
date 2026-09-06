@@ -1,0 +1,36 @@
+# Ejecución programada de los agentes Peter y Small.
+#
+# Por qué aquí y no en la nube: la cascada tiene que dispararse una hora antes
+# del cierre, para que dé tiempo a abrir o cerrar la posición recomendada ese
+# mismo día, y ninguno de los dos planificadores de la nube puede prometerlo.
+# El plan Hobby de Vercel invoca el cron en cualquier instante de la hora
+# indicada —`0 19 * * *` puede saltar a las 19:59, un minuto antes del cierre—
+# y GitHub Actions se retrasa sin aviso cuando tiene carga. Además el plan
+# Hobby mata la función a los 300 s, y Small llega a hacer quince llamadas al
+# modelo.
+#
+# Por qué cada cuarto de hora y no a una hora fija: Estados Unidos y Europa
+# cambian la hora en fines de semana distintos, así que durante dos o tres
+# semanas al año el desfase entre Nueva York y Madrid no es el habitual y una
+# hora fija caería fuera. La ventana ancha lo absorbe; el script comprueba
+# `enVentanaPrecierre` (de 75 a 15 min antes del cierre) y un sello con el día
+# ya ejecutado, de modo que **solo corre una vez al día**: manda el primer
+# disparo que cae dentro y los demás salen sin tocar Yahoo ni el modelo.
+#
+# Instalación:
+#   mkdir -p /var/lib/dep-coberturas
+#   crontab -e            # pegar el bloque de abajo al final
+#   tail -f /var/log/dep-agentes.log
+#
+# Comprobación previa (no ejecuta nada, solo informa):
+#   /var/www/dep-coberturas/scripts/agentes/run.sh --estado
+#
+# Requiere en /var/www/dep-coberturas/.env.local: SUPABASE_SERVICE_ROLE_KEY,
+# NEXT_PUBLIC_SUPABASE_URL, OPENROUTER_API_KEY y CRON_USER_ID.
+
+# dep-coberturas · agentes Peter y Small, una hora antes del cierre de Nueva
+# York. La ventana real la decide el script; esto solo le da oportunidades.
+*/15 19-22 * * 1-5 /var/www/dep-coberturas/scripts/agentes/run.sh >> /var/log/dep-agentes.log 2>&1
+
+# Rotación del log, para que no crezca sin fin.
+0 3 * * 0 [ -f /var/log/dep-agentes.log ] && tail -n 5000 /var/log/dep-agentes.log > /var/log/dep-agentes.log.tmp && mv /var/log/dep-agentes.log.tmp /var/log/dep-agentes.log

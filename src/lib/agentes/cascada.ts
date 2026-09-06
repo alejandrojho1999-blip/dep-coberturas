@@ -54,6 +54,21 @@ const FALLOS_PARA_VENDER = 2
 /** Pausa entre llamadas al modelo, para no castigar al proveedor. */
 const PAUSA_ENTRE_ANALISIS_MS = 600
 
+/**
+ * Tiempo máximo que se dedica al paso 4 antes de cortar por lo sano.
+ *
+ * El plan Hobby de Vercel mata la función a los 300 s. Medido el 2026-09-06,
+ * Small saca 15 candidatos vivos al paso 4 y el screener ya consume 30 s, así
+ * que un día con el proveedor lento se pasa del límite. Cortar aquí es mejor
+ * que que lo corte la plataforma: lo ya guardado se escribe candidato a
+ * candidato, pero un corte externo se lleva la respuesta y el planificador solo
+ * ve un error sin saber qué se llegó a hacer.
+ *
+ * Lo que no se analiza hoy se analizará mañana: el screener es determinista y
+ * los fundamentales no cambian de un día para otro.
+ */
+const PRESUPUESTO_ANALISIS_MS = 210_000
+
 export interface CascadaResult {
   category: CascadaCategory
   /** Candidatos que salieron del screener con score suficiente. */
@@ -69,6 +84,8 @@ export interface CascadaResult {
   vendidas: number
   /** Escrituras que la base de datos rechazó. */
   fallidos: number
+  /** Candidatos que se quedaron sin analizar por agotarse el presupuesto. */
+  truncadas: number
   log: string[]
 }
 
@@ -96,8 +113,10 @@ export async function ejecutarCascada(
   const perfil = PERFILES[category]
   const r: CascadaResult = {
     category, candidatos: 0, trasForecast: 0, trasMomentum: 0,
-    aprobadas: 0, creadas: 0, omitidas: 0, vendidas: 0, fallidos: 0, log: [],
+    aprobadas: 0, creadas: 0, omitidas: 0, vendidas: 0, fallidos: 0,
+    truncadas: 0, log: [],
   }
+  const arranque = Date.now()
   const log = (m: string) => { r.log.push(m) }
 
   // ── PASO 0: re-evaluación de posiciones vivas ────────────────────────────
@@ -207,7 +226,13 @@ export async function ejecutarCascada(
   // ── PASO 4 y 5: dictamen del modelo y guardado ───────────────────────────
   // Se recorre en serie a propósito: es el único paso que cuesta tokens, y en
   // paralelo se perdería la pausa que protege al proveedor.
-  for (const cand of trasMomentum) {
+  for (const [i, cand] of trasMomentum.entries()) {
+    if (Date.now() - arranque > PRESUPUESTO_ANALISIS_MS) {
+      r.truncadas = trasMomentum.length - i
+      log(`⏱ presupuesto agotado: quedan ${r.truncadas} candidato(s) sin analizar, se retoman mañana`)
+      break
+    }
+
     const f = forecast[cand.ticker]
     const m = momentum[cand.ticker]
 

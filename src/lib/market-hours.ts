@@ -114,3 +114,45 @@ export function describeMarketStatus(status: MarketStatus): string {
     default:                  return `Mercado cerrado (${reloj})`
   }
 }
+
+// ── Ventana de precierre, para el cron de los agentes ───────────────────────
+
+/**
+ * A cuántos minutos del cierre estamos. Negativo si la sesión ya cerró.
+ *
+ * No mira el día de la semana: un sábado devuelve una cifra sin sentido
+ * operativo. Quien lo use debe comprobar antes `marketStatus`.
+ */
+export function minutosParaCierre(now: Date): number {
+  return CIERRE - marketMoment(now).minutosET
+}
+
+/**
+ * El cron de los agentes apunta a una hora antes del cierre, para dejar margen
+ * de abrir o cerrar la posición que recomienden el mismo día.
+ */
+export const PRECIERRE_MINUTOS = 60
+
+/**
+ * Holgura hacia atrás. GitHub Actions no garantiza la puntualidad de `schedule`
+ * y en horas de carga arranca con retraso; sin holgura, un retraso de diez
+ * minutos saltaría la ejecución del día entero.
+ */
+export const PRECIERRE_HOLGURA_MIN = 15
+
+/**
+ * ¿Estamos en la última hora larga de la sesión?
+ *
+ * Ventana efectiva: de 75 a 15 minutos antes del cierre, es decir 14:45-15:45
+ * ET. El extremo inferior lo marca `MARGEN_CIERRE_MIN`, porque más tarde
+ * `marketStatus` ya cierra la puerta por su cuenta.
+ *
+ * Existe porque el horario de un cron se fija en UTC y el desfase con Nueva
+ * York cambia dos veces al año. El workflow dispara a las 19:00 y a las 20:00
+ * UTC, y esta ventana deja pasar exactamente una de las dos en cada estación:
+ * en verano las 19:00 (15:00 ET) y en invierno las 20:00 (15:00 ET también).
+ */
+export function enVentanaPrecierre(now: Date): boolean {
+  const faltan = minutosParaCierre(now)
+  return faltan <= PRECIERRE_MINUTOS + PRECIERRE_HOLGURA_MIN && faltan > MARGEN_CIERRE_MIN
+}

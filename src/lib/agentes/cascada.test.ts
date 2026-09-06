@@ -256,6 +256,35 @@ describe('guardado y dedupe', () => {
     expect(escrituras.filter(e => e.op === 'insert')).toHaveLength(0)
   })
 
+  it('corta el paso 4 cuando se agota el presupuesto de tiempo', async () => {
+    // El plan Hobby de Vercel mata la función a los 300 s y el VPS no tiene ese
+    // límite, pero el corte protege a los dos: sin él, un proveedor lento se
+    // lleva por delante la respuesta y el planificador no sabe qué se hizo.
+    vi.useFakeTimers()
+    try {
+      runScreener.mockResolvedValue([candidato('AAA', 6), candidato('BBB', 6)])
+      forecastDeTickers.mockResolvedValue({ AAA: forecastOk(), BBB: forecastOk() })
+      momentumDeTickers.mockResolvedValue({ AAA: momentumOk(), BBB: momentumOk() })
+      // El primer análisis consume el presupuesto entero; el segundo ya no debe
+      // llegar a pedirse.
+      analizarTicker.mockImplementationOnce(async () => {
+        vi.advanceTimersByTime(4 * 60 * 1000)
+        return dictamenAprobado()
+      })
+      const { cliente } = supabaseFalso()
+
+      const p = ejecutarCascada(cliente, 'u1', 'PETER_LYNCH')
+      await vi.runAllTimersAsync()
+      const r = await p
+
+      expect(analizarTicker).toHaveBeenCalledTimes(1)
+      expect(r.truncadas).toBe(1)
+      expect(r.log.join(' ')).toContain('presupuesto agotado')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('sigue con el resto de candidatos cuando el modelo falla en uno', async () => {
     runScreener.mockResolvedValue([candidato('AAA', 6), candidato('BBB', 6)])
     forecastDeTickers.mockResolvedValue({ AAA: forecastOk(), BBB: forecastOk() })

@@ -108,56 +108,97 @@ resultado (`agent_recommendations`).
 
 ## ¿Usa crons? ¿Cada cuánto se ejecuta?
 
-**Sí, desde el 2026-09-06: una vez al día, de lunes a viernes.** Antes de esa
-fecha la cascada solo existía en el navegador y no se evaluaba nada si nadie
-abría `/agentes` y pulsaba el botón.
+**Sí, desde el 2026-09-06: una vez al día, una hora antes del cierre de Nueva
+York, de lunes a viernes.** Antes de esa fecha la cascada solo existía en el
+navegador y no se evaluaba nada si nadie abría `/agentes` y pulsaba el botón.
 
 | Programador | Cadencia | Qué dispara |
 |---|---|---|
-| GitHub Actions `run-agents.yml` | `0 16 * * 1-5` UTC | `/api/cron/run-agents` — **Peter y Small**, un paso por agente |
-| GitHub Actions `review-exits.yml` | `0,30 14-20 * * 1-5` UTC | `/api/cron/review-exits` — salidas de Gamma y Theta (opciones) |
-| GitHub Actions `archive-chains.yml` | `15 21,22 * * 1-5` UTC | `/api/cron/archive-chains` — archivado de cadenas de opciones |
-| Crontab del VPS | de 2 min a diario | Motor de alerta temprana (`scripts/alertas/run.sh`), sin relación con los agentes |
+| Crontab del VPS | `*/15 19-22 * * 1-5` (hora de Madrid) | `scripts/agentes/run.sh` — **Peter y Small** |
+| GitHub Actions `review-exits.yml` | `0,30 14-20 * * 1-5` UTC | `/api/cron/review-exits` — salidas de Gamma y Theta |
+| GitHub Actions `archive-chains.yml` | `15 21,22 * * 1-5` UTC | `/api/cron/archive-chains` — cadenas de opciones |
+| Crontab del VPS | de 2 min a diario | Motor de alerta temprana (`scripts/alertas/run.sh`) |
 
-**Por qué una vez al día y no más.** Los fundamentales de Lynch se publican por
-trimestres: una segunda pasada el mismo día evaluaría los mismos números y solo
-movería el ruido del precio. Y el paso 4 es el único que cuesta dinero. El
-dedupe de `agent_recommendations` protege igualmente contra duplicar una
-posición viva, así que repetir la ejecución es inofensivo, solo inútil.
+### Por qué en el VPS y no en la nube
 
-**Por qué a las 16:00 UTC.** La ventana operable es 10:00-15:45 ET
-(`marketStatus`, que descuenta media hora tras la apertura y un cuarto antes del
-cierre). Las 16:00 UTC caen dentro en las dos estaciones: 12:00 ET en verano,
-11:00 ET en invierno. El endpoint comprueba el estado del mercado por su cuenta
-y responde `ejecutado: false` sin tocar nada si cae fuera, porque fuera de
-sesión Yahoo devuelve el último cierre y la recomendación nacería anclada a un
-precio que ya no existe.
+La hora importa: la recomendación llega una hora antes del cierre para que dé
+tiempo a abrir o cerrar la posición ese mismo día. Ninguno de los dos
+planificadores de la nube puede prometer esa hora.
 
-**El botón sigue estando.** El cron no lo sustituye: `/agentes` conserva su
-ejecución manual con el detalle paso a paso. Lo que comparten es el destino y
-las reglas, no el código de presentación.
+- **Vercel, plan Hobby**: invoca el cron en cualquier instante de la hora
+  indicada, para repartir carga entre cuentas. `0 19 * * *` puede saltar a las
+  19:59, que en verano es un minuto antes del cierre. Además solo admite dos
+  crons diarios, y mata la función a los **300 s** — Small llega a hacer quince
+  llamadas al modelo y no cabe con holgura.
+- **GitHub Actions**: no garantiza la puntualidad de `schedule` y se retrasa sin
+  aviso cuando la plataforma tiene carga.
+- **El VPS** ya sostiene el motor de alerta temprana con este mismo patrón, ya
+  tiene los secretos en `.env.local`, y no impone límite de duración. No añade
+  una dependencia nueva: reutiliza la que ya existe.
+
+### Por qué cada cuarto de hora si solo corre una vez
+
+Estados Unidos y Europa cambian la hora en fines de semana distintos, así que
+durante dos o tres semanas al año el desfase entre Nueva York y Madrid no es el
+habitual y una hora fija del crontab caería fuera. La ventana ancha lo absorbe,
+y dos guardas dejan pasar un solo disparo:
+
+1. `enVentanaPrecierre` (`src/lib/market-hours.ts`) exige que falten entre 75 y
+   15 minutos para el cierre. El extremo inferior lo marca `MARGEN_CIERRE_MIN`,
+   porque más tarde `marketStatus` ya cierra la puerta por su cuenta.
+2. Un sello en `/var/lib/dep-coberturas/agentes-ultimo-dia` guarda la última
+   fecha **en hora de Nueva York** que se ejecutó. Si coincide con hoy, el
+   script sale sin tocar Yahoo ni el modelo.
+
+Manda el primer disparo que cae dentro; los demás cuestan un proceso de Node de
+medio segundo y nada más.
 
 ### Cómo se dispara a mano
 
 ```bash
-curl -H "Authorization: Bearer $CRON_SECRET" \
-     "$APP_URL/api/cron/run-agents?agente=peter"   # o ?agente=small, o sin parámetro para los dos
+scripts/agentes/run.sh --estado          # informa y no ejecuta nada
+scripts/agentes/run.sh                   # respeta ventana y sello
+scripts/agentes/run.sh peter --forzar    # ignora ventana y sello, un solo agente
 ```
 
-Requiere `CRON_SECRET` y `CRON_USER_ID` en el entorno del servidor. Sin
-`CRON_SECRET` el endpoint responde 503 y no ejecuta nada: falla cerrado a
-propósito, porque una tarea que escribe en la base no debe quedar abierta por un
-despiste de configuración.
+`--forzar` no salta la comprobación de mercado abierto: fuera de sesión Yahoo
+devuelve el último cierre y la recomendación nacería anclada a un precio que ya
+no existe.
 
-No existe `vercel.json`; el despliegue es Render y `render.yaml` solo declara el
-servicio web, sin bloque de cron. Tampoco hay `pg_cron` en las migraciones: los
-tres crons de la aplicación viven en GitHub Actions.
+### El endpoint HTTP sigue existiendo
+
+`/api/cron/run-agents` hace exactamente lo mismo desde la aplicación desplegada,
+autenticado con `Authorization: Bearer $CRON_SECRET`. No hay ningún
+planificador apuntándole —el VPS llama a las librerías directamente, sin pasar
+por HTTP— pero queda disponible por si el despliegue se mueve a un plan que sí
+permita cronometrar con precisión:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+     "$APP_URL/api/cron/run-agents?agente=peter&forzar=1"
+```
+
+Sin `CRON_SECRET` responde 503 y no ejecuta nada: falla cerrado a propósito,
+porque una tarea que escribe en la base no debe quedar abierta por un descuido
+de configuración.
+
+### El botón sigue estando
+
+El cron no lo sustituye: `/agentes` conserva la ejecución manual con el detalle
+paso a paso. Lo que comparten es el destino y las reglas, no la presentación.
 
 ---
 
 ## ¿Qué consume cada ejecución? ¿Gasta tokens?
 
 Distinción importante, porque solo un paso de los cinco cuesta dinero de modelo.
+
+Medido el 2026-09-06 con una corrida real de extremo a extremo:
+
+| Agente | Screener | Embudo | Llegan al modelo | Total |
+|---|---|---|---|---|
+| Peter | 35-44 s (424 evaluados, 20 con 6/6) | 8 tras forecast, 3 tras momentum | **3** | ~69 s |
+| Small | 25-30 s (260 evaluados, 92 con ≥4/6) | 46 tras forecast, 15 tras momentum | **15** | ~2-4 min |
 
 | Paso | Recurso | ¿Gasta tokens? | Coste real |
 |---|---|---|---|
@@ -194,6 +235,12 @@ del modelo.
 
 `/api/peter-lynch/screen` es el único conmutador de universo: cualquier valor de
 `universe` distinto de `small_cap` cae a large cap en silencio.
+
+Hay además un presupuesto de tiempo en el paso 4
+(`PRESUPUESTO_ANALISIS_MS`, 210 s): si se agota, la cascada deja de analizar y
+lo dice en `truncadas`. Lo ya guardado se escribe candidato a candidato, así que
+no se pierde; el resto se retoma al día siguiente, que es inofensivo porque el
+screener es determinista.
 
 El cron no pasa por ninguna de esas rutas: llama directamente a las librerías
 (`lib/peter-lynch/screener.ts`, `lib/agentes/historicos.ts`,

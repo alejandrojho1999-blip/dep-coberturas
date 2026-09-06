@@ -57,9 +57,17 @@ export interface AnalysisResult {
  * aplanado un 400 de dato inválido y un 500 del proveedor en el mismo fallo.
  */
 export class AnalisisError extends Error {
-  constructor(message: string, readonly status: number, readonly raw?: string) {
+  // Campos declarados y asignados a mano, no como parámetros del constructor:
+  // el modo strip-only de Node (`--experimental-strip-types`, que usan los
+  // scripts del VPS) no admite las parameter properties de TypeScript.
+  readonly status: number
+  readonly raw?: string
+
+  constructor(message: string, status: number, raw?: string) {
     super(message)
     this.name = 'AnalisisError'
+    this.status = status
+    this.raw = raw
   }
 }
 

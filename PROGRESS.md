@@ -36,18 +36,22 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 
 ### Ejecución programada de los agentes
 
-- **`CRON_SECRET` y `CRON_USER_ID` están vacíos en `.env.local`.** No es nuevo
-  —los crons de `review-exits` y `archive-chains` ya dependían de ellos— pero
-  ahora hay un tercero. Sin `CRON_SECRET` el endpoint responde 503 y no ejecuta
-  nada. Hay que confirmar que ambos tienen valor en el entorno de Render, y que
-  en GitHub existen el secreto `CRON_SECRET` y la variable `APP_URL`.
-- **Comprobar la primera pasada real.** El lunes a las 16:00 UTC. Hasta
-  entonces solo se ha verificado la autenticación y la guarda de mercado
-  cerrado; la cascada completa contra Yahoo y OpenRouter no se ha ejecutado.
-- **Vigilar la duración.** El screener recorre ~440 tickers en lotes de 25 antes
-  de que empiece nada más. `maxDuration = 300` es una pista de Vercel y en
-  Render no corta, pero el `--max-time 900` del workflow sí. Si un día se agota,
-  el paso siguiente es cachear el screener entre las dos llamadas.
+- **Comprobar la primera pasada real**, el lunes entre las 20:45 y las 21:45
+  hora de Madrid: `tail -f /var/log/dep-agentes.log`. La cascada ya se validó de
+  extremo a extremo contra Yahoo y OpenRouter (69 s, 3 recomendaciones), pero
+  con un Supabase simulado; la escritura real en la cartera no se ha ejercitado
+  todavía desde el cron.
+- **No existe proyecto de Vercel para este repositorio.** El remoto es
+  `alejandrojho1999-blip/dep-coberturas` y la cuenta de Vercel del usuario
+  (`lriofrio915's projects`, plan Hobby) no tiene ningún proyecto enlazado a él.
+  Mientras siga así, `/api/cron/run-agents` no está desplegado en ninguna parte
+  y `render.yaml` describe un despliegue que el usuario dice no usar. Conviene
+  decidir dónde vive la aplicación y borrar o actualizar `render.yaml`.
+- **Vigilar el presupuesto de Small.** Es el que más se acerca al límite: 15
+  candidatos al paso 4. En el VPS no hay corte de plataforma, pero
+  `PRESUPUESTO_ANALISIS_MS` corta a los 210 s y deja `truncadas > 0`. Si eso se
+  vuelve habitual, el siguiente paso es subir el presupuesto o endurecer el
+  corte de score de Small.
 
 ### Alerta temprana
 
@@ -535,6 +539,47 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-06 (3) — el cron se muda al VPS para poder llegar a su hora
+
+**El requisito nuevo.** La cascada debía correr **una hora antes del cierre**,
+para dar margen a abrir o cerrar la posición recomendada ese mismo día. Eso
+convirtió la hora en un requisito funcional, no en un detalle de despliegue, y
+descartó a los dos planificadores de la nube:
+
+- **Vercel Hobby** invoca el cron en cualquier instante de la hora indicada,
+  para repartir carga: `0 19 * * *` puede saltar a las 19:59, un minuto antes
+  del cierre. Solo admite dos crons diarios y mata la función a los 300 s.
+- **GitHub Actions** no garantiza la puntualidad de `schedule`.
+
+**La decisión.** El planificador pasa al VPS, que ya sostiene la alerta temprana
+con este mismo patrón, ya tiene los secretos en `.env.local` y no impone límite
+de duración. Se añaden `scripts/agentes/{ejecutar.mts,run.sh,crontab.txt}` y el
+script `npm run agentes`, y se **elimina** `.github/workflows/run-agents.yml`:
+dos planificadores sobre la misma tabla habrían gastado tokens por duplicado.
+
+**El problema del horario de verano.** Estados Unidos y Europa cambian la hora
+en fines de semana distintos, así que dos o tres semanas al año una hora fija
+del crontab caería fuera de la ventana. Se resuelve con red ancha más dos
+guardas: el crontab da oportunidades cada cuarto de hora (`*/15 19-22 * * 1-5`)
+y el script exige `enVentanaPrecierre` —de 75 a 15 min al cierre, calculado con
+`Intl` sobre la hora de Nueva York— y un sello con la última fecha ET ejecutada.
+Manda el primer disparo que cae dentro; los demás cuestan medio segundo de Node.
+
+**Presupuesto de tiempo en el paso 4.** Medido: Small saca 15 candidatos al
+modelo y Peter 3. `PRESUPUESTO_ANALISIS_MS` (210 s) corta y reporta `truncadas`
+en vez de dejar que un proveedor lento se lleve por delante la respuesta. Lo ya
+guardado se escribe candidato a candidato, así que no se pierde.
+
+**Un bache encontrado por el camino.** `AnalisisError` usaba parameter
+properties de TypeScript, que el modo strip-only de Node —el que usan los
+scripts del VPS— no admite. Corregido a campos declarados a mano.
+
+**Verificado en vivo.** Cascada completa de Peter contra Yahoo y OpenRouter
+reales, con Supabase simulado: 69 s, 424 evaluados, 20 con 6/6, 8 tras forecast,
+3 tras momentum, 3 dictámenes aprobados con precios coherentes (PSX 255,09 →
+301,52; USB 63,37 → 70,32; CF 133,35 → 146,69). Crontab instalado conservando
+las 8 entradas de alertas. 1017/1017 tests.
 
 ### Sesión del 2026-09-06 (2) — los agentes dejan de depender de que alguien pulse
 

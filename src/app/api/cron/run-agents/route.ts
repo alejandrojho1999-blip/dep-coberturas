@@ -1,6 +1,12 @@
 import { authorizeCron, cronUserId } from '@/lib/cron-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { describeMarketStatus, marketStatus } from '@/lib/market-hours'
+import {
+  describeMarketStatus,
+  enVentanaPrecierre,
+  marketStatus,
+  minutosParaCierre,
+  PRECIERRE_MINUTOS,
+} from '@/lib/market-hours'
 import {
   CASCADA_CATEGORIES,
   ejecutarCascada,
@@ -27,6 +33,13 @@ export const maxDuration = 300
  * evaluarían los mismos números y solo moverían el ruido del precio. El dedupe
  * de `agent_recommendations` protege de todos modos contra duplicar una
  * posición viva, de manera que repetir la ejecución es inofensivo, solo inútil.
+ *
+ * Y corre una hora antes del cierre, para que dé tiempo a abrir o cerrar la
+ * posición recomendada ese mismo día. Como el horario del planificador se fija
+ * en UTC y el desfase con Nueva York cambia dos veces al año, el workflow
+ * dispara a las 19:00 y a las 20:00 UTC y `enVentanaPrecierre` deja pasar solo
+ * la que caiga a una hora del cierre. `?forzar=1` salta esa ventana para poder
+ * lanzarlo a mano; lo que no se salta nunca es que el mercado esté abierto.
  *
  * Con `?agente=peter` o `?agente=small` se ejecuta uno solo. Sin parámetro van
  * los dos, en serie: el screener mantiene dos cachés independientes y lanzarlos
@@ -59,12 +72,23 @@ async function handle(request: Request): Promise<Response> {
   // El paso 4 pide el precio real de mercado y de él salen el precio de entrada,
   // el objetivo y el stop. Fuera de sesión Yahoo devuelve el último cierre, así
   // que la recomendación nacería anclada a un precio que ya no existe.
-  const estado = marketStatus(new Date())
+  const ahora = new Date()
+  const estado = marketStatus(ahora)
   if (!estado.abierto) {
     return Response.json({
       ejecutado: false,
       motivo: estado.motivo,
       mensaje: describeMarketStatus(estado),
+    })
+  }
+
+  const forzar = searchParams.get('forzar') === '1'
+  if (!forzar && !enVentanaPrecierre(ahora)) {
+    const faltan = minutosParaCierre(ahora)
+    return Response.json({
+      ejecutado: false,
+      motivo: 'fuera-de-ventana',
+      mensaje: `Faltan ${faltan} min para el cierre; la ventana apunta a ${PRECIERRE_MINUTOS} min. Usa ?forzar=1 para ejecutar igualmente.`,
     })
   }
 
@@ -89,6 +113,7 @@ async function handle(request: Request): Promise<Response> {
   const creadas = resultados.reduce((n, x) => n + x.creadas, 0)
   const vendidas = resultados.reduce((n, x) => n + x.vendidas, 0)
   const fallidos = resultados.reduce((n, x) => n + x.fallidos, 0)
+  const truncadas = resultados.reduce((n, x) => n + x.truncadas, 0)
 
   return Response.json({
     ejecutado: true,
@@ -96,6 +121,7 @@ async function handle(request: Request): Promise<Response> {
     creadas,
     vendidas,
     fallidos,
+    truncadas,
     errores,
     resultados,
   }, {
