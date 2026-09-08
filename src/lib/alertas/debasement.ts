@@ -107,13 +107,31 @@ export function metricaDesde(def: SerieDef, obs: FREDObservation[]): MetricaDeba
 }
 
 /**
+ * Cuánta historia se pide a FRED.
+ *
+ * No basta con un año. Una serie `var12m` necesita la observación de doce meses
+ * antes de **su última publicación**, no de hoy, y el IPC sale con unos dos
+ * meses de retraso: en septiembre de 2026 el último dato era el de julio, cuyo
+ * objetivo interanual caía en julio de 2025, treinta y cinco días antes del
+ * comienzo de una ventana de 400 días. `variacion12m` no encontraba con qué
+ * comparar y las dos series de IPC se caían del panel con «sin observaciones
+ * suficientes».
+ *
+ * El fallo era intermitente y por eso duró: con un retraso de publicación corto
+ * la observación entraba por los pelos, y con uno largo no. 500 días dejan casi
+ * cuatro meses de margen sobre los 365 y absorben tanto el retraso como el hecho
+ * de que estas series sean mensuales.
+ */
+export const DIAS_DE_HISTORIA = 500
+
+/**
  * Foto del envilecimiento.
  *
  * Cada serie se pide por separado y un fallo aislado no tumba el resto: es
  * preferible un panel con cuatro de cinco métricas que ninguno.
  */
 export async function medirDebasement(ahora = new Date()): Promise<Debasement> {
-  const desde = new Date(ahora.getTime() - 400 * 86_400_000).toISOString().slice(0, 10)
+  const desde = new Date(ahora.getTime() - DIAS_DE_HISTORIA * 86_400_000).toISOString().slice(0, 10)
   const hasta = ahora.toISOString().slice(0, 10)
 
   const metricas: MetricaDebasement[] = []

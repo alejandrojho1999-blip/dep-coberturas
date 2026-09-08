@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { metricaDesde, variacion12m } from '@/lib/alertas/debasement'
+import { DIAS_DE_HISTORIA, metricaDesde, variacion12m } from '@/lib/alertas/debasement'
+
+/**
+ * Serie mensual como la publica FRED: un dato el día 1 de cada mes, con
+ * `mesesDeRetraso` de demora respecto a hoy, recortada a la ventana que se pide.
+ */
+function serieMensual(hoy: Date, diasDeVentana: number, mesesDeRetraso: number) {
+  const desde = new Date(hoy.getTime() - diasDeVentana * 86_400_000)
+  const ultimo = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - mesesDeRetraso, 1)
+
+  const obs: Array<{ date: string; value: number }> = []
+  for (let i = 30; i >= 0; i--) {
+    const d = new Date(ultimo)
+    d.setUTCMonth(d.getUTCMonth() - i)
+    if (d >= desde) obs.push({ date: d.toISOString().slice(0, 10), value: 100 + (30 - i) })
+  }
+  return obs
+}
 
 describe('variacion12m', () => {
   it('calcula la variación contra la observación de hace un año', () => {
@@ -24,6 +41,25 @@ describe('variacion12m', () => {
   it('una base cero no produce infinitos', () => {
     const r = variacion12m([{ date: '2025-01-01', value: 0 }, { date: '2026-08-01', value: 5 }])
     expect(r.var12mPct).toBeNull()
+  })
+
+  // El IPC sale con unos dos meses de retraso, así que su objetivo interanual
+  // queda casi catorce meses atrás. Con los 400 días que se pedían antes, la
+  // observación con la que comparar caía fuera de la ventana y las dos series de
+  // IPC desaparecían del panel con «sin observaciones suficientes».
+  it('la ventana que se pide cubre una serie mensual publicada con retraso', () => {
+    const hoy = new Date('2026-09-09T00:00:00Z')
+
+    const corta = variacion12m(serieMensual(hoy, 400, 2))
+    expect(corta.var12mPct).toBeNull()
+
+    const actual = variacion12m(serieMensual(hoy, DIAS_DE_HISTORIA, 2))
+    expect(actual.var12mPct).not.toBeNull()
+  })
+
+  it('aguanta un retraso de publicación de tres meses', () => {
+    const hoy = new Date('2026-09-09T00:00:00Z')
+    expect(variacion12m(serieMensual(hoy, DIAS_DE_HISTORIA, 3)).var12mPct).not.toBeNull()
   })
 })
 
