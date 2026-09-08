@@ -1,4 +1,5 @@
 import YahooFinance from 'yahoo-finance2'
+import { conReintentos } from '@/lib/reintentos'
 const yahooFinance = new YahooFinance()
 
 export interface FREDObservation {
@@ -57,11 +58,18 @@ export async function fetchFREDObservations(
   })
 
   const url = `https://api.stlouisfed.org/fred/series/observations?${params.toString()}`
-  const response = await fetch(url)
 
-  if (!response.ok) {
-    throw new Error(`FRED API error for series ${seriesId}: ${response.status} ${response.statusText}`)
-  }
+  // FRED devuelve un 502 de vez en cuando; el 2026-09-08 uno se llevó por
+  // delante un ciclo de alertas entero. Un 4xx —clave mala, serie que no
+  // existe— no se reintenta: `esFalloPasajero` solo reconoce 5xx, 429 y caídas
+  // de red, así que ese error sigue subiendo a la primera.
+  const response = await conReintentos(async () => {
+    const r = await fetch(url)
+    if (!r.ok) {
+      throw new Error(`FRED API error for series ${seriesId}: ${r.status} ${r.statusText}`)
+    }
+    return r
+  })
 
   const data = (await response.json()) as {
     observations: Array<{ date: string; value: string }>

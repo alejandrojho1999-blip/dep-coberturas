@@ -12,6 +12,53 @@ import { N_MINIMO_PARA_CORREGIR, type PuntoCurva } from '@/lib/alertas/calibraci
 import type { EstadoEvento } from '@/lib/alertas/dedupe'
 import type { ProbabilidadTasas } from '@/lib/alertas/fedwatch'
 import type { MetricaDebasement } from '@/lib/alertas/debasement'
+import { conReintentos, esFalloPasajero } from '@/lib/reintentos'
+
+/** Forma mínima de cualquier respuesta de PostgREST. */
+type RespuestaPostgrest = { error: { code?: string; message?: string } | null }
+
+/**
+ * Envoltorio para volver a lanzar una consulta que falló por algo pasajero.
+ *
+ * PostgREST no lanza: devuelve el fallo dentro de `error`, así que no hay nada
+ * que `conReintentos` pueda atrapar por sí solo. Aquí se convierte en excepción
+ * el rato justo para reintentar y, si se agotan los intentos, se devuelve la
+ * respuesta original intacta. Eso es deliberado: cada quien sigue decidiendo qué
+ * hacer con su error —`urlsRecientes` tolera que falte la tabla, otros no— y los
+ * mensajes del log no cambian.
+ */
+class FalloPasajeroPostgrest<R> extends Error {
+  constructor(readonly respuesta: R, mensaje: string) {
+    super(mensaje)
+    this.name = 'FalloPasajeroPostgrest'
+  }
+}
+
+async function leerConReintentos<R extends RespuestaPostgrest>(
+  etiqueta: string,
+  consulta: () => PromiseLike<R>,
+): Promise<R> {
+  try {
+    return await conReintentos(
+      async () => {
+        const respuesta = await consulta()
+        if (respuesta.error && esFalloPasajero(respuesta.error)) {
+          throw new FalloPasajeroPostgrest(respuesta, respuesta.error.message ?? 'sin mensaje')
+        }
+        return respuesta
+      },
+      {
+        alReintentar: (intento, error, esperaMs) =>
+          console.warn(
+            `[reintento ${intento}] ${etiqueta}: ${(error as Error).message} — se repite en ${esperaMs} ms`,
+          ),
+      },
+    )
+  } catch (error) {
+    if (error instanceof FalloPasajeroPostgrest) return error.respuesta as R
+    throw error
+  }
+}
 
 export interface SenalAGuardar {
   tipo: 'guerra' | 'fed_tesoro' | 'tasas' | 'debasement'
@@ -114,11 +161,13 @@ export async function enviadosUltimaHora(
   ahora = new Date(),
 ): Promise<number> {
   const desde = new Date(ahora.getTime() - 3_600_000).toISOString()
-  const { count, error } = await admin
-    .from('alert_signals')
-    .select('id', { count: 'exact', head: true })
-    .not('aceptado_at', 'is', null)
-    .gte('aceptado_at', desde)
+  const { count, error } = await leerConReintentos('alert_signals (conteo)', () =>
+    admin
+      .from('alert_signals')
+      .select('id', { count: 'exact', head: true })
+      .not('aceptado_at', 'is', null)
+      .gte('aceptado_at', desde),
+  )
 
   if (error) throw new Error(`alert_signals (conteo): ${error.message}`)
   return count ?? 0
@@ -223,8 +272,12 @@ export async function urlsRecientes(
   const desde = new Date(Date.now() - horas * 3_600_000).toISOString()
 
   const [senales, vistas] = await Promise.all([
-    admin.from('alert_signals').select('url').gte('created_at', desde).not('url', 'is', null),
-    admin.from('alert_seen_urls').select('url').gte('created_at', desde),
+    leerConReintentos('alert_signals (urls)', () =>
+      admin.from('alert_signals').select('url').gte('created_at', desde).not('url', 'is', null),
+    ),
+    leerConReintentos('alert_seen_urls (urls)', () =>
+      admin.from('alert_seen_urls').select('url').gte('created_at', desde),
+    ),
   ])
 
   if (senales.error) throw new Error(`alert_signals (urls): ${senales.error.message}`)
