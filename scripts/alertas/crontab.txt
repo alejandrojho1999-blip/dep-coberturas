@@ -15,8 +15,15 @@
 # Requiere en /var/www/dep-coberturas/.env.local: OPENROUTER_API_KEY,
 # FRED_API_KEY, SUPABASE_SERVICE_ROLE_KEY, NEXUS_WEBHOOK_URL y NEXUS_WEBHOOK_TOKEN.
 
-# Escalada Rusia–OTAN: cada 2 minutos. Es el único que compite con el precio.
-*/2 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh guerra >> /var/log/dep-alertas.log 2>&1
+# Escalada Rusia–OTAN: cada 5 minutos. Es el único que compite con el precio,
+# pero a cada 2 minutos eran 720 corridas al día y el 2026-09-08 casi todas
+# cerraron con «revisados 0»: los titulares no aparecen a ese ritmo. El coste es
+# hasta 3 minutos más de latencia en el aviso.
+#
+# Va desplazado 2 minutos para no coincidir con `calendario`, que también corre
+# cada 5: dos procesos de Node a la vez cada cinco minutos es contención que no
+# hace falta pagar.
+2-59/5 * * * * /var/www/dep-coberturas/scripts/alertas/run.sh guerra >> /var/log/dep-alertas.log 2>&1
 
 # Calendario de tasas: avisos a 24 h, 1 h y 15 min, y disparo al publicarse el
 # dato. La tolerancia de los hitos es de 5 minutos, así que este es el periodo
