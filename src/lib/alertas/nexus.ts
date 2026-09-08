@@ -16,6 +16,8 @@
  * base con su error, no reventar el ciclo y perder también las siguientes.
  */
 
+import { readFileSync } from 'node:fs'
+
 import { estadoCanal, type EstadoCanal } from '@/lib/alertas/canal'
 
 export interface ResultadoEnvio {
@@ -51,8 +53,43 @@ interface RespuestaPuente {
   error?: string
 }
 
+/**
+ * Token del puente, con un solo origen de verdad.
+ *
+ * El token vivía en dos sitios: `WEBHOOK_TOKEN` en el fichero de entorno que
+ * carga el servicio del puente, y `NEXUS_WEBHOOK_TOKEN` en el de la aplicación.
+ * El 2026-09-08 se rotó solo el primero y todo respondió `401` durante horas
+ * sin que nada lo dijera: dos copias de un secreto son dos oportunidades de
+ * divergir, y la divergencia solo se ve cuando ya falló.
+ *
+ * Aquí manda el fichero del puente, porque el puente es quien valida: si se lee,
+ * no hay forma de que la aplicación mande un token que el puente vaya a
+ * rechazar. La variable de entorno queda como respaldo para cuando ese fichero
+ * no existe —una máquina de desarrollo, o un despliegue donde el motor no corra
+ * junto al puente—. `NEXUS_WEBHOOK_ENV_FILE` cambia la ruta; apuntarla a algo
+ * inexistente devuelve el control a la variable.
+ */
+export function tokenPuente(): string | null {
+  const ruta = process.env.NEXUS_WEBHOOK_ENV_FILE || '/root/openclaw-webhook/webhook.env'
+
+  try {
+    const contenido = readFileSync(ruta, 'utf8')
+    const valor = contenido.match(/^\s*WEBHOOK_TOKEN\s*=\s*(.*)$/m)?.[1]
+    if (valor) {
+      // El fichero lo consume systemd, que no quita comillas ni espacios de la
+      // misma forma en todos los casos; se normaliza igual que haría el shell.
+      const limpio = valor.trim().replace(/^["']|["']$/g, '')
+      if (limpio) return limpio
+    }
+  } catch {
+    // Sin fichero legible se usa la variable, que es lo correcto fuera del VPS.
+  }
+
+  return process.env.NEXUS_WEBHOOK_TOKEN || null
+}
+
 export function nexusConfigurado(): boolean {
-  return Boolean(process.env.NEXUS_WEBHOOK_URL && process.env.NEXUS_WEBHOOK_TOKEN)
+  return Boolean(process.env.NEXUS_WEBHOOK_URL && tokenPuente())
 }
 
 /**
@@ -78,7 +115,7 @@ export async function enviarNexus(
   evento = 'alerta-temprana',
 ): Promise<ResultadoEnvio> {
   const url = process.env.NEXUS_WEBHOOK_URL
-  const token = process.env.NEXUS_WEBHOOK_TOKEN
+  const token = tokenPuente()
 
   const canal = await estadoCanal()
 
@@ -93,7 +130,11 @@ export async function enviarNexus(
   })
 
   if (!url || !token) {
-    return fallo('NEXUS_WEBHOOK_URL o NEXUS_WEBHOOK_TOKEN no configurados')
+    return fallo(
+      'sin puente: falta NEXUS_WEBHOOK_URL, o el token no está ni en ' +
+      `${process.env.NEXUS_WEBHOOK_ENV_FILE || '/root/openclaw-webhook/webhook.env'} ` +
+      'ni en NEXUS_WEBHOOK_TOKEN',
+    )
   }
 
   try {

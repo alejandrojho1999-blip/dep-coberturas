@@ -9,9 +9,13 @@
  * pruebas impiden que el lado de la aplicación vuelva a confundirlos.
  */
 
+import { unlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { enviarNexus, nexusConfigurado } from '@/lib/alertas/nexus'
+import { enviarNexus, nexusConfigurado, tokenPuente } from '@/lib/alertas/nexus'
 
 vi.mock('@/lib/alertas/canal', () => ({
   estadoCanal: vi.fn(async () => ({ estado: 'vivo', detalle: 'linea de estado simulada' })),
@@ -34,6 +38,10 @@ function responde(status: number, cuerpo: unknown) {
 beforeEach(() => {
   process.env.NEXUS_WEBHOOK_URL = URL_PUENTE
   process.env.NEXUS_WEBHOOK_TOKEN = 'token-de-prueba'
+  // Sin esto la prueba leería el fichero real del puente y mandaría el token de
+  // producción en sus aserciones. Se apunta a una ruta inexistente para que el
+  // respaldo por variable de entorno sea el que mande.
+  process.env.NEXUS_WEBHOOK_ENV_FILE = '/inexistente/webhook.env'
   vi.mocked(estadoCanal).mockResolvedValue({ estado: 'vivo', detalle: 'linea de estado simulada' })
 })
 
@@ -41,6 +49,7 @@ afterEach(() => {
   vi.restoreAllMocks()
   delete process.env.NEXUS_WEBHOOK_URL
   delete process.env.NEXUS_WEBHOOK_TOKEN
+  delete process.env.NEXUS_WEBHOOK_ENV_FILE
 })
 
 describe('nexusConfigurado', () => {
@@ -49,6 +58,51 @@ describe('nexusConfigurado', () => {
 
     delete process.env.NEXUS_WEBHOOK_TOKEN
     expect(nexusConfigurado()).toBe(false)
+  })
+})
+
+describe('tokenPuente', () => {
+  // El origen único: el token sale del fichero que carga el propio puente, para
+  // que no pueda divergir del que este valida. Tener dos copias fue lo que dejó
+  // que se rotara una sola y todo respondiera 401 durante horas.
+  const fichero = join(tmpdir(), `webhook-test-${process.pid}.env`)
+
+  afterEach(() => {
+    try { unlinkSync(fichero) } catch { /* la prueba pudo no crearlo */ }
+  })
+
+  it('el fichero del puente gana a la variable de entorno', () => {
+    writeFileSync(fichero, 'WA_ACCOUNT=nexus\nWEBHOOK_TOKEN=el-del-puente\n')
+    process.env.NEXUS_WEBHOOK_ENV_FILE = fichero
+
+    expect(tokenPuente()).toBe('el-del-puente')
+  })
+
+  it('sin fichero legible cae a la variable', () => {
+    process.env.NEXUS_WEBHOOK_ENV_FILE = join(tmpdir(), 'no-existe-jamas.env')
+
+    expect(tokenPuente()).toBe('token-de-prueba')
+  })
+
+  it('quita comillas y espacios como haría el shell', () => {
+    writeFileSync(fichero, 'WEBHOOK_TOKEN = "con-comillas"  \n')
+    process.env.NEXUS_WEBHOOK_ENV_FILE = fichero
+
+    expect(tokenPuente()).toBe('con-comillas')
+  })
+
+  it('un fichero sin la clave, o con ella vacía, cae a la variable', () => {
+    writeFileSync(fichero, 'WA_ACCOUNT=nexus\nWEBHOOK_TOKEN=\n')
+    process.env.NEXUS_WEBHOOK_ENV_FILE = fichero
+
+    expect(tokenPuente()).toBe('token-de-prueba')
+  })
+
+  it('sin fichero y sin variable no inventa un token', () => {
+    process.env.NEXUS_WEBHOOK_ENV_FILE = join(tmpdir(), 'no-existe-jamas.env')
+    delete process.env.NEXUS_WEBHOOK_TOKEN
+
+    expect(tokenPuente()).toBeNull()
   })
 })
 
@@ -63,7 +117,11 @@ describe('enviarNexus', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(r.aceptado).toBe(false)
     expect(r.entregado).toBe(false)
-    expect(r.error).toMatch(/no configurados/)
+    // El error nombra los dos sitios de donde puede salir el token, para que no
+    // haya que abrir el código a averiguar dónde se buscó.
+    expect(r.error).toMatch(/sin puente/)
+    expect(r.error).toMatch(/webhook\.env/)
+    expect(r.error).toMatch(/NEXUS_WEBHOOK_TOKEN/)
   })
 
   it('200 con delivered:true es una entrega de verdad, con su id', async () => {

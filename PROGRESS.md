@@ -52,6 +52,15 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   no tiene el proyecto enlazado, así que desde aquí no se puede desplegar ni
   leer sus logs. `/api/cron/run-agents` sigue existiendo como respaldo HTTP,
   pero quien de verdad dispara la cascada es el crontab del VPS.
+- **GitHub Actions se está comiendo el 80% de `review-exits`.** El workflow
+  declara `0,30 14-20 * * 1-5` —14 ejecuciones al día— y hace **2 o 3**: 2 el
+  2026-09-07, 3 el 2026-09-04. Los que corren salen verdes, así que `CRON_SECRET`
+  está bien puesto en Vercel y el endpoint funciona; lo que falla es la
+  puntualidad del planificador, el mismo motivo por el que el cron de agentes se
+  mudó al VPS. La revisión de niveles de salida está corriendo a una fracción de
+  la frecuencia que se diseñó. `archive-chains` es diario y no sufre esto tanto.
+  Arreglo natural: mudar `review-exits` al crontab del VPS, como se hizo con los
+  agentes.
 - **Render queda borrado** (2026-09-08): `render.yaml` y `DEPLOY_RENDER.md`
   fuera del repo. `SECURITY_AUDIT_RENDER.md` y `SECURITY_REVIEW_PROGRESS.md` se
   conservan: son registros de seguridad, no documentos de despliegue.
@@ -62,14 +71,16 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 > saber el resultado. La sesión `nexus` de WhatsApp está revinculada y la cadena
 > completa se probó de extremo a extremo con entrega confirmada.
 
-- **El token del puente vive en dos sitios y hay que rotarlo en los dos.**
-  `WEBHOOK_TOKEN` en `/root/openclaw-webhook/webhook.env` y
-  `NEXUS_WEBHOOK_TOKEN` en `.env.local`. El 2026-09-08 se rotó solo el primero y
-  todo respondió 401 durante horas sin que nada lo dijera. Convendría un
-  comprobante en el arranque del cron, o un único origen para los dos.
-- **Nadie mira `queue/dead/`.** El puente entierra ahí lo que no logró entregar
-  en 24 h, en vez de borrarlo, pero no hay quien lo revise. Falta un aviso —o
-  una línea en el pulso— cuando ese directorio deja de estar vacío.
+> **El token ya tiene un solo origen** desde el 2026-09-08: `WEBHOOK_TOKEN` en
+> `/root/openclaw-webhook/webhook.env`, el fichero que carga el propio puente.
+> `tokenPuente()` lo lee de ahí y la copia de `.env.local` se retiró, así que no
+> hay dos valores que puedan divergir. `npm run alertas -- diagnostico` dice de
+> dónde salió, y `npm run alertas -- cola` enseña la cola y sale con 1 si hay
+> algo enterrado.
+
+- **Nadie vigila `queue/dead/` todavía de forma automática.** El comando existe
+  (`npm run alertas -- cola`, código de salida 1 si hay abandonados) pero no está
+  en el crontab. Falta encadenarlo a un aviso.
 - **Vigilar el suelo de severidad en 2.** La corrección de la curva se aplica
   antes del corte, así que puede empujar una alerta por debajo del suelo. Desde
   el 2026-09-08 eso ya no es invisible: `silencioPorLaCurva` lo nombra en la

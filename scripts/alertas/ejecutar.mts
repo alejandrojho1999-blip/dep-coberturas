@@ -28,7 +28,9 @@ import {
   cicloSnapshot,
   type ResultadoCiclo,
 } from '@/lib/alertas/motor'
-import { enviarNexus, nexusConfigurado } from '@/lib/alertas/nexus'
+import { existsSync } from 'node:fs'
+
+import { enviarNexus, nexusConfigurado, tokenPuente } from '@/lib/alertas/nexus'
 import { atr as calcularAtr } from '@/lib/alertas/atr'
 import { cotizarVarios } from '@/lib/alertas/precios'
 import { simbolosDe } from '@/lib/alertas/simbolos'
@@ -42,7 +44,7 @@ import { detectarEmergentes } from '@/lib/pulso/keywords'
 import { juzgarEmergentes } from '@/lib/pulso/juez'
 import { cicloEntrenar, ciclopredecir } from '@/lib/pulso/ciclos'
 
-const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'pulso', 'keywords', 'entrenar', 'predecir', 'prueba', 'diagnostico', 'claves'] as const
+const CICLOS = ['guerra', 'macro', 'snapshot', 'calendario', 'pulso', 'keywords', 'entrenar', 'predecir', 'prueba', 'diagnostico', 'claves', 'cola'] as const
 type Ciclo = (typeof CICLOS)[number]
 
 function ahoraTexto(): string {
@@ -66,10 +68,25 @@ async function diagnostico(): Promise<number> {
   for (const clave of [
     'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
     'OPENROUTER_API_KEY', 'FRED_API_KEY',
-    'NEXUS_WEBHOOK_URL', 'NEXUS_WEBHOOK_TOKEN',
+    'NEXUS_WEBHOOK_URL',
   ]) {
     filas.push([`env ${clave}`, Boolean(process.env[clave]), process.env[clave] ? 'presente' : 'VACÍA'])
   }
+
+  // El token no se lista como variable porque ya no lo es: sale del fichero del
+  // puente. Lo que interesa saber aquí es de dónde vino, para que un 401 no
+  // vuelva a obligar a comparar dos ficheros a mano.
+  const ficheroPuente = process.env.NEXUS_WEBHOOK_ENV_FILE || '/root/openclaw-webhook/webhook.env'
+  const token = tokenPuente()
+  filas.push([
+    'token del puente',
+    Boolean(token),
+    token
+      ? (existsSync(ficheroPuente)
+          ? `${token.length} caracteres, leído de ${ficheroPuente}`
+          : `${token.length} caracteres, de NEXUS_WEBHOOK_TOKEN (sin fichero del puente)`)
+      : `no está ni en ${ficheroPuente} ni en NEXUS_WEBHOOK_TOKEN`,
+  ])
 
   try {
     const titulares = await leerFuentes(FUENTES_GUERRA, 24 * 60)
@@ -276,6 +293,64 @@ async function prediccion(): Promise<number> {
   return 0
 }
 
+/**
+ * Estado de la cola del puente.
+ *
+ * El puente reintenta solo durante 24 h y entierra en `queue/dead/` lo que no
+ * logró entregar, en vez de borrarlo. Eso conserva la evidencia, pero solo sirve
+ * si alguien la mira: sin esto, un mensaje abandonado quedaba tan invisible como
+ * cuando el puente los tiraba en silencio.
+ *
+ * Sale con 1 si hay algo enterrado, para que un cron pueda encadenarlo y avisar.
+ */
+async function cola(): Promise<number> {
+  const url = process.env.NEXUS_WEBHOOK_URL
+  const token = tokenPuente()
+
+  if (!url || !token) {
+    console.error('sin puente configurado: falta NEXUS_WEBHOOK_URL o el token.')
+    return 3
+  }
+
+  try {
+    const res = await fetch(`${url}/queue`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(15_000),
+    })
+
+    if (!res.ok) {
+      log(`el puente respondió ${res.status} al pedir la cola`)
+      return 1
+    }
+
+    const estado = await res.json() as {
+      pending: number
+      dead: number
+      oldestPending: string | null
+      items: Array<{ id: string; event: string; attempts: number; nextAttemptAt: string | null; lastError: string | null }>
+    }
+
+    log(`cola del puente: ${estado.pending} pendiente(s), ${estado.dead} enterrado(s)`)
+    if (estado.oldestPending) log(`  el más viejo espera desde ${estado.oldestPending}`)
+
+    for (const i of estado.items) {
+      log(`  ${i.id} · ${i.event} · ${i.attempts} intento(s) · próximo ${i.nextAttemptAt ?? 'ya'}`)
+      if (i.lastError) log(`      ${i.lastError.split('\n')[0]}`)
+    }
+
+    if (estado.dead > 0) {
+      log(`HAY ${estado.dead} MENSAJE(S) ABANDONADO(S) en /root/openclaw-webhook/queue/dead/`)
+      log('son alertas que nunca llegaron; revísalos antes de borrarlos.')
+      return 1
+    }
+
+    return 0
+  } catch (e) {
+    console.error(`no se pudo consultar la cola: ${(e as Error).message}`)
+    return 1
+  }
+}
+
 async function main(): Promise<number> {
   const args = process.argv.slice(2)
   const ciclo = args.find((a) => !a.startsWith('--')) as Ciclo | undefined
@@ -288,6 +363,7 @@ async function main(): Promise<number> {
   }
 
   if (ciclo === 'diagnostico') return diagnostico()
+  if (ciclo === 'cola') return cola()
   if (ciclo === 'claves') return claves()
   if (ciclo === 'pulso') return pulso(dryRun)
   if (ciclo === 'keywords') return keywords(dryRun)
@@ -312,8 +388,7 @@ async function main(): Promise<number> {
     if (envio.encolado) {
       log(`NO ENTREGADO TODAVÍA, en la cola del puente: ${envio.error}`)
       log('el puente reintenta solo durante 24 h; revisa la cola con:')
-      log('  curl -s -H "Authorization: Bearer $NEXUS_WEBHOOK_TOKEN" \\')
-      log('    http://127.0.0.1:9091/webhook/liberty-trading/queue')
+      log('  npm run alertas -- cola')
       if (envio.canal === 'caido') {
         log('la sesión de WhatsApp está caída; reconéctala para que la cola drene:')
         log('  openclaw channels login --channel whatsapp --account nexus')
