@@ -28,7 +28,13 @@ import {
   cicloSnapshot,
   type ResultadoCiclo,
 } from '@/lib/alertas/motor'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
+import {
+  evaluarFuentes,
+  mensajeVigilancia,
+  type EstadoVigilancia,
+} from '@/lib/pulso/vigilancia'
 
 import { enviarNexus, nexusConfigurado, tokenPuente } from '@/lib/alertas/nexus'
 import { atr as calcularAtr } from '@/lib/alertas/atr'
@@ -171,6 +177,37 @@ async function claves(): Promise<number> {
  * devuelve un `ResultadoCiclo` como los demás ciclos, y por eso puede correr
  * cada media hora sin gastar ni una llamada al modelo de lenguaje.
  */
+/**
+ * Dónde se anota cuántos ciclos lleva cada fuente sin traer datos.
+ *
+ * Mismo sitio y mismo criterio que el sello de los agentes: un fichero suelto en
+ * `/var/lib`, no una tabla. Es un contador que solo importa entre dos corridas
+ * consecutivas, y perderlo —al reinstalar, al mover el servidor— no cuesta más
+ * que un aviso tardío.
+ */
+const VIGILANCIA = process.env.PULSO_VIGILANCIA_PATH ?? '/var/lib/dep-coberturas/pulso-vigilancia.json'
+
+function leerVigilancia(): EstadoVigilancia {
+  try {
+    return JSON.parse(readFileSync(VIGILANCIA, 'utf8')) as EstadoVigilancia
+  } catch {
+    // Sin fichero, o con un fichero ilegible, se empieza de cero: la cuenta se
+    // rehará en las próximas horas y es preferible a no vigilar nada.
+    return {}
+  }
+}
+
+function escribirVigilancia(estado: EstadoVigilancia) {
+  try {
+    mkdirSync(dirname(VIGILANCIA), { recursive: true })
+    writeFileSync(VIGILANCIA, `${JSON.stringify(estado)}\n`, 'utf8')
+  } catch (e) {
+    // No se falla por esto: el pulso ya se midió y se guardó. Pero sin fichero
+    // la cuenta no avanza y la vigilancia deja de servir, así que tiene que verse.
+    log(`⚠ no se pudo escribir la vigilancia en ${VIGILANCIA}: ${(e as Error).message}`)
+  }
+}
+
 async function pulso(dryRun: boolean): Promise<number> {
   const resultado = await recolectarPulso()
 
@@ -197,6 +234,18 @@ async function pulso(dryRun: boolean): Promise<number> {
   const guardadas = await guardarObservaciones(admin, resultado.observaciones)
   const guardados = await guardarDocumentos(admin, resultado.documentos)
   log(`pulso: ${guardadas} observaciones nuevas y ${guardados} documentos nuevos guardados`)
+
+  // Una fuente caída se tolera, pero no en silencio: el 2026-09-08 YouTube
+  // estuvo ocho ciclos fuera y solo quedó constancia en el log.
+  const { estado, cambios } = evaluarFuentes(leerVigilancia(), resultado.fuentesVivas)
+  escribirVigilancia(estado)
+
+  const aviso = mensajeVigilancia(cambios)
+  if (aviso) {
+    log(aviso.replace(/\n/g, ' | '))
+    const envio = await enviarNexus(aviso, 'pulso-fuentes')
+    if (!envio.aceptado) log(`⚠ aviso de fuentes no enviado: ${envio.error}`)
+  }
 
   // Que todas las fuentes fallen no es un día flojo, es una avería.
   if (!resultado.fuentesVivas.length) return 1
