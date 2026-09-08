@@ -28,9 +28,16 @@ type RespuestaPostgrest = { error: { code?: string; message?: string } | null }
  * mensajes del log no cambian.
  */
 class FalloPasajeroPostgrest<R> extends Error {
-  constructor(readonly respuesta: R, mensaje: string) {
+  // Campo declarado y asignado a mano, no una parameter property: los scripts
+  // corren con `--experimental-strip-types`, que solo borra anotaciones y
+  // rechaza cualquier sintaxis que genere código. `tsc` y vitest sí la aceptan,
+  // así que este fallo no aparece hasta que lo ejecuta el cron.
+  readonly respuesta: R
+
+  constructor(respuesta: R, mensaje: string) {
     super(mensaje)
     this.name = 'FalloPasajeroPostgrest'
+    this.respuesta = respuesta
   }
 }
 
