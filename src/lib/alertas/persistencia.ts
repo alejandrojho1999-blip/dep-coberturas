@@ -196,20 +196,107 @@ export async function tocarEvento(
   if (error) throw new Error(`alert_dedupe (update): ${error.message}`)
 }
 
-/** URLs ya procesadas, para no volver a pagar la clasificación del mismo enlace. */
+/**
+ * ¿El error es «esa tabla no existe todavía»?
+ *
+ * PostgREST devuelve `PGRST205` cuando la tabla no está en su caché de esquema
+ * y `42P01` cuando Postgres la rechaza directamente. Se comprueban los dos
+ * porque cuál llega depende de si el esquema se ha recargado.
+ */
+function tablaAusente(error: { code?: string; message?: string }): boolean {
+  return error.code === 'PGRST205' || error.code === '42P01'
+}
+
+/**
+ * URLs ya procesadas, para no volver a pagar la clasificación del mismo enlace.
+ *
+ * Lee de dos sitios y devuelve la unión. `alert_seen_urls` es la fuente buena:
+ * guarda todo lo que pasó por el modelo, relevante o no. `alert_signals` se
+ * sigue consultando porque durante los primeros días tras la migración 028 es
+ * la única memoria que existe de lo ya clasificado; sin ella, el primer ciclo
+ * después del despliegue reclasificaría la ventana entera de golpe.
+ */
 export async function urlsRecientes(
   admin: SupabaseClient,
   horas = 24,
 ): Promise<Set<string>> {
   const desde = new Date(Date.now() - horas * 3_600_000).toISOString()
-  const { data, error } = await admin
-    .from('alert_signals')
-    .select('url')
-    .gte('created_at', desde)
-    .not('url', 'is', null)
 
-  if (error) throw new Error(`alert_signals (urls): ${error.message}`)
-  return new Set((data ?? []).map((r) => String(r.url)))
+  const [senales, vistas] = await Promise.all([
+    admin.from('alert_signals').select('url').gte('created_at', desde).not('url', 'is', null),
+    admin.from('alert_seen_urls').select('url').gte('created_at', desde),
+  ])
+
+  if (senales.error) throw new Error(`alert_signals (urls): ${senales.error.message}`)
+  // La tabla llega en la migración 028 y el cron corre desde el árbol de
+  // trabajo: entre desplegar el código y aplicar el SQL hay una ventana en la
+  // que no existe. Ahí se sigue con la memoria vieja —se paga de más, como
+  // antes— en vez de tumbar el ciclo y dejar de vigilar. Cualquier otro error
+  // sí sube: un permiso mal puesto no puede pasar por «todavía no está».
+  if (vistas.error && !tablaAusente(vistas.error)) {
+    throw new Error(`alert_seen_urls (urls): ${vistas.error.message}`)
+  }
+
+  return new Set([
+    ...(senales.data ?? []).map((r) => String(r.url)),
+    ...(vistas.data ?? []).map((r) => String(r.url)),
+  ])
+}
+
+export interface VistaAGuardar {
+  url: string
+  tipo: 'guerra' | 'fed_tesoro'
+  titular: string
+  fuente: string | null
+  relevante: boolean
+}
+
+/**
+ * Anota los titulares que ya pasaron por el modelo.
+ *
+ * Se llama con TODO lo clasificado, no solo con lo relevante: el descarte es
+ * justo el caso que se repetía en bucle. Los titulares que fallaron en el
+ * clasificador quedan deliberadamente fuera —`clasificarTitulares` no los
+ * devuelve— porque un error de OpenRouter no es un veredicto y hay que
+ * reintentarlos.
+ *
+ * `upsert` y no `insert`: dos fuentes RSS pueden servir el mismo enlace dentro
+ * de la misma tanda, y un choque de clave no debe tumbar el ciclo. Se conserva
+ * la fila original, que ya lleva la fecha correcta para la ventana.
+ */
+export async function registrarVistas(
+  admin: SupabaseClient,
+  vistas: VistaAGuardar[],
+): Promise<void> {
+  if (!vistas.length) return
+
+  const { error } = await admin
+    .from('alert_seen_urls')
+    .upsert(
+      vistas.map((v) => ({
+        url: v.url,
+        tipo: v.tipo,
+        titular: v.titular.slice(0, 500),
+        fuente: v.fuente,
+        relevante: v.relevante,
+      })),
+      { onConflict: 'url', ignoreDuplicates: true },
+    )
+
+  if (error) throw new Error(`alert_seen_urls (insert): ${error.message}`)
+}
+
+/**
+ * Borra las anotaciones que ya nadie consulta.
+ *
+ * La ventana más larga que usa `urlsRecientes` es la de macro, 48 h. Siete días
+ * dejan margen de sobra para que un cambio de ventana no se coma la memoria, y
+ * evitan que la tabla crezca sin fin por una fila que ya no filtra nada.
+ */
+export async function podarVistas(admin: SupabaseClient, dias = 7): Promise<void> {
+  const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
+  const { error } = await admin.from('alert_seen_urls').delete().lt('created_at', desde)
+  if (error) throw new Error(`alert_seen_urls (poda): ${error.message}`)
 }
 
 export async function guardarSnapshot(

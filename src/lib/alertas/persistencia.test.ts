@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { cargarCurva, curvaActiva } from '@/lib/alertas/persistencia'
+import { cargarCurva, curvaActiva, registrarVistas, urlsRecientes } from '@/lib/alertas/persistencia'
 import { N_MINIMO_PARA_CORREGIR } from '@/lib/alertas/calibracion'
 
 /**
@@ -83,5 +83,106 @@ describe('curvaActiva', () => {
     process.env.ALERTAS_CURVA = 'off'
     const explota = { from: () => { throw new Error('no debería consultarse') } } as never
     expect(await cargarCurva(explota)).toEqual({ curva: [], error: null })
+  })
+})
+
+/**
+ * Supabase de mentira para las dos tablas que consulta `urlsRecientes`.
+ * Aplica el filtro de fecha de verdad, que es lo que decide la ventana.
+ */
+function supabaseDeUrls(
+  senales: Array<{ url: string; created_at: string }>,
+  vistas: Array<{ url: string; created_at: string }>,
+) {
+  const consultar = (filas: Array<{ url: string; created_at: string }>) => {
+    const constructor = {
+      gte: (_c: string, desde: string) => {
+        const data = filas.filter((f) => f.created_at >= desde).map((f) => ({ url: f.url }))
+        return Object.assign(Promise.resolve({ data, error: null }), {
+          not: () => Promise.resolve({ data, error: null }),
+        })
+      },
+    }
+    return constructor
+  }
+  return {
+    from: (tabla: string) => ({
+      select: () => consultar(tabla === 'alert_signals' ? senales : vistas),
+    }),
+  } as unknown as SupabaseClient
+}
+
+describe('urlsRecientes', () => {
+  const hace1h = new Date(Date.now() - 3_600_000).toISOString()
+  const hace3d = new Date(Date.now() - 3 * 86_400_000).toISOString()
+
+  it('une las señales publicadas con los titulares descartados', async () => {
+    // La fuga del 2026-09-08: `b` se clasificó y se descartó, así que no está
+    // en alert_signals. Sin la unión volvía al modelo cada dos minutos.
+    const urls = await urlsRecientes(
+      supabaseDeUrls([{ url: 'a', created_at: hace1h }], [{ url: 'b', created_at: hace1h }]),
+      24,
+    )
+    expect(urls).toEqual(new Set(['a', 'b']))
+  })
+
+  it('deja fuera lo anterior a la ventana', async () => {
+    const urls = await urlsRecientes(
+      supabaseDeUrls([], [{ url: 'viejo', created_at: hace3d }, { url: 'nuevo', created_at: hace1h }]),
+      24,
+    )
+    expect(urls).toEqual(new Set(['nuevo']))
+  })
+})
+
+describe('registrarVistas', () => {
+  it('no toca la base cuando no hay nada que anotar', async () => {
+    const explota = { from: () => { throw new Error('no debería consultarse') } } as never
+    await expect(registrarVistas(explota, [])).resolves.toBeUndefined()
+  })
+
+  it('anota también lo que el modelo descartó', async () => {
+    let recibido: Array<Record<string, unknown>> = []
+    const admin = {
+      from: () => ({
+        upsert: (filas: Array<Record<string, unknown>>) => {
+          recibido = filas
+          return Promise.resolve({ error: null })
+        },
+      }),
+    } as unknown as SupabaseClient
+
+    await registrarVistas(admin, [
+      { url: 'u1', tipo: 'guerra', titular: 'sí', fuente: 'Reuters', relevante: true },
+      { url: 'u2', tipo: 'guerra', titular: 'no', fuente: 'Reuters', relevante: false },
+    ])
+
+    expect(recibido.map((f) => f.url)).toEqual(['u1', 'u2'])
+    expect(recibido.map((f) => f.relevante)).toEqual([true, false])
+  })
+})
+
+describe('urlsRecientes ante la tabla que aún no existe', () => {
+  const conError = (code: string) => ({
+    from: (tabla: string) => ({
+      select: () => ({
+        gte: () => {
+          if (tabla === 'alert_seen_urls') return Promise.resolve({ data: null, error: { code, message: 'nope' } })
+          const data = [{ url: 'a' }]
+          return Object.assign(Promise.resolve({ data, error: null }), {
+            not: () => Promise.resolve({ data, error: null }),
+          })
+        },
+      }),
+    }),
+  }) as unknown as SupabaseClient
+
+  it('sigue con la memoria vieja mientras falte la migración 028', async () => {
+    expect(await urlsRecientes(conError('PGRST205'), 24)).toEqual(new Set(['a']))
+    expect(await urlsRecientes(conError('42P01'), 24)).toEqual(new Set(['a']))
+  })
+
+  it('cualquier otro error sí revienta: un permiso mal puesto no es un hueco', async () => {
+    await expect(urlsRecientes(conError('42501'), 24)).rejects.toThrow('alert_seen_urls')
   })
 })

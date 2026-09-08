@@ -26,7 +26,9 @@ import {
   enviadosUltimaHora,
   estadoDeEvento,
   guardarSnapshot,
+  podarVistas,
   registrarSenal,
+  registrarVistas,
   tocarEvento,
   ultimoSnapshot,
   urlsRecientes,
@@ -225,6 +227,35 @@ export function corregirSeveridad(
   return { severidad, severidadLlm, corregida: severidad !== severidadLlm }
 }
 
+/**
+ * Anota lo ya clasificado para que la próxima vuelta no lo vuelva a pagar.
+ *
+ * Un fallo aquí no interrumpe el ciclo: las alertas relevantes ya clasificadas
+ * tienen que salir igual. Pero sí sube al log del cron, porque mientras esto
+ * falle el clasificador está reclasificando los mismos titulares cada dos
+ * minutos, que es exactamente la fuga que esta tabla vino a tapar.
+ */
+async function anotarVistas(
+  admin: SupabaseClient,
+  dryRun: boolean,
+  tipo: 'guerra' | 'fed_tesoro',
+  clasificados: Array<{ url: string; titulo: string; fuente: string; clasificacion: { relevante: boolean } }>,
+  resultado: ResultadoCiclo,
+): Promise<void> {
+  if (dryRun || !clasificados.length) return
+  try {
+    await registrarVistas(admin, clasificados.map((t) => ({
+      url: t.url,
+      tipo,
+      titular: t.titulo,
+      fuente: t.fuente,
+      relevante: t.clasificacion.relevante,
+    })))
+  } catch (e) {
+    resultado.errores.push(`no se pudo anotar lo clasificado: ${(e as Error).message}`)
+  }
+}
+
 // ── Ciclo 1: escalada Rusia–OTAN ────────────────────────────────────────────
 
 export async function cicloGuerra(
@@ -242,6 +273,10 @@ export async function cicloGuerra(
 
   const { clasificados, errores } = await clasificarTitulares(nuevos, 'guerra', 12)
   resultado.errores.push(...errores)
+
+  // Antes de cualquier `return`: lo pagado se anota aunque nada fuese relevante,
+  // que es justo el caso que se repetía cada dos minutos.
+  await anotarVistas(admin, dryRun, 'guerra', clasificados, resultado)
 
   // La curva se lee una vez por ciclo y no por titular: es la misma tabla para
   // todos y un ciclo puede traer una docena de hechos.
@@ -348,6 +383,8 @@ export async function cicloMacro(
 
   const { clasificados, errores } = await clasificarTitulares(nuevos, 'fed_tesoro', 10)
   resultado.errores.push(...errores)
+
+  await anotarVistas(admin, dryRun, 'fed_tesoro', clasificados, resultado)
 
   const { curva, error: errorCurva } = await cargarCurva(admin)
   if (errorCurva) resultado.errores.push(errorCurva)
@@ -469,6 +506,14 @@ export async function cicloSnapshot(
 
   const previo = dryRun ? null : await ultimoSnapshot(admin)
   if (!dryRun) await guardarSnapshot(admin, probabilidad, debasement.metricas)
+
+  // La poda cuelga del ciclo horario y no del de guerra: una fila caducada no
+  // hace daño a nadie, y lanzar un DELETE cada dos minutos para borrar nada es
+  // más ruido que el que ahorra. Que falle no invalida el snapshot.
+  if (!dryRun) {
+    try { await podarVistas(admin) }
+    catch (e) { resultado.errores.push(`poda de urls vistas: ${(e as Error).message}`) }
+  }
 
   const decision = forzar
     ? { enviar: true, motivo: 'forzado' }

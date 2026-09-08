@@ -3665,3 +3665,62 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
   `SECURITY_REVIEW_PROGRESS.md`.
 - Render quedó descartado el 2026-09-08: `render.yaml` y `DEPLOY_RENDER.md`
   borrados. Los dos documentos de seguridad se conservan como registro.
+
+---
+
+## Sesión 2026-09-08 · La fuga de tokens del clasificador de alertas
+
+### Completado
+- **Identificada la fuga.** `cicloGuerra` y `cicloMacro` filtraban los titulares
+  nuevos contra `urlsRecientes`, que leía de `alert_signals`. Pero a
+  `alert_signals` solo llegan los titulares que el modelo marcó `relevante`
+  (vía `despachar` → `registrarSenal`). Los descartados no dejaban rastro, así
+  que volvían al clasificador cada dos minutos con el mismo prompt de sistema.
+- **Medición, no estimación.** El 2026-09-07 en `/var/log/dep-alertas.log`:
+  1.990 clasificaciones de guerra y 255 de macro en un día. `SISTEMA_GUERRA`
+  ocupa 11.665 caracteres (~3.240 tokens), así que solo guerra gastaba ~6,6 M
+  de tokens de entrada al día. Comprobado contra la base el 2026-09-08:
+  `urlsRecientes` devuelve **15 urls** en 24 h. Mil novecientas noventa
+  clasificaciones para quince señales.
+- **Coste antes:** ~6,9 M tokens in + ~0,35 M out al día ≈ **$2,38/día**
+  ($0,29/M in, $1,14/M out para `deepseek/deepseek-chat-v3-0324`, precio leído
+  de la API de OpenRouter). Después: **~$0,13/mes** en guerra y macro.
+- **`supabase/migrations/028_alertas_urls_vistas.sql`** — tabla
+  `alert_seen_urls` (url PK, tipo, titular, fuente, relevante, created_at),
+  índice por fecha, RLS con el mismo criterio que la 022.
+- **`registrarVistas`, `podarVistas` y `urlsRecientes` en `persistencia.ts`.**
+  `urlsRecientes` devuelve ahora la unión de `alert_signals` y
+  `alert_seen_urls`.
+- **`anotarVistas` en `motor.ts`**, llamada en los dos ciclos justo después de
+  `clasificarTitulares` y antes de cualquier `return`. La poda cuelga del ciclo
+  de snapshot (horario).
+- Tests nuevos en `persistencia.test.ts` (unión, ventana, anotado de descartes,
+  degradación sin migración). 246 tests en `src/lib/alertas` en verde, `tsc
+  --noEmit` y `eslint` limpios.
+
+### Pendiente
+- **Aplicar `028_alertas_urls_vistas.sql` en el SQL Editor de Supabase.** Hasta
+  entonces `urlsRecientes` detecta `PGRST205`/`42P01` y sigue con la memoria
+  vieja: no se rompe el cron, pero se sigue pagando de más.
+- Verificar en el log al día siguiente que `guerra: revisados N` cae a cero
+  entre titulares nuevos, en vez de quedarse clavado en 5-6.
+- Sigue sin haber contabilidad de tokens: `analisis.ts`, `clasificador.ts` y
+  `juez.ts` descartan el campo `usage` de la respuesta de OpenRouter.
+
+### Decisiones tomadas
+- **Tabla aparte y no una fila más en `alert_signals`.** Una señal es algo que
+  se decidió publicar o silenciar, con severidad, evento y mensaje. Un titular
+  descartado no es nada de eso, y meterlo allí falsearía `enviadosUltimaHora` y
+  la tabla que lee el panel.
+- **Solo se anota lo que el modelo llegó a clasificar.** Los titulares que
+  fallaron en OpenRouter no salen de `clasificarTitulares`, y anotarlos los
+  condenaría a no reintentarse nunca: un error de red no es un veredicto.
+- **`urlsRecientes` lee las dos tablas.** Con solo la nueva, el primer ciclo
+  tras el despliegue reclasificaría la ventana entera de golpe.
+- **La falta de la tabla degrada, no rompe.** El cron corre desde el árbol de
+  trabajo, así que entre editar el código y aplicar el SQL hay una ventana real.
+  Ahí se prefiere pagar de más a dejar de vigilar. Cualquier otro error de esa
+  consulta sí sube: un permiso mal puesto no puede colarse como «todavía no
+  está».
+- **La poda va en el ciclo horario**, no en el de guerra: un DELETE cada dos
+  minutos para borrar nada es más ruido que el que ahorra.
