@@ -18,7 +18,7 @@ import { cotizarVarios, type CotizacionActivo } from '@/lib/alertas/precios'
 import { simbolosDe, type SimboloAlerta } from '@/lib/alertas/simbolos'
 import { clasificarTitulares } from '@/lib/alertas/clasificador'
 import { FUENTES_GUERRA, FUENTES_MACRO, leerFuentes, type Titular } from '@/lib/alertas/rss'
-import { decidirEnvio } from '@/lib/alertas/dedupe'
+import { decidirEnvio, severidadMinimaEnvio } from '@/lib/alertas/dedupe'
 import { enviarNexus } from '@/lib/alertas/nexus'
 import { aplicarCurva, type PuntoCurva } from '@/lib/alertas/calibracion'
 import {
@@ -104,6 +104,39 @@ async function probabilidadOpcional(errores: string[]): Promise<ProbabilidadTasa
 }
 
 /**
+ * Atribuye un silencio: ¿lo decidió el modelo, o la curva de calibración?
+ *
+ * La corrección se aplica **antes** del corte por suelo, así que puede bajar un
+ * peldaño y con ello empujar por debajo del umbral un hecho que el modelo había
+ * puesto por encima. Eso no es un fallo —es lo que la curva existe para hacer—
+ * pero es una decisión del sistema que hasta ahora no dejaba rastro: la fila
+ * quedaba idéntica a la de un hecho que el modelo ya consideraba menor.
+ *
+ * Con el suelo en 2, en vez de en 3, el margen es de un solo peldaño y este
+ * caso deja de ser raro. Devuelve la línea a registrar, o `null` si la curva no
+ * tuvo nada que ver.
+ */
+export function silencioPorLaCurva(
+  calibrada?: { severidadLlm: number; severidad: number },
+): string | null {
+  if (!calibrada) return null
+  const suelo = severidadMinimaEnvio()
+  if (calibrada.severidadLlm < suelo || calibrada.severidad >= suelo) return null
+  return (
+    `curva: silenciada una alerta que el modelo puso en ${calibrada.severidadLlm} ` +
+    `y la curva bajó a ${calibrada.severidad}, por debajo del suelo ${suelo} ` +
+    `(escotilla: ALERTAS_CURVA=off)`
+  )
+}
+
+function detalleDelSilencio(calibrada?: { severidadLlm: number; severidad: number }): string {
+  return (
+    silencioPorLaCurva(calibrada) ??
+    'no enviado: por debajo del suelo de severidad'
+  )
+}
+
+/**
  * Envía y registra una señal.
  *
  * El orden importa: primero se envía, luego se guarda con el resultado. Al
@@ -118,8 +151,12 @@ async function despachar(params: {
   resultado: ResultadoCiclo
   /** Registra el hecho sin enviarlo: por debajo del suelo de severidad. */
   silencioso?: boolean
+  /** Severidades antes y después de la curva, para poder atribuir el silencio. */
+  calibrada?: { severidadLlm: number; severidad: number }
 }): Promise<void> {
-  const { admin, dryRun, mensaje, senal, estadoPrevio, resultado, silencioso = false } = params
+  const {
+    admin, dryRun, mensaje, senal, estadoPrevio, resultado, silencioso = false, calibrada,
+  } = params
   if (!silencioso) resultado.mensajes.push(mensaje)
 
   if (dryRun) { if (!silencioso) resultado.enviados++; return }
@@ -134,8 +171,13 @@ async function despachar(params: {
       aceptadoAt: null,
       errorEnvio: null,
       canalEstado: null,
-      canalDetalle: 'no enviado: por debajo del suelo de severidad',
+      canalDetalle: detalleDelSilencio(calibrada),
     })
+    // Un silencio que causó la curva —no el modelo— sale al log del cron. Con
+    // el suelo en 2 el margen es de un solo peldaño, y esto es lo único que
+    // avisa de que la corrección está apagando alertas que el modelo sí quería.
+    const porLaCurva = silencioPorLaCurva(calibrada)
+    if (porLaCurva) resultado.errores.push(porLaCurva)
     await tocarEvento(admin, senal.eventoKey, senal.severidad, estadoPrevio)
     resultado.omitidos++
     return
@@ -154,10 +196,10 @@ async function despachar(params: {
   })
   await tocarEvento(admin, senal.eventoKey, senal.severidad, estadoPrevio)
 
-  // Solo cuenta como enviado lo que el puente aceptó **y** salió por un canal
-  // vivo. Un mensaje aceptado con la sesión caída no ha llegado a nadie, y como
-  // el puente no encola ni reintenta, tampoco llegará después.
-  if (envio.aceptado && envio.canal !== 'caido') resultado.enviados++
+  // Solo cuenta como enviado lo que OpenClaw confirmó entregado. Un mensaje
+  // encolado llegará —el puente reintenta durante 24 h— pero todavía no ha
+  // llegado, y contarlo aquí volvería a inflar la cifra como hacía el `202`.
+  if (envio.entregado) resultado.enviados++
   else resultado.omitidos++
 }
 
@@ -245,6 +287,7 @@ export async function cicloGuerra(
       admin,
       dryRun,
       silencioso,
+      calibrada,
       mensaje: mensajeGuerra({
         titular,
         clasificacion: clasificacionFinal,
@@ -338,6 +381,7 @@ export async function cicloMacro(
       admin,
       dryRun,
       silencioso,
+      calibrada,
       mensaje: mensajeMacro({
         titular,
         clasificacion: clasificacionFinal,
@@ -469,7 +513,7 @@ export async function cicloSnapshot(
     canalDetalle: envio.canalDetalle,
   })
 
-  if (envio.aceptado && envio.canal !== 'caido') resultado.enviados++
+  if (envio.entregado) resultado.enviados++
   else resultado.omitidos++
 
   return resultado

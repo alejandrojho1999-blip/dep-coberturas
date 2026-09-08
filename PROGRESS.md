@@ -36,43 +36,52 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 
 ### Ejecución programada de los agentes
 
-- **Comprobar la primera pasada real**, el lunes entre las 20:45 y las 21:45
-  hora de Madrid: `tail -f /var/log/dep-agentes.log`. La cascada ya se validó de
-  extremo a extremo contra Yahoo y OpenRouter (69 s, 3 recomendaciones), pero
-  con un Supabase simulado; la escritura real en la cartera no se ha ejercitado
-  todavía desde el cron.
-- **No existe proyecto de Vercel para este repositorio.** El remoto es
-  `alejandrojho1999-blip/dep-coberturas` y la cuenta de Vercel del usuario
-  (`lriofrio915's projects`, plan Hobby) no tiene ningún proyecto enlazado a él.
-  Mientras siga así, `/api/cron/run-agents` no está desplegado en ninguna parte
-  y `render.yaml` describe un despliegue que el usuario dice no usar. Conviene
-  decidir dónde vive la aplicación y borrar o actualizar `render.yaml`.
-- **Vigilar el presupuesto de Small.** Es el que más se acerca al límite: 15
-  candidatos al paso 4. En el VPS no hay corte de plataforma, pero
-  `PRESUPUESTO_ANALISIS_MS` corta a los 210 s y deja `truncadas > 0`. Si eso se
-  vuelve habitual, el siguiente paso es subir el presupuesto o endurecer el
-  corte de score de Small.
+> **La primera pasada real ya ocurrió**, el 2026-09-07 a las 18:46-18:49 UTC, y
+> se verificó contra la base el 2026-09-08: Peter evaluó 424, sacó 21 con 6/6,
+> 3 dictámenes aprobados y 0 nuevas —los tres ya tenían posición viva, que es el
+> comportamiento correcto—; Small, 92 candidatos y **11 filas nuevas** en
+> `agent_recommendations` con precios de mercado reales (WSBC 41,33; KFY 85,35;
+> ACCO 4,42). Supabase real, no simulado. `truncadas` = 0 en todo el log, así
+> que el presupuesto de 210 s del paso 4 ni se rozó.
+
+- **Vigilar el presupuesto de Small** si el universo crece. Hoy sobra margen,
+  pero es el que más se acerca: 15 candidatos al paso 4. Si `truncadas > 0` se
+  vuelve habitual, subir `PRESUPUESTO_ANALISIS_MS` o endurecer el corte de score.
+- **La aplicación vive en el Vercel de Alejandro**, igual que el repositorio
+  (`alejandrojho1999-blip/dep-coberturas`). La cuenta de Vercel de este usuario
+  no tiene el proyecto enlazado, así que desde aquí no se puede desplegar ni
+  leer sus logs. `/api/cron/run-agents` sigue existiendo como respaldo HTTP,
+  pero quien de verdad dispara la cascada es el crontab del VPS.
+- **Render queda borrado** (2026-09-08): `render.yaml` y `DEPLOY_RENDER.md`
+  fuera del repo. `SECURITY_AUDIT_RENDER.md` y `SECURITY_REVIEW_PROGRESS.md` se
+  conservan: son registros de seguridad, no documentos de despliegue.
 
 ### Alerta temprana
 
-- **La cuenta `nexus` de WhatsApp necesita revincularse a mano.** Lleva
-  desvinculada desde el 2026-09-05 (`not linked, stopped, disconnected`). El
-  gateway está sano —la cuenta `stefy` sigue conectada—, así que es solo la
-  sesión. Requiere escanear un QR, no se puede automatizar:
-  `openclaw channels login --channel whatsapp --account nexus`. Después,
-  `openclaw channels status` debe mostrar `linked, running, connected` y
-  `npm run alertas -- prueba` debe entregar de verdad.
-- **El puente no tiene cola ni reintento, y responde `202` antes de saber si el
-  envío salió.** `/root/openclaw-webhook/server.js` (fuera del repo) contesta
-  `202 queued` y solo entonces llama a `execFile`; un fallo se queda en su log.
-  Mientras siga así, cada caída de sesión se traga los mensajes de esas horas.
-  Arreglo pendiente: contestar después de conocer el resultado, y persistir una
-  cola con reintento que alguien drene.
-- **Vigilar el suelo de severidad en 2.** La curva de calibración corrige la
-  severidad *antes* del corte (`motor.ts:212`), así que puede empujar una alerta
-  por debajo del suelo y silenciarla. Con el suelo en 2 el margen es más
-  estrecho que con 3. La escotilla `ALERTAS_CURVA=off` desactiva la corrección
-  sin redeploy.
+> **El puente ya encola y reintenta** desde el 2026-09-08, y responde después de
+> saber el resultado. La sesión `nexus` de WhatsApp está revinculada y la cadena
+> completa se probó de extremo a extremo con entrega confirmada.
+
+- **El token del puente vive en dos sitios y hay que rotarlo en los dos.**
+  `WEBHOOK_TOKEN` en `/root/openclaw-webhook/webhook.env` y
+  `NEXUS_WEBHOOK_TOKEN` en `.env.local`. El 2026-09-08 se rotó solo el primero y
+  todo respondió 401 durante horas sin que nada lo dijera. Convendría un
+  comprobante en el arranque del cron, o un único origen para los dos.
+- **Nadie mira `queue/dead/`.** El puente entierra ahí lo que no logró entregar
+  en 24 h, en vez de borrarlo, pero no hay quien lo revise. Falta un aviso —o
+  una línea en el pulso— cuando ese directorio deja de estar vacío.
+- **Vigilar el suelo de severidad en 2.** La corrección de la curva se aplica
+  antes del corte, así que puede empujar una alerta por debajo del suelo. Desde
+  el 2026-09-08 eso ya no es invisible: `silencioPorLaCurva` lo nombra en la
+  fila y lo saca al log del cron cuando el modelo la quería y la curva la apagó.
+  Queda mirar con qué frecuencia aparece. Escotilla: `ALERTAS_CURVA=off`.
+- **Las rutas a binarios bajo nvm son una trampa recurrente.** `canal.ts` y
+  `nexus_heartbeat_cron.py` tenían escrito `v22.22.0`, que desapareció al
+  actualizar; ambos resuelven ya la versión en caliente. Si aparece un tercer
+  sitio con la ruta fija, arreglarlo igual.
+- **Fuera de este proyecto:** el cron de recordatorios de `stefy_claw` agota su
+  timeout de 90 s en `send_whatsapp.py`. No es de dep-coberturas, pero comparte
+  el gateway de OpenClaw.
 
 ### Tesis de inversión
 
@@ -82,14 +91,17 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
 > 10485760 y los seis MIME esperados, más sus cuatro políticas de
 > `storage.objects`. «Adjuntar fuentes» ya puede subir.
 
-- **Comprobar `pdf-parse` en producción.** Es la primera vez que se ejecuta de
-  verdad: el código heredado llamaba al módulo como si fuera una función, que
-  es la API de la versión 1, y la 2 exporta una clase. Está corregido y
-  probado con mocks, pero un PDF real en Vercel es otra cosa. Un archivo
-  ilegible degrada a cero caracteres, no tumba el lote.
+- **Comprobar `pdf-parse` en producción.** Sigue sin ejercitarse: el
+  2026-09-08 la tabla `informe_adjuntos` estaba **vacía**, así que no se ha
+  subido ni un archivo desde que la función existe. El código heredado llamaba
+  al módulo como si fuera una función —la API de la versión 1— y la 2 exporta
+  una clase; está corregido y probado con mocks, pero un PDF real es otra cosa.
+  Solo se cierra subiendo uno. Un archivo ilegible degrada a cero caracteres,
+  no tumba el lote.
 - **Adjuntos huérfanos:** un lote subido cuya tesis nunca se generó deja filas
-  con `informe_id NULL`. No molestan; convendría una limpieza de los que pasen
-  de una semana.
+  con `informe_id NULL`. Hoy no hay ninguno —no hay ninguna fila— así que no
+  corre prisa; convendría una limpieza de los que pasen de una semana antes de
+  que la función se empiece a usar de verdad.
 
 ### Calibración de severidad
 
@@ -539,6 +551,72 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-08 — el `202` deja de mentir, y tres roturas vivas que nadie veía
+
+Se abrió la sesión para cerrar los siete pendientes que quedaban. Cuatro ya
+estaban resueltos o eran nada; lo interesante fue lo que apareció al ir a
+comprobarlos.
+
+**Lo que ya estaba hecho.** La primera pasada real del cron de agentes había
+ocurrido el 2026-09-07: 11 filas nuevas en `agent_recommendations` con precios
+de mercado reales, contra Supabase de verdad, `truncadas` = 0. La sesión
+`nexus` de WhatsApp estaba revinculada. `informe_adjuntos` estaba vacía, así que
+no había huérfanos que limpiar. Render se borró: la aplicación vive en el Vercel
+de Alejandro.
+
+**Tres roturas vivas, encadenadas.** Al lanzar la prueba de entrega salió un
+`401`, y tirando del hilo aparecieron tres fallos distintos, los tres de ese
+mismo día, los tres invisibles:
+
+1. **El token del puente se había rotado en un solo lado.** `webhook.env` se
+   reescribió a las 04:08; `.env.local` conservaba el viejo. Todo lo que la
+   aplicación mandara al puente respondía 401.
+2. **El CLI de OpenClaw exigía dueño explícito.** La versión 2026.9.2 aborta con
+   `AgentSelectionRequiredError` cuando hay varios agentes configurados. Se
+   resuelve con `agents.defaults.systemAgent.agentId`, que —según
+   `docs/cli/channels.md`— solo elige el *workspace de descubrimiento del
+   plugin*, no el destinatario, así que fijarlo no altera el enrutado.
+3. **La sonda del canal apuntaba a un Node que ya no existía.** `canal.ts` tenía
+   escrito `/root/.nvm/versions/node/v22.22.0/bin/openclaw`; nvm había pasado a
+   `v22.23.2`. El `ENOENT` se traducía a `desconocido` y la sonda dejaba de
+   vigilar sin decirlo. Ahora resuelve la versión en caliente, y antepone el
+   `bin/` elegido al PATH porque el shim es `#!/usr/bin/env node` y si no coge
+   el Node viejo del propio proceso. El mismo fallo tenía tumbado el heartbeat
+   de `nexus_claw` cada 30 minutos; se arregló igual.
+
+**El puente encola y deja de mentir.** El `202 queued` se emitía **antes** de
+llamar a OpenClaw, así que era una promesa que el puente no podía cumplir: entre
+el 2026-09-05 y el 2026-09-08, con la sesión caída, cada mensaje de esas horas
+se perdió y el fallo solo existía en el journal. La versión nueva invierte el
+orden —persiste, intenta, y solo entonces responde— y distingue tres desenlaces:
+`200 delivered` (entregado, con el id de WhatsApp), `202 queued` (no salió, pero
+está en disco y se reintenta 24 h con espera creciente) y `502` (se perdió, y se
+dice). La cola es un fichero por mensaje con `fsync` antes de contestar, los
+envíos van en serie porque OpenClaw tarda 10-20 s y dos a la vez compiten por la
+sesión, y lo que se abandona va a `dead/` en vez de borrarse.
+
+El fichero pasa a estar **bajo control de versiones** en `scripts/puente/`. Que
+viviera solo en `/root` es exactamente lo que permitió que el token y la ruta
+derivaran sin que el repo se enterara.
+
+**El lado de la aplicación deja de contar aceptados.** `ResultadoEnvio` ahora
+distingue `entregado` de `aceptado` y `encolado`, y `resultado.enviados` cuenta
+solo entregas confirmadas. Un puente viejo, sin esos campos, se sigue
+interpretando como antes.
+
+**El silencio de la curva deja rastro.** `silencioPorLaCurva` nombra el caso que
+importaba vigilar —el modelo puso la alerta por encima del suelo y la curva la
+bajó por debajo— en la fila y en el log del cron, con la escotilla escrita en el
+propio aviso. Antes era indistinguible de un hecho que el clasificador ya
+consideraba menor.
+
+**Verificado.** Entrega real confirmada por WhatsApp con su id. La cola se probó
+en una instancia aparte: fallo → 202 encolado con backoff, reinicio del proceso
+→ el mensaje sobrevive, canal recuperado → drena solo sin que nadie reenvíe
+nada, y `MAX_AGE_MS` vencido → enterrado en `dead/`. Lint limpio, `tsc` limpio,
+**1031/1031 tests** (14 nuevos: 9 del contrato del puente, 5 de la atribución
+del silencio).
 
 ### Sesión del 2026-09-06 (3) — el cron se muda al VPS para poder llegar a su hora
 
@@ -3484,17 +3562,33 @@ El sistema de diseño resultante está documentado en **`DESIGN.md`**.
 - **Benchmark SPY** en las tres carteras en vivo, normalizado al capital de cada una.
 
 ### Alertas
-- **«Aceptado» y «entregado» no son lo mismo.** El puente de Nexus es asíncrono
-  y su 202 solo dice que recibió la petición. El registro nombra lo que de
-  verdad sabe (`aceptado_at`) y guarda aparte el estado del canal, que es lo
-  más cerca que se puede estar de saber si llegará.
-- **Con el canal caído se envía igual**: el puente encola y OpenClaw reintenta
-  al volver. Lo que cambia es que la fila lo dice, en vez de contarlo como un
-  envío bueno.
+- **«Aceptado» y «entregado» no son lo mismo.** Se mantiene la distinción, pero
+  desde el 2026-09-08 ya no hay que inferirla: el puente responde **después** de
+  intentar el envío y dice `delivered`. `aceptado` pasó a significar «el puente
+  se hizo cargo» —entregado o encolado—, y `entregado` es lo que OpenClaw
+  confirmó. Lo que manda es `delivered`, no el código HTTP.
+- **Un mensaje que no sale no se pierde, se encola.** El puente lo persiste en
+  disco antes de intentarlo y reintenta 24 h con espera creciente. Por eso
+  `resultado.enviados` cuenta solo entregas: un encolado llegará, pero todavía
+  no ha llegado, y contarlo repetiría la mentira del `202`.
+- **Se persiste antes de intentar, no después.** Si el proceso muere durante el
+  envío el mensaje sigue en la cola y se reintenta al arrancar. Como mucho se
+  duplica, que es preferible a perderlo.
+- **Lo abandonado se entierra, no se borra.** Tras 24 h sin lograrlo el mensaje
+  va a `queue/dead/`. Borrarlo dejaría el sistema sin forma de saber qué se
+  perdió, que es el problema que todo esto vino a resolver.
+- **El puente vive en el repo** (`scripts/puente/server.js`) y se instala en
+  `/root/openclaw-webhook/`. Que solo viviera fuera es lo que dejó derivar el
+  token y la ruta del binario sin que nadie lo notara.
+- **Ninguna ruta a un binario de nvm se escribe a mano.** La versión se resuelve
+  en caliente y se antepone su `bin/` al PATH, porque el shim de OpenClaw es
+  `#!/usr/bin/env node` y si no coge el Node del proceso que llama.
 - **Las filas anteriores a la migración 023 quedan como `desconocido`**, no como
   `vivo`. Marcarlas de otro modo repetiría la misma mentira que se está
   corrigiendo.
 
 ### Congelado
-- Todo lo de Render y las vulnerabilidades de `npm audit`, documentado en
+- Las vulnerabilidades de `npm audit`, documentadas en
   `SECURITY_REVIEW_PROGRESS.md`.
+- Render quedó descartado el 2026-09-08: `render.yaml` y `DEPLOY_RENDER.md`
+  borrados. Los dos documentos de seguridad se conservan como registro.

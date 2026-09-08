@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { corregirSeveridad, horaEnEcuador, SALTO_PROB_RELEVANTE, tocaDigest } from '@/lib/alertas/motor'
+import { corregirSeveridad, silencioPorLaCurva, horaEnEcuador, SALTO_PROB_RELEVANTE, tocaDigest } from '@/lib/alertas/motor'
 
 afterEach(() => vi.useRealTimers())
 
@@ -93,5 +93,55 @@ describe('corregirSeveridad', () => {
   it('marca corregida solo cuando el peldaño cambia', () => {
     const igual = [{ tema: 'guerra', severidadLlm: 2, severidadFinal: 2 }]
     expect(corregirSeveridad(2, 'guerra', igual).corregida).toBe(false)
+  })
+})
+
+describe('silencioPorLaCurva', () => {
+  // El suelo se lee del entorno en cada llamada, así que se fija por prueba.
+  const conSuelo = (suelo: string, f: () => void) => {
+    const previo = process.env.ALERTAS_SEVERIDAD_MINIMA
+    process.env.ALERTAS_SEVERIDAD_MINIMA = suelo
+    try { f() } finally {
+      if (previo === undefined) delete process.env.ALERTAS_SEVERIDAD_MINIMA
+      else process.env.ALERTAS_SEVERIDAD_MINIMA = previo
+    }
+  }
+
+  it('nombra el caso que importa: el modelo la quería, la curva la apagó', () => {
+    conSuelo('2', () => {
+      const linea = silencioPorLaCurva({ severidadLlm: 3, severidad: 1 })
+      expect(linea).toMatch(/modelo puso en 3/)
+      expect(linea).toMatch(/curva bajó a 1/)
+      expect(linea).toMatch(/suelo 2/)
+      // La escotilla se nombra en el propio aviso: quien lo lea en el log del
+      // cron no debería tener que buscar cómo desactivar la corrección.
+      expect(linea).toMatch(/ALERTAS_CURVA=off/)
+    })
+  })
+
+  it('calla cuando el modelo ya la había puesto por debajo del suelo', () => {
+    // Aquí la curva no decidió nada: el hecho ya era menor para el clasificador.
+    conSuelo('2', () => {
+      expect(silencioPorLaCurva({ severidadLlm: 1, severidad: 1 })).toBeNull()
+    })
+  })
+
+  it('calla cuando la corrección no cruzó el suelo', () => {
+    conSuelo('2', () => {
+      expect(silencioPorLaCurva({ severidadLlm: 4, severidad: 2 })).toBeNull()
+    })
+  })
+
+  it('con el suelo en 3 el margen es mayor, y el mismo caso ya no cruza', () => {
+    // El motivo de vigilar esto: bajar el suelo de 3 a 2 no cambia la curva,
+    // cambia cuántas correcciones acaban cruzándolo.
+    conSuelo('3', () => {
+      expect(silencioPorLaCurva({ severidadLlm: 4, severidad: 3 })).toBeNull()
+      expect(silencioPorLaCurva({ severidadLlm: 4, severidad: 2 })).toMatch(/suelo 3/)
+    })
+  })
+
+  it('sin datos de calibración no inventa una atribución', () => {
+    expect(silencioPorLaCurva(undefined)).toBeNull()
   })
 })

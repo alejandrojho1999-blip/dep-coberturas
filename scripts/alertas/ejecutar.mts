@@ -304,23 +304,24 @@ async function main(): Promise<number> {
       'prueba',
     )
     // Se distinguen los tres desenlaces porque los tres se ven distintos en el
-    // teléfono: llega, lo rechaza el puente, o el puente lo acepta y lo tira
-    // porque la sesión está caída.
-    if (!envio.aceptado) {
-      log(`el puente rechazó el mensaje: ${envio.error}`)
+    // teléfono: llega, queda en cola para más tarde, o se pierde.
+    if (envio.entregado) {
+      log(`mensaje ENTREGADO en WhatsApp${envio.messageId ? ` (id ${envio.messageId})` : ''}`)
+      return 0
+    }
+    if (envio.encolado) {
+      log(`NO ENTREGADO TODAVÍA, en la cola del puente: ${envio.error}`)
+      log('el puente reintenta solo durante 24 h; revisa la cola con:')
+      log('  curl -s -H "Authorization: Bearer $NEXUS_WEBHOOK_TOKEN" \\')
+      log('    http://127.0.0.1:9091/webhook/liberty-trading/queue')
+      if (envio.canal === 'caido') {
+        log('la sesión de WhatsApp está caída; reconéctala para que la cola drene:')
+        log('  openclaw channels login --channel whatsapp --account nexus')
+      }
       return 1
     }
-    if (envio.canal === 'caido') {
-      log(`ACEPTADO POR EL PUENTE, PERO NO ENTREGADO Y SIN REINTENTO: ${envio.canalDetalle}`)
-      log('reconecta la sesión: openclaw channels login --channel whatsapp --account nexus')
-      return 1
-    }
-    log(
-      envio.canal === 'vivo'
-        ? 'mensaje entregado al puente con la sesión de WhatsApp viva'
-        : `mensaje entregado al puente; estado del canal indeterminado (${envio.canalDetalle})`,
-    )
-    return 0
+    log(`MENSAJE PERDIDO, ni entregado ni encolado: ${envio.error}`)
+    return 1
   }
 
   // En seco no se toca la base: el cliente de servicio ni siquiera se crea, así

@@ -20,17 +20,35 @@ import { estadoCanal, type EstadoCanal } from '@/lib/alertas/canal'
 
 export interface ResultadoEnvio {
   /**
-   * El puente aceptó el mensaje. NO significa que llegara al teléfono: el
-   * puente responde `202 queued` y solo después intenta enviar, sin reintentar
-   * si falla. Lo más cerca que se está de saber si llegará es `canal`,
-   * consultado justo antes.
+   * El puente se hizo cargo del mensaje: o lo entregó, o lo tiene en su cola
+   * con reintento. En ningún caso se perdió.
    */
   aceptado: boolean
+  /**
+   * OpenClaw confirmó la entrega. Esto sí es una entrega de verdad: el puente
+   * ya no responde hasta saberlo.
+   */
+  entregado: boolean
+  /** El mensaje no salió, pero está en la cola del puente y se reintentará. */
+  encolado: boolean
+  /** Id del mensaje en WhatsApp, cuando se entregó. Sirve para auditar. */
+  messageId: string | null
   error: string | null
   /** Estado de la sesión de WhatsApp en el momento del envío. */
   canal: EstadoCanal
   /** Línea de estado de OpenClaw, para poder auditar la decisión después. */
   canalDetalle: string
+}
+
+/** Respuesta del puente. Los campos opcionales faltan en versiones viejas. */
+interface RespuestaPuente {
+  delivered?: boolean
+  queued?: boolean
+  messageId?: string | null
+  id?: string
+  attempts?: number
+  nextAttemptAt?: string | null
+  error?: string
 }
 
 export function nexusConfigurado(): boolean {
@@ -45,11 +63,15 @@ export function nexusConfigurado(): boolean {
  * consulta y el POST; pero el resultado lo dice, para que la fila del registro
  * no afirme una entrega que no ocurrió.
  *
- * OJO: el puente NO encola. Responde `202 queued` antes de invocar a OpenClaw y
- * luego dispara sin mirar; si el envío falla solo queda una línea en su log. No
- * hay cola, ni reintento, ni drenador en ninguna parte, así que un mensaje
- * emitido con la sesión caída se pierde para siempre. El `202` es una promesa
- * que el puente no cumple.
+ * Desde el 2026-09-08 el puente responde **después** de intentar el envío, y
+ * distingue tres casos: `200` con `delivered:true` (entregado y confirmado por
+ * OpenClaw), `202` con `queued:true` (no salió, pero está en su cola en disco y
+ * lo reintentará con espera creciente durante 24 h) y `502` (se perdió). Lo que
+ * manda es el campo `delivered`, no el código: un 202 significa «todavía no».
+ *
+ * Un puente viejo, sin esos campos, responde `202` sin `delivered`. En ese caso
+ * se cae al comportamiento anterior: se toma como aceptado y la entrega se
+ * infiere del estado del canal, que es lo más cerca que se podía estar entonces.
  */
 export async function enviarNexus(
   mensaje: string,
@@ -60,13 +82,18 @@ export async function enviarNexus(
 
   const canal = await estadoCanal()
 
+  const fallo = (error: string): ResultadoEnvio => ({
+    aceptado: false,
+    entregado: false,
+    encolado: false,
+    messageId: null,
+    error,
+    canal: canal.estado,
+    canalDetalle: canal.detalle,
+  })
+
   if (!url || !token) {
-    return {
-      aceptado: false,
-      error: 'NEXUS_WEBHOOK_URL o NEXUS_WEBHOOK_TOKEN no configurados',
-      canal: canal.estado,
-      canalDetalle: canal.detalle,
-    }
+    return fallo('NEXUS_WEBHOOK_URL o NEXUS_WEBHOOK_TOKEN no configurados')
   }
 
   try {
@@ -83,35 +110,63 @@ export async function enviarNexus(
         // El puente toma `data.message` como texto del WhatsApp.
         data: { message: mensaje },
       }),
-      signal: AbortSignal.timeout(15_000),
+      // El puente ya no responde hasta terminar el envío, y OpenClaw tarda
+      // 10-20 s por mensaje; con un margen de 15 s se cortaría una entrega que
+      // iba bien y se registraría como fallo lo que en realidad llegó.
+      signal: AbortSignal.timeout(90_000),
     })
 
+    const cuerpo: RespuestaPuente = await res.json().catch(() => ({}))
+
     if (!res.ok) {
-      const cuerpo = await res.text().catch(() => '')
+      return fallo(
+        `puente devolvió ${res.status}: ${(cuerpo.error ?? JSON.stringify(cuerpo)).slice(0, 200)}`,
+      )
+    }
+
+    // Puente viejo: sin `delivered` no hay forma de saberlo, así que se infiere
+    // del estado del canal como se hacía antes.
+    if (cuerpo.delivered === undefined) {
       return {
-        aceptado: false,
-        error: `puente devolvió ${res.status}: ${cuerpo.slice(0, 200)}`,
+        aceptado: true,
+        entregado: canal.estado === 'vivo',
+        encolado: false,
+        messageId: null,
+        error: canal.estado === 'caido'
+          ? `no entregado: el puente aceptó el mensaje, pero la sesión de WhatsApp está caída y no hay reintento: ${canal.detalle}`
+          : null,
         canal: canal.estado,
         canalDetalle: canal.detalle,
       }
     }
 
-    // El puente aceptó el mensaje. Si la sesión de WhatsApp estaba caída, eso
-    // se registra como el fallo que es, aunque el puente respondiera 202.
+    if (cuerpo.delivered) {
+      return {
+        aceptado: true,
+        entregado: true,
+        encolado: false,
+        messageId: cuerpo.messageId ?? null,
+        error: null,
+        canal: canal.estado,
+        canalDetalle: canal.detalle,
+      }
+    }
+
+    // No salió. Encolado no es un fallo perdido: se reintentará. Se registra
+    // como error igualmente para que nadie lea la fila como una entrega.
     return {
-      aceptado: true,
-      error: canal.estado === 'caido'
-        ? `no entregado: el puente aceptó el mensaje, pero la sesión de WhatsApp está caída y no hay reintento: ${canal.detalle}`
-        : null,
+      aceptado: Boolean(cuerpo.queued),
+      entregado: false,
+      encolado: Boolean(cuerpo.queued),
+      messageId: null,
+      error: cuerpo.queued
+        ? `no entregado todavía: en la cola del puente, ${cuerpo.attempts ?? 1} intento(s), ` +
+          `próximo ${cuerpo.nextAttemptAt ?? 'sin programar'}: ${String(cuerpo.error).slice(0, 200)}`
+        : `no entregado y no encolado: ${String(cuerpo.error).slice(0, 200)}`,
       canal: canal.estado,
       canalDetalle: canal.detalle,
     }
   } catch (e) {
-    return {
-      aceptado: false,
-      error: (e as Error).message,
-      canal: canal.estado,
-      canalDetalle: canal.detalle,
-    }
+    return fallo((e as Error).message)
   }
 }

@@ -13,6 +13,8 @@
  */
 
 import { execFile } from 'node:child_process'
+import { existsSync, readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 
 const ejecutar = promisify(execFile)
@@ -25,9 +27,53 @@ export interface CanalWhatsapp {
   detalle: string
 }
 
-/** Ruta del binario de OpenClaw; el cron no hereda el PATH del usuario. */
+/**
+ * Ruta del binario de OpenClaw; el cron no hereda el PATH del usuario.
+ *
+ * No se puede fijar una versión de Node concreta: nvm instala cada release en
+ * su propio directorio y al actualizar OpenClaw el binario se muda. Una ruta
+ * escrita a mano sobrevive hasta la siguiente actualización y luego falla con
+ * `ENOENT`, que `estadoCanal` traduce a `desconocido` — es decir, la sonda deja
+ * de vigilar el canal sin que nadie se entere. Ocurrió el 2026-09-08, cuando
+ * `v22.22.0` desapareció en favor de `v22.23.2`.
+ *
+ * Por eso se busca: primero la escotilla `OPENCLAW_BIN`, después los binarios
+ * que de verdad existan bajo nvm —el más alto por orden natural, que es el más
+ * reciente—, y por último `openclaw` a secas, que resuelve por PATH cuando lo
+ * hay. La búsqueda es síncrona y toca un solo directorio.
+ */
 function rutaOpenclaw(): string {
-  return process.env.OPENCLAW_BIN || '/root/.nvm/versions/node/v22.22.0/bin/openclaw'
+  if (process.env.OPENCLAW_BIN) return process.env.OPENCLAW_BIN
+
+  const raiz = process.env.OPENCLAW_NVM_DIR || '/root/.nvm/versions/node'
+  try {
+    const candidatos = readdirSync(raiz)
+      .sort((a, b) => b.localeCompare(a, 'en', { numeric: true }))
+      .map((version) => join(raiz, version, 'bin', 'openclaw'))
+      .filter((ruta) => existsSync(ruta))
+
+    if (candidatos[0]) return candidatos[0]
+  } catch {
+    // El directorio de nvm puede no existir (contenedor, otra máquina): se cae
+    // al PATH, que es lo correcto en un entorno de desarrollo normal.
+  }
+
+  return 'openclaw'
+}
+
+/**
+ * Entorno con el que se invoca el CLI.
+ *
+ * El ejecutable `openclaw` es un script `#!/usr/bin/env node`, así que la
+ * versión de Node que acaba corriendo sale del PATH, no del binario que se
+ * eligió. Los scripts de alertas corren bajo el Node de la aplicación, que es
+ * más antiguo que el mínimo que exige OpenClaw, y el CLI aborta antes de hacer
+ * nada. Anteponiendo el `bin/` del propio binario al PATH, `env node` resuelve
+ * al Node hermano, que por construcción es el que esa instalación soporta.
+ */
+function entornoDe(binario: string): NodeJS.ProcessEnv {
+  const bin = dirname(binario)
+  return { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` }
 }
 
 function cuenta(): string {
@@ -72,10 +118,11 @@ export function buscarLineaDeCuenta(salida: string, cuentaBuscada: string): stri
  */
 export async function estadoCanal(timeoutMs = 20_000): Promise<CanalWhatsapp> {
   try {
+    const binario = rutaOpenclaw()
     const { stdout } = await ejecutar(
-      rutaOpenclaw(),
+      binario,
       ['channels', 'status', '--channel', 'whatsapp'],
-      { timeout: timeoutMs, maxBuffer: 1024 * 1024 },
+      { timeout: timeoutMs, maxBuffer: 1024 * 1024, env: entornoDe(binario) },
     )
 
     const linea = buscarLineaDeCuenta(stdout, cuenta())
