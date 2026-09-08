@@ -52,15 +52,28 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   no tiene el proyecto enlazado, así que desde aquí no se puede desplegar ni
   leer sus logs. `/api/cron/run-agents` sigue existiendo como respaldo HTTP,
   pero quien de verdad dispara la cascada es el crontab del VPS.
-- **GitHub Actions se está comiendo el 80% de `review-exits`.** El workflow
-  declara `0,30 14-20 * * 1-5` —14 ejecuciones al día— y hace **2 o 3**: 2 el
-  2026-09-07, 3 el 2026-09-04. Los que corren salen verdes, así que `CRON_SECRET`
-  está bien puesto en Vercel y el endpoint funciona; lo que falla es la
-  puntualidad del planificador, el mismo motivo por el que el cron de agentes se
-  mudó al VPS. La revisión de niveles de salida está corriendo a una fracción de
-  la frecuencia que se diseñó. `archive-chains` es diario y no sufre esto tanto.
-  Arreglo natural: mudar `review-exits` al crontab del VPS, como se hizo con los
-  agentes.
+> **Ya no queda ningún cron en la nube.** El 2026-09-08 se borraron los dos
+> workflows de GitHub Actions y sus tareas pasaron al crontab del VPS
+> (`scripts/opciones/`). Los motivos, medidos:
+>
+> - `review-exits` cumplía **2 o 3** de las 14 citas diarias que declaraba.
+> - `archive-chains` disparaba **siempre fuera de su ventana**: programado a las
+>   21:15 UTC, ejecutaba pasadas las 23:00 todos los días. El endpoint respondía
+>   `ejecutado: false` con HTTP 200 y el job salía verde, así que
+>   `options_chain_snapshots` llevaba **vacía desde el primer día**. Es la misma
+>   familia de mentira que el `202` del puente: un código de éxito que no
+>   distingue «hecho» de «no tocaba».
+>
+> La lógica de las dos tareas vive ahora en `src/lib/options/cron-opciones.ts`,
+> compartida entre el cron y la ruta de API, que se conserva como respaldo. Los
+> envoltorios usan `flock` en lugar del grupo `concurrency` de GitHub.
+
+- **El archivo de cadenas empieza de cero.** No hay ninguna sesión capturada, y
+  las anteriores no se pueden recuperar: Yahoo no publica histórico de cadenas,
+  que es justo el motivo por el que este archivo existe. La primera captura real
+  será la del próximo cierre; conviene comprobarla al día siguiente con
+  `npm run opciones -- estado`.
+
 - **Render queda borrado** (2026-09-08): `render.yaml` y `DEPLOY_RENDER.md`
   fuera del repo. `SECURITY_AUDIT_RENDER.md` y `SECURITY_REVIEW_PROGRESS.md` se
   conservan: son registros de seguridad, no documentos de despliegue.
@@ -90,9 +103,11 @@ Fuera del menú pero con ruta viva: `/dashboard`, `/perfil` y
   `nexus_heartbeat_cron.py` tenían escrito `v22.22.0`, que desapareció al
   actualizar; ambos resuelven ya la versión en caliente. Si aparece un tercer
   sitio con la ruta fija, arreglarlo igual.
-- **Fuera de este proyecto:** el cron de recordatorios de `stefy_claw` agota su
-  timeout de 90 s en `send_whatsapp.py`. No es de dep-coberturas, pero comparte
-  el gateway de OpenClaw.
+- **Fuera de este proyecto, ya arreglado:** los recordatorios de `stefy_claw` y
+  el heartbeat de `nexus_claw` llamaban a un `openclaw` bajo `v22.22.0` que dejó
+  de existir. Los dos resuelven ya la versión en caliente. Verificado con
+  `--dry-run` en el caso de stefy, para no mandar un mensaje a una tercera
+  persona.
 
 ### Tesis de inversión
 
@@ -562,6 +577,53 @@ Drive, comprobar la cuenta activa (`list_recent_files` muestra el `owner`).
 ---
 
 ## Completado
+
+### Sesión del 2026-09-08 (2) — los crons bajan de la nube, y el archivo de cadenas resulta que nunca archivó
+
+**El token deja de vivir en dos sitios.** `WEBHOOK_TOKEN` del fichero que carga
+el puente es ahora el único origen; `tokenPuente()` lo lee de ahí y la copia de
+`.env.local` se retiró. El diagnóstico dice de dónde salió, y se añadió
+`npm run alertas -- cola`, que enseña la cola y sale con 1 si hay algo
+enterrado en `dead/`.
+
+**Todos los crons pasan al VPS.** Los dos workflows de GitHub Actions se
+borraron. Lo que se midió antes de tocar nada:
+
+- `review-exits` declaraba 14 ejecuciones diarias y hacía 2 o 3.
+- `archive-chains` no acertó **ni una sola vez** su ventana. Programado a las
+  21:15 UTC, GitHub lo ejecutaba pasadas las 23:00 todos los días —19:0x-19:2x
+  hora de Nueva York, fuera del tramo 16:00-19:00 ET que el endpoint exige—, así
+  que respondía `ejecutado: false`, devolvía 200 y el job salía verde.
+  `options_chain_snapshots` estaba **vacía**: cero sesiones desde que existe.
+
+Eso último es la misma mentira que el `202` del puente, en otro disfraz: un
+código de éxito que no distingue «lo hice» de «no tocaba». Aquí costó meses de
+datos que no se pueden recuperar, porque no existe histórico gratuito de cadenas
+—que es exactamente el motivo por el que este archivo se creó—.
+
+La lógica de las dos tareas sale de las rutas a `src/lib/options/cron-opciones.ts`
+y se comparte con ellas, para que el cron y el respaldo HTTP no puedan aplicar
+ventanas distintas. `scripts/opciones/` añade el script, el envoltorio y el
+bloque de crontab. El archivo lleva sello del día —el `upsert` ya lo hace
+idempotente, pero el sello evita volver a pedirle 36 cadenas a Yahoo— y la
+revisión de salidas no lo lleva, porque tiene que correr cada media hora.
+`flock` sustituye al grupo `concurrency` de GitHub: dos revisiones a la vez
+podrían cerrar la misma posición dos veces.
+
+**Ninguna ruta de binario bajo nvm se escribe ya a mano.** El mismo fallo que el
+2026-09-08 tumbó `canal.ts` tenía rotos el heartbeat de `nexus_claw` y los
+recordatorios de `stefy_claw` —ambos llamaban a un `openclaw` bajo `v22.22.0`
+que había desaparecido— y hacía frágiles los tres envoltorios de cron del
+proyecto. Todos resuelven ahora la versión en caliente, prefiriendo aquella con
+la que se probó el proyecto y cayendo a la más reciente si ya no está. Un
+barrido de la máquina confirma que no queda ningún ejecutable vivo con la ruta
+muerta.
+
+**Verificado.** Los tres envoltorios arrancan Node con el entorno mínimo del
+cron; `opciones estado/salidas/archivo` declinan correctamente fuera de ventana;
+el canal de stefy responde a un `--dry-run` con el binario nuevo, sin mandar
+nada a una tercera persona; los dos crons de OpenClaw corren sin error. Lint
+limpio, `tsc` limpio.
 
 ### Sesión del 2026-09-08 — el `202` deja de mentir, y tres roturas vivas que nadie veía
 

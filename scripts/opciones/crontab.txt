@@ -1,0 +1,45 @@
+# Tareas programadas de opciones, en el VPS.
+#
+# Por qué aquí y no en GitHub Actions: medido el 2026-09-08, el `schedule` de
+# GitHub cumplía 2 o 3 de las 14 citas diarias de la revisión de salidas. No
+# fallaba —los jobs que corrían salían verdes— sencillamente no se ejecutaba.
+# GitHub lo documenta: `schedule` se retrasa o se descarta cuando hay carga. Una
+# tarea que existe para poner al día el registro cada media hora y cumple el
+# 20 % de las veces no está haciendo su trabajo.
+#
+# Por qué ventanas anchas y no horas exactas: el crontab corre en la hora del
+# servidor (Europa) y el mercado está en Nueva York. Estados Unidos y Europa
+# cambian la hora en fines de semana distintos, así que dos o tres semanas al
+# año el desfase no es el habitual y una hora fija caería fuera. La ventana
+# ancha lo absorbe y las guardas del código deciden: `marketStatus` para las
+# salidas, la ventana 16:00-19:00 ET para el archivo, y un sello del día ya
+# archivado para no repetir la captura. Los disparos que caen fuera cuestan
+# medio segundo de Node y salen sin tocar Yahoo ni Supabase.
+#
+# `flock` en run.sh evita solapes, que es lo que daba el grupo `concurrency` de
+# GitHub: dos revisiones a la vez podrían cerrar la misma posición dos veces.
+#
+# Instalación:
+#   mkdir -p /var/lib/dep-coberturas
+#   crontab -e            # pegar el bloque de abajo al final
+#   tail -f /var/log/dep-opciones.log
+#
+# Comprobación previa (no ejecuta nada, solo informa):
+#   /var/www/dep-coberturas/scripts/opciones/run.sh estado
+#
+# Requiere en /var/www/dep-coberturas/.env.local: NEXT_PUBLIC_SUPABASE_URL,
+# SUPABASE_SERVICE_ROLE_KEY y CRON_USER_ID.
+
+# dep-coberturas · revisión de los niveles de salida de Gamma y Theta, cada
+# media hora mientras la sesión regular esté abierta. La ventana cubre el
+# horario de Nueva York en verano y en invierno; `marketStatus` descarta el
+# resto.
+0,30 14-23 * * 1-5 /var/www/dep-coberturas/scripts/opciones/run.sh salidas >> /var/log/dep-opciones.log 2>&1
+
+# dep-coberturas · archivo de las cadenas de opciones, una vez por sesión, tras
+# el cierre. La captura son ~36 tickers y tarda un par de minutos; el sello del
+# día hace que solo la primera oportunidad de la ventana haga trabajo.
+*/20 21-23,0-2 * * * /var/www/dep-coberturas/scripts/opciones/run.sh archivo >> /var/log/dep-opciones.log 2>&1
+
+# Rotación del log, para que no crezca sin fin.
+0 3 * * 0 [ -f /var/log/dep-opciones.log ] && tail -n 5000 /var/log/dep-opciones.log > /var/log/dep-opciones.log.tmp && mv /var/log/dep-opciones.log.tmp /var/log/dep-opciones.log
